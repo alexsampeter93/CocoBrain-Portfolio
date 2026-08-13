@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --cream-bg: #f5e6d3;
+    --coco-dark: #2b211c;
+    --coco-mid: #6b4530;
+    --coco-light: #c99b6e;
+    --brain-pink: #f2939e;
+    --brain-glow: #ff6b85;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream text-coco-dark font-sans antialiased;
+    margin: 0;
+    overscroll-behavior-y: none;
+  }
+
+  /* Foco visible: los nodos y la nav se recorren con teclado */
+  :focus-visible {
+    outline: 3px solid var(--brain-glow);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* Contenido solo para lectores de pantalla, visible al recibir foco */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-50 rounded-full bg-coco-dark px-5 py-3 text-cream;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
