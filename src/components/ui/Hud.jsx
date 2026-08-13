@@ -3,20 +3,12 @@ import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 /**
- * Marco de interfaz.
+ * Marco de interfaz: marcas de encuadre, firma y navegación.
  *
- * La marca no va "pegada arriba" a tamaño de icono: entra grande, como parte
- * de la composición de portada, y se recoge a su esquina a medida que se baja.
- * Ese movimiento es la animación —el logo no se limita a estar, se comporta.
+ * El logotipo NO está aquí. Vive dentro de la escena 3D (Wordmark3D), donde
+ * comparte perspectiva, paralaje y luz con el resto. Como imagen fija en una
+ * esquina se leía como papel pegado encima del fondo.
  */
-
-// Anchos del logotipo, en píxeles, al principio y una vez recogido.
-const LOGO_WIDTH_OPEN = 240
-const LOGO_WIDTH_TUCKED = 104
-
-// A qué altura del scroll termina de recogerse.
-const TUCK_END = 0.16
-
 function CornerTicks() {
   const base = 'pointer-events-none fixed z-40 h-5 w-5 border-coco-light'
   return (
@@ -47,31 +39,21 @@ export default function Hud({ sections, activeSection, onSelect, onClose, progre
     return () => tween.kill()
   }, [reducedMotion])
 
-  const tuck = Math.min(1, progress / TUCK_END)
-  const logoWidth = LOGO_WIDTH_OPEN + (LOGO_WIDTH_TUCKED - LOGO_WIDTH_OPEN) * tuck
-
   return (
     <>
       <CornerTicks />
 
+      {/* El logotipo ya no vive aqui: esta dentro de la escena 3D, detras de
+          Olaz, para que comparta perspectiva y luz con el resto. Como imagen
+          fija en una esquina se leia como papel pegado encima. */}
       <div className="pointer-events-none fixed left-6 top-6 z-40 sm:left-10 sm:top-10">
         <button
+          ref={logoRef}
           type="button"
           onClick={onClose}
-          className="pointer-events-auto block pl-9 pt-9"
-          aria-label="Volver al inicio"
+          className="pointer-events-auto block pl-9 pt-9 font-mono text-[11px] text-coco-mid transition-colors hover:text-coco-dark"
         >
-          <img
-            ref={logoRef}
-            src="/img/wordmark.webp"
-            srcSet="/img/wordmark-sm.webp 720w, /img/wordmark.webp 1310w"
-            sizes="240px"
-            alt="CocoBrain"
-            width="1310"
-            height="335"
-            className="h-auto max-w-[45vw]"
-            style={{ width: `${logoWidth}px` }}
-          />
+          CocoBrain — Alex
         </button>
       </div>
 

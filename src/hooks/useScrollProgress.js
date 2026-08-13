@@ -8,15 +8,19 @@ import { useEffect, useRef, useState } from 'react'
  * rueda de ratón— y mover una cámara con él directamente produce un viaje a
  * tirones. Suavizarlo es lo que da la sensación de inercia.
  */
-export function useScrollProgress({ smoothing = 0.08 } = {}) {
+export function useScrollProgress({ smoothing = 0.08, screens = 3 } = {}) {
   const [progress, setProgress] = useState(0)
   const targetRef = useRef(0)
   const currentRef = useRef(0)
 
   useEffect(() => {
     const read = () => {
-      const scrollable = document.documentElement.scrollHeight - window.innerHeight
-      targetRef.current = scrollable > 0 ? window.scrollY / scrollable : 0
+      // El recorrido se mide sobre una distancia fija —`screens` alturas de
+      // pantalla— y no sobre el alto total del documento. Si dependiera del
+      // documento, anadir contenido debajo desplazaria todos los momentos de
+      // la animacion.
+      const distance = window.innerHeight * screens
+      targetRef.current = Math.min(1, Math.max(0, window.scrollY / distance))
     }
 
     read()
@@ -41,7 +45,7 @@ export function useScrollProgress({ smoothing = 0.08 } = {}) {
       window.removeEventListener('resize', read)
       cancelAnimationFrame(frame)
     }
-  }, [smoothing])
+  }, [smoothing, screens])
 
   return progress
 }

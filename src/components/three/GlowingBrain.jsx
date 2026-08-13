@@ -63,7 +63,9 @@ export default function GlowingBrain({ position, scale = 1 }) {
   })
 
   return (
-    <group position={position} scale={scale}>
+    // Nombre para que la camara del scroll pueda localizarlo y volar hacia
+    // el sin necesidad de duplicar aqui sus coordenadas.
+    <group name="brain-target" position={position} scale={scale}>
       {/* El sprite siempre mira a cámara, así el halo no se ve de canto. */}
       <sprite ref={haloRef} scale={[4.2, 4.2, 1]}>
         <spriteMaterial

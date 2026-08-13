@@ -9,8 +9,7 @@ import { usePointer } from '../../hooks/usePointer'
 /**
  * Ojo con los nombres: los que puso Meshy no corresponden con lo que
  * contienen los archivos. `Coco_Thinker` es el que sostiene el cerebro en la
- * mano, y `Brainy_Coconut` es el pensativo. Las claves de aqui si describen
- * lo que se ve.
+ * mano, y `Brainy_Coconut` es el pensativo.
  */
 export const MASCOT_MODELS = {
   brain: '/preview/olaz-thinker.glb',
@@ -22,27 +21,32 @@ const DRACO_PATH = '/draco/'
 const FILL_HEIGHT = 0.72
 
 /**
- * Limites de la mirada.
- *
- * El giro completo era un error: al llevar el cursor a los botones, Olaz
- * daba media vuelta y ensenaba la espalda. Una persona gira la cabeza hacia
- * lo que mira, no se da la vuelta. 55 grados a cada lado es el maximo que
- * mantiene la cara visible.
+ * Limites de la mirada. 65 grados es lo maximo que deja la cara legible:
+ * mas alla se lee como "se ha dado la vuelta", no como "esta mirando".
  */
-const MAX_YAW = MathUtils.degToRad(55)
-const MAX_PITCH = MathUtils.degToRad(22)
-const LOOK_EASING = 0.09
+const MAX_YAW = MathUtils.degToRad(65)
+const MAX_PITCH = MathUtils.degToRad(26)
+const LOOK_EASING = 0.11
 
-// Respiracion: escala no uniforme, muy corta. El cuerpo se ensancha un pelo
-// mientras se acorta, que es lo que hace que parezca que respira en vez de
-// que se infla.
+// Inclinacion del cuerpo acompanando a la mirada. Es lo que hace que el
+// gesto se note: girar solo sobre el eje vertical se lee como un maniqui
+// rotando; inclinarse un poco se lee como interes.
+const LEAN_AMOUNT = 0.1
+
 const BREATH_SPEED = 1.5
 const BREATH_AMOUNT = 0.016
 
 const FLOAT_AMPLITUDE = 0.045
 const FLOAT_SPEED = 0.6
 
-export default function Mascot3D({ url, children, reaction = 0 }) {
+export default function Mascot3D({
+  url,
+  children,
+  reaction = 0,
+  startle = 0,
+  turnAway = 0,
+  lookEnabled = true,
+}) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const camera = useThree((state) => state.camera)
   const viewport = useThree((state) => state.viewport)
@@ -57,9 +61,8 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
   const tuned = useMemo(() => {
     scene.traverse((object) => {
       if (!object.isMesh || !object.material) return
-      // Meshy exporta un mapa metallic-roughness que bajo un HDRI deja el
-      // coco con brillo de plastico. Se anula y se sube la respuesta al
-      // entorno, que es de donde sale el volumen.
+      // Meshy exporta metallic-roughness que bajo un HDRI deja el coco con
+      // brillo de plastico. Se anula y se sube la respuesta al entorno.
       object.material.metalness = 0
       object.material.envMapIntensity = 1.25
       object.material.needsUpdate = true
@@ -67,7 +70,6 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
     return scene
   }, [scene])
 
-  /** Encuadre automatico: el GLB no viene ni centrado ni a escala conocida. */
   useLayoutEffect(() => {
     const group = fitRef.current
     if (!group) return
@@ -85,13 +87,7 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
     group.position.set(-center.x * fit, -center.y * fit, -center.z * fit)
   }, [tuned, viewport.height])
 
-  /**
-   * Salto con aplastado al aterrizar.
-   *
-   * Es la unica deformacion permitida con una malla fusionada: escalar el
-   * cuerpo entero de forma no uniforme. Da mucho caracter y no necesita
-   * piezas separadas.
-   */
+  /** Salto con aplastado: la unica deformacion que aguanta una malla fusionada. */
   useEffect(() => {
     if (!reaction || reducedMotion) return
 
@@ -99,12 +95,10 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
     const breath = breathRef.current
     if (!group || !breath) return
 
-    // Matar el anterior antes de arrancar: si se solapan, el personaje
-    // tiembla.
+    // Matar el anterior antes de arrancar: si se solapan, tiembla.
     gsap.killTweensOf([group.position, breath.scale])
 
     const timeline = gsap.timeline()
-
     timeline
       .to(breath.scale, { x: 1.1, y: 0.86, duration: 0.11, ease: 'power2.out' })
       .to(group.position, { y: 0.32, duration: 0.3, ease: 'power2.out' }, '<')
@@ -116,6 +110,29 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
     return () => timeline.kill()
   }, [reaction, reducedMotion])
 
+  /**
+   * Respingo al empezar a bajar. Mas corto y mas seco que el salto: es un
+   * susto, no una celebracion.
+   */
+  useEffect(() => {
+    if (!startle || reducedMotion) return
+
+    const group = jumpRef.current
+    const breath = breathRef.current
+    if (!group || !breath) return
+
+    gsap.killTweensOf([group.position, breath.scale])
+
+    const timeline = gsap.timeline()
+    timeline
+      .to(breath.scale, { x: 0.9, y: 1.16, duration: 0.09, ease: 'power3.out' })
+      .to(group.position, { y: 0.14, duration: 0.16, ease: 'power3.out' }, '<')
+      .to(group.position, { y: 0, duration: 0.32, ease: 'bounce.out' })
+      .to(breath.scale, { x: 1, y: 1, duration: 0.45, ease: 'elastic.out(1, 0.4)' }, '<')
+
+    return () => timeline.kill()
+  }, [startle, reducedMotion])
+
   useFrame((state) => {
     const motion = motionRef.current
     const breath = breathRef.current
@@ -124,33 +141,46 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
     const t = state.clock.elapsedTime
     motion.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE
 
-    // Respiracion, solo si no hay un salto en curso pisando la escala.
     if (breath && !gsap.isTweening(breath.scale)) {
-      const breathValue = Math.sin(t * BREATH_SPEED) * BREATH_AMOUNT
-      breath.scale.set(1 - breathValue, 1 + breathValue, 1 - breathValue)
+      const value = Math.sin(t * BREATH_SPEED) * BREATH_AMOUNT
+      breath.scale.set(1 - value, 1 + value, 1 - value)
     }
 
     /**
-     * Mirada: se proyecta el cursor al espacio 3D y se apunta hacia el punto,
-     * en vez de rotar en proporcion a la posicion del raton. La diferencia es
-     * que asi mira de verdad a donde esta el cursor —incluidos los botones—
-     * y los limites impiden que llegue a darse la vuelta.
+     * Mirada: se proyecta el cursor al espacio 3D y se apunta al punto, en
+     * vez de rotar en proporcion a la posicion del raton. Asi mira de verdad
+     * a donde esta el cursor —botones incluidos— y los topes impiden que
+     * llegue a darse la vuelta.
      */
-    const target = new Vector3(pointer.current.x, -pointer.current.y, 0.5).unproject(camera)
-    const origin = motion.getWorldPosition(new Vector3())
-    const toTarget = target.sub(origin)
+    let yaw = 0
+    let pitch = 0
 
-    const yaw = MathUtils.clamp(Math.atan2(toTarget.x, toTarget.z), -MAX_YAW, MAX_YAW)
-    const pitch = MathUtils.clamp(
-      -Math.atan2(toTarget.y, Math.hypot(toTarget.x, toTarget.z)),
-      -MAX_PITCH,
-      MAX_PITCH,
-    )
+    if (lookEnabled) {
+      const target = new Vector3(pointer.current.x, -pointer.current.y, 0.5).unproject(camera)
+      const origin = motion.getWorldPosition(new Vector3())
+      const toTarget = target.sub(origin)
 
-    // Lerp siempre: sin suavizado persigue el raton a tirones y parece un
-    // objeto arrastrado, no un personaje mirando.
-    motion.rotation.y = MathUtils.lerp(motion.rotation.y, yaw, LOOK_EASING)
+      yaw = MathUtils.clamp(Math.atan2(toTarget.x, toTarget.z), -MAX_YAW, MAX_YAW)
+      pitch = MathUtils.clamp(
+        -Math.atan2(toTarget.y, Math.hypot(toTarget.x, toTarget.z)),
+        -MAX_PITCH,
+        MAX_PITCH,
+      )
+    }
+
+    // `turnAway` va de 0 a 1 y suma media vuelta: es como se gira de espaldas
+    // antes de entrar en el cerebro.
+    const targetYaw = yaw + turnAway * Math.PI
+
+    motion.rotation.y = MathUtils.lerp(motion.rotation.y, targetYaw, LOOK_EASING)
     motion.rotation.x = MathUtils.lerp(motion.rotation.x, pitch, LOOK_EASING)
+    // El cuerpo se inclina hacia donde mira. Sin esto el giro se lee como un
+    // maniqui sobre un plato giratorio.
+    motion.rotation.z = MathUtils.lerp(
+      motion.rotation.z,
+      (-yaw / MAX_YAW) * LEAN_AMOUNT,
+      LOOK_EASING,
+    )
   })
 
   return (
@@ -161,8 +191,7 @@ export default function Mascot3D({ url, children, reaction = 0 }) {
             <group ref={fitRef}>
               <primitive object={tuned} />
               {/* Los hijos van dentro del grupo escalado: sus coordenadas se
-                  expresan en el espacio del modelo y acompanan al personaje
-                  cuando gira. */}
+                  expresan en el espacio del modelo y acompanan al personaje. */}
               {children}
             </group>
           </group>

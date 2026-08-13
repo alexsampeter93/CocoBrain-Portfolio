@@ -1,22 +1,36 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, PerformanceMonitor, Sparkles, Stats } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { ACESFilmicToneMapping, MathUtils } from 'three'
+import { ACESFilmicToneMapping, MathUtils, Vector3 } from 'three'
 import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
+import Wordmark3D from './Wordmark3D'
 import NeuralNodes from './NeuralNodes'
 import CameraRig from './CameraRig'
 import GlowingBrain from './GlowingBrain'
-import { DEFAULT_BRAIN_TRANSFORM } from '../ui/TuningPanel'
 
 const IS_COARSE_POINTER =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
 
-// El viaje se parte en dos mitades y el cambio de escena ocurre en el medio,
-// tapado por un fundido. Nunca se ve el salto.
-export const SWAP_POINT = 0.5
+/**
+ * Sitio del cerebro luminoso sobre la mano, en el espacio del modelo.
+ * Ajustado por Alex con el panel de colocacion, que ya se ha retirado.
+ */
+export const BRAIN_TRANSFORM = { x: -0.53, y: 0.23, z: 0.66, scale: 0.17 }
+
+/**
+ * Actos del recorrido, en fraccion de scroll.
+ *
+ *   0    -> TURN_START   portada, la camara se acerca al cerebro de la mano
+ *   TURN_START -> SWAP   Olaz se gira de espaldas y entramos
+ *   SWAP -> INSIDE_END   dentro del cerebro: aqui viven los nodos
+ *   INSIDE_END -> 1      se sale de la escena y sigue la pagina normal
+ */
+export const TURN_START = 0.26
+export const SWAP_POINT = 0.42
+export const INSIDE_END = 0.66
 
 function OffsetGroup({ xRatio, children }) {
   const width = useThree((state) => state.viewport.width)
@@ -29,56 +43,54 @@ function CameraRigBridge({ xRatio, ...props }) {
 }
 
 /**
- * Empuje de camara guiado por el scroll.
+ * Camara guiada por el scroll.
  *
- * Fuera: se acerca al personaje hasta "entrar" en el.
- * Dentro: retrocede despacio por la constelacion, como si se recorriera.
+ * Fuera vuela hacia el cerebro que Olaz sostiene: no se escriben aqui sus
+ * coordenadas, se busca el objeto por nombre en la escena. Asi, si el cerebro
+ * cambia de sitio, la camara le sigue sin tocar este archivo.
  *
- * Solo actua cuando no hay una seccion abierta: si hay una, manda el
- * CameraRig y las dos animaciones se pelearian por la misma camara.
+ * Solo actua si no hay una seccion abierta: si la hay, manda el CameraRig y
+ * las dos animaciones se pelearian por la misma camara.
  */
 function ScrollDolly({ progress, inside, enabled }) {
   const camera = useThree((state) => state.camera)
-  const width = useThree((state) => state.viewport.width)
+  const scene = useThree((state) => state.scene)
+  const target = useRef(new Vector3())
+  const look = useRef(new Vector3())
 
   useFrame(() => {
     if (!enabled) return
 
     if (!inside) {
+      const brain = scene.getObjectByName('brain-target')
+      if (brain) brain.getWorldPosition(target.current)
+
       const t = MathUtils.clamp(progress / SWAP_POINT, 0, 1)
-      // Acelera al final: la sensacion de "entrar" viene de que los ultimos
+      // Acelera al final: la sensacion de entrar viene de que los ultimos
       // metros se recorren mas rapido que los primeros.
       const eased = t * t
-      camera.position.z = MathUtils.lerp(6, 1.6, eased)
-      camera.position.x = MathUtils.lerp(0, width * 0.12, eased)
-      camera.position.y = MathUtils.lerp(0, -0.05, eased)
+
+      camera.position.x = MathUtils.lerp(0, target.current.x, eased)
+      camera.position.y = MathUtils.lerp(0, target.current.y, eased)
+      camera.position.z = MathUtils.lerp(6, target.current.z + 0.45, eased)
+
+      look.current.lerpVectors(new Vector3(0, 0, 0), target.current, eased)
     } else {
-      const t = MathUtils.clamp((progress - SWAP_POINT) / (1 - SWAP_POINT), 0, 1)
-      camera.position.z = MathUtils.lerp(2.6, 5.4, t)
-      camera.position.x = 0
-      camera.position.y = MathUtils.lerp(0, 0.4, t)
+      const t = MathUtils.clamp((progress - SWAP_POINT) / (INSIDE_END - SWAP_POINT), 0, 1)
+      camera.position.set(0, MathUtils.lerp(0, 0.5, t), MathUtils.lerp(2.4, 5.6, t))
+      look.current.set(0, 0, 0)
     }
 
-    camera.lookAt(0, 0, 0)
+    camera.lookAt(look.current)
   })
 
   return null
 }
 
-/** Primera pantalla: Olaz grande con el cerebro en la mano. */
-function OuterScene({
-  model,
-  xRatio,
-  sections,
-  activeSection,
-  onSelect,
-  brainTransform,
-  reaction,
-}) {
-  // Suspense propio: si el cerebro tarda o falla, el personaje se ve igual.
-  // Compartir el Suspense del padre hacia que un asset secundario bloqueara
-  // la escena entera.
+/** Portada: Olaz con el cerebro encendido y el logotipo al fondo. */
+function OuterScene({ model, xRatio, brainTransform, reaction, startle, turnAway }) {
   const glow = (
+    // Suspense propio: si el cerebro tarda o falla, el personaje se ve igual.
     <Suspense fallback={null}>
       <GlowingBrain
         position={[brainTransform.x, brainTransform.y, brainTransform.z]}
@@ -92,12 +104,18 @@ function OuterScene({
       <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
+      <Wordmark3D position={[0, 0.25, -3.2]} />
+
       <OffsetGroup xRatio={xRatio}>
-        <Mascot3D url={model} reaction={reaction}>
+        <Mascot3D
+          url={model}
+          reaction={reaction}
+          startle={startle}
+          turnAway={turnAway}
+          lookEnabled={turnAway < 0.05}
+        >
           {glow}
         </Mascot3D>
-
-        <NeuralNodes sections={sections} activeSection={activeSection} onSelect={onSelect} />
 
         <ContactShadows
           position={[0, -1.9, 0]}
@@ -113,23 +131,27 @@ function OuterScene({
   )
 }
 
-/** Dentro del cerebro: Olaz pensativo pequeno, rodeado por la constelacion. */
+/**
+ * Dentro del cerebro. Los nodos existen SOLO aqui: fuera hay una persona,
+ * dentro estan sus pensamientos. Poder navegarlos desde fuera era lo que no
+ * tenia sentido.
+ */
 function InnerScene({ sections, activeSection, onSelect }) {
   return (
     <>
-      <Environment files="/hdri/studio.hdr" environmentIntensity={0.75} />
-      <directionalLight position={[2, 3, 4]} intensity={0.5} color="#FFE8E4" />
-      {/* Luz rosa cercana: aqui dentro la fuente es el propio cerebro. */}
+      <Environment files="/hdri/studio.hdr" environmentIntensity={0.7} />
+      <directionalLight position={[2, 3, 4]} intensity={0.45} color="#FFE8E4" />
+      {/* Aqui dentro la fuente de luz es el propio cerebro. */}
       <pointLight position={[0, 0.4, 1.4]} intensity={4} color="#FF6B85" distance={7} />
 
-      <group scale={0.34} position={[0, -0.25, 0]}>
+      <group scale={0.3} position={[0, -0.3, 0]}>
         <Mascot3D url={MASCOT_MODELS.thinker} />
       </group>
 
       <NeuralNodes sections={sections} activeSection={activeSection} onSelect={onSelect} />
 
       {/* Particulas cercanas: dan la sensacion de estar dentro de algo, no
-          mirandolo desde fuera. */}
+          de mirarlo desde fuera. */}
       <Sparkles count={70} scale={7} size={2.4} speed={0.28} color="#FF9AAA" opacity={0.7} />
     </>
   )
@@ -142,11 +164,20 @@ export default function Scene({
   activeSection,
   onSelect,
   progress = 0,
-  brainTransform = DEFAULT_BRAIN_TRANSFORM,
+  brainTransform = BRAIN_TRANSFORM,
   reaction = 0,
+  startle = 0,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
   const inside = progress >= SWAP_POINT
+
+  // De 0 a 1 en la franja previa al cambio: es lo que gira a Olaz de espaldas
+  // justo antes de entrar.
+  const turnAway = MathUtils.clamp(
+    (progress - TURN_START) / (SWAP_POINT - TURN_START),
+    0,
+    1,
+  )
 
   return (
     <Canvas
@@ -164,11 +195,7 @@ export default function Scene({
       <ScrollDolly progress={progress} inside={inside} enabled={!activeSection} />
 
       {activeSection && (
-        <CameraRigBridge
-          xRatio={inside ? 0 : xRatio}
-          sections={sections}
-          activeSection={activeSection}
-        />
+        <CameraRigBridge xRatio={0} sections={sections} activeSection={activeSection} />
       )}
 
       <Suspense fallback={null}>
@@ -182,16 +209,15 @@ export default function Scene({
           <OuterScene
             model={model}
             xRatio={xRatio}
-            sections={sections}
-            activeSection={activeSection}
-            onSelect={onSelect}
             brainTransform={brainTransform}
             reaction={reaction}
+            startle={startle}
+            turnAway={turnAway}
           />
         )}
       </Suspense>
 
-      {/* Solo dentro: el bloom aqui esta motivado por el cerebro que ilumina.
+      {/* Solo dentro: aqui el bloom esta motivado por el cerebro que ilumina.
           Fuera lavaba el crema del fondo sin ganar nada. */}
       {inside && (
         <EffectComposer disableNormalPass multisampling={0}>
