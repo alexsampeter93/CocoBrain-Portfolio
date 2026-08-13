@@ -18,7 +18,7 @@ const FILL_HEIGHT = 0.72
 const FLOAT_AMPLITUDE = 0.035
 const FLOAT_SPEED = 0.6
 
-export default function Mascot3D({ url, xRatio = 0 }) {
+export default function Mascot3D({ url }) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const viewport = useThree((state) => state.viewport)
   const reducedMotion = usePrefersReducedMotion()
@@ -76,11 +76,8 @@ export default function Mascot3D({ url, xRatio = 0 }) {
     group.rotation.x = MathUtils.lerp(group.rotation.x, -y * 0.12, 0.05)
   })
 
-  // El desplazamiento se expresa como fracción del ancho visible, no en
-  // unidades: así el personaje mantiene su sitio en la composición al
-  // cambiar el tamaño de la ventana.
   return (
-    <group position={[viewport.width * xRatio, 0, 0]}>
+    <group>
       <group ref={motionRef}>
         <group ref={fitRef}>
           <primitive object={tuned} />

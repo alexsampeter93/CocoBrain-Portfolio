@@ -1,8 +1,10 @@
 import { Suspense, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, PerformanceMonitor, Stats } from '@react-three/drei'
 import { ACESFilmicToneMapping } from 'three'
 import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
+import NeuralNodes from './NeuralNodes'
+import CameraRig from './CameraRig'
 
 const IS_COARSE_POINTER =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -10,14 +12,28 @@ const IS_COARSE_POINTER =
 const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
 
 /**
- * Escena deliberadamente mínima: entorno, personaje y sombra de contacto.
- *
- * Nada de suelo reflectante, bloom, profundidad de campo ni grano. Todo eso
- * estaba apilado encima de una composición que no funcionaba, y cada capa
- * tapaba peor a la anterior. Se vuelve a añadir de una en una, y solo cuando
- * lo que hay debajo ya se sostiene.
+ * Desplaza a sus hijos una fracción del ancho visible. Se expresa en
+ * fracción y no en unidades para que la composición aguante al cambiar el
+ * tamaño de la ventana.
  */
-export default function Scene({ model = MASCOT_MODELS.thinker, xRatio = 0 }) {
+function OffsetGroup({ xRatio, children }) {
+  const width = useThree((state) => state.viewport.width)
+  return <group position={[width * xRatio, 0, 0]}>{children}</group>
+}
+
+/** Lee el desplazamiento en unidades de mundo para pasárselo al CameraRig. */
+function CameraRigBridge({ xRatio, ...props }) {
+  const width = useThree((state) => state.viewport.width)
+  return <CameraRig offsetX={width * xRatio} {...props} />
+}
+
+export default function Scene({
+  model = MASCOT_MODELS.brain,
+  xRatio = 0,
+  sections,
+  activeSection,
+  onSelect,
+}) {
   const [dpr, setDpr] = useState(MAX_DPR)
 
   return (
@@ -30,30 +46,41 @@ export default function Scene({ model = MASCOT_MODELS.thinker, xRatio = 0 }) {
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 1,
       }}
-      aria-hidden="true"
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(MAX_DPR)} />
 
+      <CameraRigBridge
+        xRatio={xRatio}
+        sections={sections}
+        activeSection={activeSection}
+      />
+
       <Suspense fallback={null}>
-        {/* HDRI de estudio (Poly Haven, CC0), servido desde /public. De aquí
-            sale prácticamente toda la luz: reflejos, rebotes y degradados. */}
+        {/* HDRI de estudio (Poly Haven, CC0). De aquí sale casi toda la luz. */}
         <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
 
-        {/* Un único direccional para dar dirección a la sombra. La cantidad
-            de luz la pone el HDRI; subir esto aplana el modelo. */}
+        {/* Un único direccional, solo para dar dirección a la sombra. */}
         <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
-        <Mascot3D url={model} xRatio={xRatio} />
+        <OffsetGroup xRatio={xRatio}>
+          <Mascot3D url={model} />
 
-        <ContactShadows
-          position={[0, -1.9, 0]}
-          scale={7}
-          opacity={0.32}
-          blur={2.4}
-          far={3}
-          resolution={512}
-          color="#4A2F1C"
-        />
+          <NeuralNodes
+            sections={sections}
+            activeSection={activeSection}
+            onSelect={onSelect}
+          />
+
+          <ContactShadows
+            position={[0, -1.9, 0]}
+            scale={7}
+            opacity={0.32}
+            blur={2.4}
+            far={3}
+            resolution={512}
+            color="#4A2F1C"
+          />
+        </OffsetGroup>
       </Suspense>
 
       {import.meta.env.DEV && <Stats />}

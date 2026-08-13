@@ -1,57 +1,76 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Line } from '@react-three/drei'
+import { Html, Line } from '@react-three/drei'
 import { CatmullRomCurve3, Color, Vector3 } from 'three'
 import { previewNodePositions, nodeConnections } from '../../data/nodeLayout'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
-const PINK = '#F2939E'
 const GLOW = '#FF6B85'
-const LINE = '#C99B6E'
+const LINE = '#B08355'
 
-// Un pulso por conexión sería demasiado ruido visual y demasiado dibujo.
-// Con menos pulsos que conexiones, la red parece viva sin parecer un
-// salvapantallas.
-const PULSE_COUNT = 3
-const PULSE_SPEED = 0.16
+// Nodos pequeños. La versión anterior usaba esferas de radio 0.13 con un halo
+// del doble: a tamaño de pantalla parecían chicles y dominaban la escena por
+// encima del personaje.
+const NODE_RADIUS = 0.055
+const HOVER_SCALE = 1.7
 
-/**
- * Nodo suelto. Respira con un seno desfasado por índice: si todos laten a la
- * vez el conjunto parece parpadear, y desfasados parece que se comunican.
- */
-function Node({ position, accent, phase }) {
-  const ref = useRef(null)
+const PULSE_SPEED = 0.14
+
+function Node({ section, position, phase, active, onSelect }) {
+  const meshRef = useRef(null)
+  const [hovered, setHovered] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
 
+  const highlighted = hovered || active
+
   useFrame((state) => {
-    if (!ref.current || reducedMotion) return
-    const t = state.clock.elapsedTime
-    const scale = 1 + Math.sin(t * 1.3 + phase) * 0.08
-    ref.current.scale.setScalar(scale)
+    if (!meshRef.current) return
+    const breath = reducedMotion ? 1 : 1 + Math.sin(state.clock.elapsedTime * 1.4 + phase) * 0.09
+    const target = breath * (highlighted ? HOVER_SCALE : 1)
+    // Lerp en vez de asignar: el cambio de escala al pasar por encima tiene
+    // que sentirse como un músculo, no como un interruptor.
+    meshRef.current.scale.lerp({ x: target, y: target, z: target }, 0.18)
   })
 
   return (
     <group position={position}>
-      <mesh ref={ref}>
-        <sphereGeometry args={[0.13, 24, 20]} />
+      <mesh
+        ref={meshRef}
+        onPointerOver={(event) => {
+          event.stopPropagation()
+          setHovered(true)
+          document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={() => {
+          setHovered(false)
+          document.body.style.cursor = ''
+        }}
+        onClick={(event) => {
+          event.stopPropagation()
+          onSelect(section.id)
+        }}
+      >
+        <sphereGeometry args={[NODE_RADIUS, 20, 16]} />
         <meshStandardMaterial
-          color={accent}
+          color={section.accent}
           emissive={GLOW}
-          emissiveIntensity={0.55}
-          roughness={0.35}
+          emissiveIntensity={highlighted ? 1.1 : 0.35}
+          roughness={0.3}
         />
       </mesh>
-      {/* Halo: una esfera mayor casi transparente. Sobre fondo crema hace
-          más por la sensación de brillo que el propio bloom. */}
-      <mesh scale={2.3}>
-        <sphereGeometry args={[0.13, 16, 12]} />
-        <meshBasicMaterial color={GLOW} transparent opacity={0.12} depthWrite={false} />
-      </mesh>
+
+      {highlighted && (
+        <Html center distanceFactor={7} position={[0, NODE_RADIUS * 3.4, 0]}>
+          <span className="whitespace-nowrap rounded-full bg-coco-dark px-3 py-1 text-[11px] font-medium text-cream">
+            {section.label}
+          </span>
+        </Html>
+      )}
     </group>
   )
 }
 
-/** Punto de luz que recorre una conexión de un extremo al otro. */
+/** Punto de luz recorriendo una conexión. */
 function Pulse({ curve, offset }) {
   const ref = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -64,33 +83,65 @@ function Pulse({ curve, offset }) {
     }
     const t = (state.clock.elapsedTime * PULSE_SPEED + offset) % 1
     ref.current.position.copy(curve.getPointAt(t))
-    // Se apaga en los extremos: así nace y muere en los nodos en vez de
-    // aparecer y desaparecer de golpe a mitad de camino.
-    ref.current.material.opacity = Math.sin(t * Math.PI) * 0.9
+    // Se apaga en los extremos: nace y muere en los nodos, en vez de
+    // aparecer de la nada a mitad del recorrido.
+    ref.current.material.opacity = Math.sin(t * Math.PI) * 0.75
   })
 
   return (
     <mesh ref={ref}>
-      <sphereGeometry args={[0.045, 12, 10]} />
+      <sphereGeometry args={[0.022, 10, 8]} />
       <meshBasicMaterial color={GLOW} transparent depthWrite={false} />
     </mesh>
   )
 }
 
-export default function NeuralNodes({ sections }) {
+/** Polvo en suspensión. Barato y es lo que da atmósfera y sensación de aire. */
+function Dust({ count = 90 }) {
+  const ref = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
-  const groupRef = useRef(null)
 
-  // Geometría y curvas fuera del bucle de render: crearlas por frame es la
-  // forma más rápida de tirar el framerate.
+  const positions = useMemo(() => {
+    const array = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      array[i * 3] = (Math.random() - 0.5) * 8
+      array[i * 3 + 1] = (Math.random() - 0.5) * 6
+      array[i * 3 + 2] = (Math.random() - 0.5) * 5
+    }
+    return array
+  }, [count])
+
+  useFrame((state) => {
+    if (!ref.current || reducedMotion) return
+    ref.current.rotation.y = state.clock.elapsedTime * 0.02
+  })
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.022}
+        color={LINE}
+        transparent
+        opacity={0.45}
+        sizeAttenuation
+        depthWrite={false}
+      />
+    </points>
+  )
+}
+
+export default function NeuralNodes({ sections, activeSection, onSelect }) {
+  // Curvas y geometría fuera del bucle de render.
   const { nodes, curves } = useMemo(() => {
     const positions = previewNodePositions
 
     const nodes = sections
       .filter((section) => positions[section.nodeName])
       .map((section, index) => ({
-        id: section.id,
-        accent: section.accent,
+        section,
         position: new Vector3(...positions[section.nodeName]),
         phase: index * 1.7,
       }))
@@ -100,11 +151,11 @@ export default function NeuralNodes({ sections }) {
       .map(([from, to]) => {
         const a = new Vector3(...positions[from])
         const b = new Vector3(...positions[to])
-        // Punto medio desplazado: una recta entre dos nodos parece un cable,
+        // Punto medio desplazado: una recta entre dos nodos parece un cable;
         // una curva suave parece una conexión.
         const mid = a.clone().lerp(b, 0.5)
-        mid.z += 0.35
-        mid.y += 0.12
+        mid.z += 0.4
+        mid.y += 0.15
         return new CatmullRomCurve3([a, mid, b])
       })
 
@@ -112,33 +163,22 @@ export default function NeuralNodes({ sections }) {
   }, [sections])
 
   const pulses = useMemo(
-    () =>
-      Array.from({ length: PULSE_COUNT }, (_, index) => ({
-        curve: curves[index % curves.length],
-        offset: index / PULSE_COUNT,
-      })),
+    () => curves.map((curve, index) => ({ curve, offset: index / curves.length })),
     [curves],
   )
 
-  // Deriva lenta del conjunto. Muy poca amplitud: lo justo para que la red
-  // no parezca una ilustración fija.
-  useFrame((state) => {
-    if (!groupRef.current || reducedMotion) return
-    const t = state.clock.elapsedTime
-    groupRef.current.rotation.y = Math.sin(t * 0.12) * 0.14
-    groupRef.current.rotation.x = Math.cos(t * 0.09) * 0.06
-  })
-
   return (
-    <group ref={groupRef}>
+    <group>
+      <Dust />
+
       {curves.map((curve, index) => (
         <Line
           key={`line-${index}`}
-          points={curve.getPoints(24)}
+          points={curve.getPoints(28)}
           color={new Color(LINE)}
-          lineWidth={1.1}
+          lineWidth={0.9}
           transparent
-          opacity={0.35}
+          opacity={0.28}
         />
       ))}
 
@@ -148,10 +188,12 @@ export default function NeuralNodes({ sections }) {
 
       {nodes.map((node) => (
         <Node
-          key={node.id}
+          key={node.section.id}
+          section={node.section}
           position={node.position}
-          accent={node.accent ?? PINK}
           phase={node.phase}
+          active={activeSection === node.section.id}
+          onSelect={onSelect}
         />
       ))}
     </group>
