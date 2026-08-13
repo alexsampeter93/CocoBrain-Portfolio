@@ -30,13 +30,13 @@ function CameraRigBridge({ xRatio, ...props }) {
 }
 
 /**
- * Empuje de cámara guiado por el scroll.
+ * Empuje de camara guiado por el scroll.
  *
- * Fuera: se acerca al personaje hasta "entrar" en él.
- * Dentro: retrocede despacio por la constelación, como si se recorriera.
+ * Fuera: se acerca al personaje hasta "entrar" en el.
+ * Dentro: retrocede despacio por la constelacion, como si se recorriera.
  *
- * Solo actúa cuando no hay una sección abierta: si hay una, manda el
- * CameraRig y las dos animaciones se pelearían por la misma cámara.
+ * Solo actua cuando no hay una seccion abierta: si hay una, manda el
+ * CameraRig y las dos animaciones se pelearian por la misma camara.
  */
 function ScrollDolly({ progress, inside, enabled }) {
   const camera = useThree((state) => state.camera)
@@ -47,8 +47,8 @@ function ScrollDolly({ progress, inside, enabled }) {
 
     if (!inside) {
       const t = MathUtils.clamp(progress / SWAP_POINT, 0, 1)
-      // Acelera al final: la sensación de "entrar" viene de que los últimos
-      // metros se recorren más rápido que los primeros.
+      // Acelera al final: la sensacion de "entrar" viene de que los ultimos
+      // metros se recorren mas rapido que los primeros.
       const eased = t * t
       camera.position.z = MathUtils.lerp(6, 1.6, eased)
       camera.position.x = MathUtils.lerp(0, width * 0.12, eased)
@@ -74,11 +74,11 @@ function OuterScene({
   activeSection,
   onSelect,
   brainTransform,
-  rigParts,
+  useRig,
 }) {
-  {/* Suspense propio: si el cerebro tarda o falla, el personaje se ve igual.
-      Compartir el Suspense del padre hacía que un asset secundario bloqueara
-      la escena entera. */}
+  // Suspense propio: si el cerebro tarda o falla, el personaje se ve igual.
+  // Compartir el Suspense del padre hacia que un asset secundario bloqueara
+  // la escena entera.
   const glow = (
     <Suspense fallback={null}>
       <GlowingBrain
@@ -94,17 +94,9 @@ function OuterScene({
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
       <OffsetGroup xRatio={xRatio}>
-        {rigParts ? (
-          <MascotRig parts={rigParts} />
-        ) : (
-          <Mascot3D url={model}>{glow}</Mascot3D>
-        )}
+        {useRig ? <MascotRig /> : <Mascot3D url={model}>{glow}</Mascot3D>}
 
-        <NeuralNodes
-          sections={sections}
-          activeSection={activeSection}
-          onSelect={onSelect}
-        />
+        <NeuralNodes sections={sections} activeSection={activeSection} onSelect={onSelect} />
 
         <ContactShadows
           position={[0, -1.9, 0]}
@@ -120,13 +112,13 @@ function OuterScene({
   )
 }
 
-/** Dentro del cerebro: Olaz pensativo pequeño, rodeado por la constelación. */
+/** Dentro del cerebro: Olaz pensativo pequeno, rodeado por la constelacion. */
 function InnerScene({ sections, activeSection, onSelect }) {
   return (
     <>
       <Environment files="/hdri/studio.hdr" environmentIntensity={0.75} />
       <directionalLight position={[2, 3, 4]} intensity={0.5} color="#FFE8E4" />
-      {/* Luz rosa cercana: aquí dentro la fuente es el propio cerebro. */}
+      {/* Luz rosa cercana: aqui dentro la fuente es el propio cerebro. */}
       <pointLight position={[0, 0.4, 1.4]} intensity={4} color="#FF6B85" distance={7} />
 
       <group scale={0.34} position={[0, -0.25, 0]}>
@@ -135,8 +127,8 @@ function InnerScene({ sections, activeSection, onSelect }) {
 
       <NeuralNodes sections={sections} activeSection={activeSection} onSelect={onSelect} />
 
-      {/* Partículas cercanas: dan la sensación de estar dentro de algo, no
-          mirándolo desde fuera. */}
+      {/* Particulas cercanas: dan la sensacion de estar dentro de algo, no
+          mirandolo desde fuera. */}
       <Sparkles count={70} scale={7} size={2.4} speed={0.28} color="#FF9AAA" opacity={0.7} />
     </>
   )
@@ -150,7 +142,7 @@ export default function Scene({
   onSelect,
   progress = 0,
   brainTransform = DEFAULT_BRAIN_TRANSFORM,
-  rigParts = null,
+  useRig = false,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
   const inside = progress >= SWAP_POINT
@@ -193,12 +185,12 @@ export default function Scene({
             activeSection={activeSection}
             onSelect={onSelect}
             brainTransform={brainTransform}
-            rigParts={rigParts}
+            useRig={useRig}
           />
         )}
       </Suspense>
 
-      {/* Solo dentro: el bloom aquí está motivado por el cerebro que ilumina.
+      {/* Solo dentro: el bloom aqui esta motivado por el cerebro que ilumina.
           Fuera lavaba el crema del fondo sin ganar nada. */}
       {inside && (
         <EffectComposer disableNormalPass multisampling={0}>
