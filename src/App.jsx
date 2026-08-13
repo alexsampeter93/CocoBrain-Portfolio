@@ -48,11 +48,14 @@ export default function App() {
   const [activeSection, setActiveSection] = useState(null)
   const [brainTransform, setBrainTransform] = useState(readBrainTransform)
 
-  // /?rig sustituye el modelo fusionado por la mascota montada con las cinco
-  // piezas sueltas. El montaje es automatico, no hay nada que ajustar.
-  const rigMode =
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).has('rig')
+  // Contador, no booleano: cada incremento dispara un salto nuevo aunque se
+  // pulse la misma sección dos veces seguidas.
+  const [reaction, setReaction] = useState(0)
+
+  const selectSection = useCallback((id) => {
+    setActiveSection(id)
+    setReaction((value) => value + 1)
+  }, [])
 
   const close = useCallback(() => setActiveSection(null), [])
 
@@ -87,10 +90,10 @@ export default function App() {
             xRatio={wide ? 0.24 : 0}
             sections={sections}
             activeSection={activeSection}
-            onSelect={setActiveSection}
+            onSelect={selectSection}
             progress={progress}
             brainTransform={brainTransform}
-            useRig={rigMode}
+            reaction={reaction}
           />
         </Suspense>
       </div>
@@ -105,12 +108,12 @@ export default function App() {
       <Hud
         sections={sections}
         activeSection={activeSection}
-        onSelect={setActiveSection}
+        onSelect={selectSection}
         onClose={close}
         progress={progress}
       />
 
-      {import.meta.env.DEV && !rigMode && (
+      {import.meta.env.DEV && (
         <TuningPanel value={brainTransform} onChange={setBrainTransform} />
       )}
 
