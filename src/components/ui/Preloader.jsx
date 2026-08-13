@@ -34,25 +34,32 @@ export default function Preloader() {
     })
   }, [progress, total])
 
-  // Tres caminos para darse por terminado.
+  /**
+   * Tope duro, en su propio efecto y sin dependencias.
+   *
+   * Antes vivía junto a la comprobación de progreso, así que se cancelaba y
+   * se rearmaba en cada cambio de progreso: si una descarga fallaba y
+   * reintentaba, el temporizador no llegaba a saltar nunca y el preloader se
+   * quedaba tapando la pantalla para siempre. Aislado, no se puede reiniciar.
+   */
   useEffect(() => {
-    if (dismissed) return
+    const timer = setTimeout(() => setDismissed(true), HARD_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
-    const timers = []
+  // Nada registrado tras la espera de cortesía: la carga terminó antes de
+  // montar este componente.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (total === 0) setDismissed(true)
+    }, NOTHING_LOADING_MS)
+    return () => clearTimeout(timer)
+  }, [total])
 
-    if (total > 0 && progress >= 100 && !active) {
-      timers.push(setTimeout(() => setDismissed(true), 300))
-    }
-
-    timers.push(
-      setTimeout(() => {
-        if (total === 0) setDismissed(true)
-      }, NOTHING_LOADING_MS),
-    )
-
-    timers.push(setTimeout(() => setDismissed(true), HARD_TIMEOUT_MS))
-
-    return () => timers.forEach(clearTimeout)
+  useEffect(() => {
+    if (dismissed || total === 0 || progress < 100 || active) return
+    const timer = setTimeout(() => setDismissed(true), 300)
+    return () => clearTimeout(timer)
   }, [progress, total, active, dismissed])
 
   useEffect(() => {

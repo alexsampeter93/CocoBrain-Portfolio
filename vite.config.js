@@ -14,7 +14,6 @@ export default defineConfig({
         '**/Assets/**',
         '**/_docs/**',
         '**/public/draco/**',
-        '**/public/preview/**',
         '**/public/hdri/**',
       ],
     },

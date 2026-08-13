@@ -74,10 +74,15 @@ function OuterScene({ model, xRatio, sections, activeSection, onSelect, brainTra
 
       <OffsetGroup xRatio={xRatio}>
         <Mascot3D url={model}>
-          <GlowingBrain
-            position={[brainTransform.x, brainTransform.y, brainTransform.z]}
-            scale={brainTransform.scale}
-          />
+          {/* Suspense propio: si el cerebro tarda o falla, el personaje se ve
+              igual. Compartir el Suspense del padre hacía que un asset
+              secundario bloqueara la escena entera. */}
+          <Suspense fallback={null}>
+            <GlowingBrain
+              position={[brainTransform.x, brainTransform.y, brainTransform.z]}
+              scale={brainTransform.scale}
+            />
+          </Suspense>
         </Mascot3D>
 
         <NeuralNodes
