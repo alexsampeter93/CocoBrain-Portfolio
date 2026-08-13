@@ -1,15 +1,10 @@
 import { Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import {
-  ContactShadows,
-  Environment,
-  Lightformer,
-  PerformanceMonitor,
-  Stats,
-} from '@react-three/drei'
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
+import { Environment, Lightformer, PerformanceMonitor, Stats } from '@react-three/drei'
+import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping } from 'three'
-import Logo3D from './Logo3D'
+import NeuralNodes from './NeuralNodes'
+import { sections } from '../../data/sections'
 
 const CREAM = '#F5E6D3'
 
@@ -104,25 +99,13 @@ export default function Scene() {
 
       <Suspense fallback={null}>
         <StudioEnvironment />
-        <Logo3D />
-
-        {/* Sombra de contacto: sin esto el modelo flota sin apoyarse en nada
-            y el ojo lo lee como un recorte pegado sobre el fondo. */}
-        <ContactShadows
-          position={[0, -1.45, 0]}
-          scale={9}
-          opacity={0.42}
-          blur={2.6}
-          far={4}
-          resolution={512}
-          color="#4A2F1C"
-        />
+        <NeuralNodes sections={sections} />
       </Suspense>
 
       <EffectComposer disableNormalPass>
-        {/* Solo brilla el cerebro rosa: umbral alto para no lavar el crema */}
-        <Bloom intensity={0.5} luminanceThreshold={0.82} luminanceSmoothing={0.3} mipmapBlur />
-        <Vignette offset={0.3} darkness={0.4} />
+        {/* Umbral alto: solo prenden los nodos y los pulsos. Bajarlo lava el
+            crema del fondo y se pierde el contraste de la marca. */}
+        <Bloom intensity={0.85} luminanceThreshold={0.75} luminanceSmoothing={0.35} mipmapBlur />
       </EffectComposer>
 
       {/* Contador de fps: fuera del build de producción */}

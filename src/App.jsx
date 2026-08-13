@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import Hero from './components/ui/Hero'
+import Scene from './components/three/Scene'
 import { sections } from './data/sections'
 
 /**
@@ -12,6 +14,15 @@ export default function App() {
       <a className="skip-link" href="#contenido">
         Saltar al contenido
       </a>
+
+      {/* Capa 3D: va detrás del arte 2D y no captura el ratón. Aquí el
+          tiempo real hace lo que se le da bien —profundidad, brillo,
+          movimiento— en vez de intentar renderizar un personaje. */}
+      <div className="pointer-events-none fixed inset-0 -z-10 h-[100dvh] w-full">
+        <Suspense fallback={null}>
+          <Scene />
+        </Suspense>
+      </div>
 
       <header className="fixed inset-x-0 top-0 z-20 flex items-baseline justify-between px-6 py-5 sm:px-10">
         <span className="text-[13px] font-medium text-coco-mid">
