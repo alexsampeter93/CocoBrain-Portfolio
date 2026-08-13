@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Hero from './components/ui/Hero'
 import HeroCopy from './components/ui/HeroCopy'
+import Preloader from './components/ui/Preloader'
 import Scene from './components/three/Scene'
 import { sections } from './data/sections'
 
@@ -19,6 +20,8 @@ export default function App() {
       <a className="skip-link" href="#contenido">
         Saltar al contenido
       </a>
+
+      {!USE_2D_HERO && <Preloader />}
 
       {!USE_2D_HERO && (
         <div className="pointer-events-none fixed inset-0 -z-10 h-[100dvh] w-full">
