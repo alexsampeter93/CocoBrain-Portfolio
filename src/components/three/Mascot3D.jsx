@@ -28,6 +28,18 @@ const MAX_YAW = MathUtils.degToRad(65)
 const MAX_PITCH = MathUtils.degToRad(26)
 const LOOK_EASING = 0.11
 
+/**
+ * Distancia en pantalla, en coordenadas normalizadas, a la que la mirada
+ * llega a su tope. 0.55 significa: separando el cursor algo mas de media
+ * pantalla del personaje, ya esta girado del todo.
+ *
+ * Antes esto se resolvia proyectando el cursor al espacio 3D con `unproject`
+ * a profundidad 0.5, pero con near 0.1 y far 100 ese punto cae a 0.4 unidades
+ * de la camara: practicamente encima. El angulo resultante variaba unos dos
+ * grados y por eso el seguimiento no se notaba.
+ */
+const LOOK_SATURATION = 0.55
+
 // Inclinacion del cuerpo acompanando a la mirada. Es lo que hace que el
 // gesto se note: girar solo sobre el eje vertical se lee como un maniqui
 // rotando; inclinarse un poco se lee como interes.
@@ -46,6 +58,7 @@ export default function Mascot3D({
   startle = 0,
   turnAway = 0,
   lookEnabled = true,
+  idleEnabled = false,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const camera = useThree((state) => state.camera)
@@ -133,6 +146,66 @@ export default function Mascot3D({
     return () => timeline.kill()
   }, [startle, reducedMotion])
 
+  /**
+   * Gestos de reposo.
+   *
+   * Ahora que los nodos viven dentro del cerebro, la primera pantalla se
+   * queda sin nada que hacer aparte de seguir el cursor. Cada pocos segundos
+   * el personaje hace algo por su cuenta: un brinco, un suspiro o un
+   * bamboleo. Sin esto se lee como un modelo expuesto, no como alguien
+   * esperando.
+   *
+   * Los intervalos son irregulares a proposito: a intervalo fijo el ojo
+   * detecta el patron enseguida y deja de leerse como espontaneo.
+   */
+  useEffect(() => {
+    if (reducedMotion || !idleEnabled) return
+
+    let timer
+
+    const play = () => {
+      const jump = jumpRef.current
+      const breath = breathRef.current
+      if (!jump || !breath) return
+      // No pisar un salto o un respingo en curso.
+      if (gsap.isTweening(jump.position) || gsap.isTweening(breath.scale)) return
+
+      const timeline = gsap.timeline()
+      const gesture = Math.floor(Math.random() * 3)
+
+      if (gesture === 0) {
+        // Brinco corto.
+        timeline
+          .to(breath.scale, { x: 1.06, y: 0.92, duration: 0.1 })
+          .to(jump.position, { y: 0.12, duration: 0.2, ease: 'power2.out' }, '<')
+          .to(jump.position, { y: 0, duration: 0.24, ease: 'power2.in' })
+          .to(breath.scale, { x: 1, y: 1, duration: 0.45, ease: 'elastic.out(1, 0.5)' }, '<')
+      } else if (gesture === 1) {
+        // Suspiro: se hincha despacio y se desinfla.
+        timeline
+          .to(breath.scale, { x: 0.97, y: 1.05, duration: 0.8, ease: 'sine.inOut' })
+          .to(breath.scale, { x: 1.03, y: 0.97, duration: 0.5, ease: 'sine.inOut' })
+          .to(breath.scale, { x: 1, y: 1, duration: 0.5, ease: 'sine.out' })
+      } else {
+        // Bamboleo lateral.
+        timeline
+          .to(jump.rotation, { z: 0.09, duration: 0.35, ease: 'sine.inOut' })
+          .to(jump.rotation, { z: -0.07, duration: 0.5, ease: 'sine.inOut' })
+          .to(jump.rotation, { z: 0, duration: 0.6, ease: 'elastic.out(1, 0.5)' })
+      }
+    }
+
+    const schedule = () => {
+      timer = setTimeout(() => {
+        play()
+        schedule()
+      }, 5500 + Math.random() * 5500)
+    }
+
+    schedule()
+    return () => clearTimeout(timer)
+  }, [reducedMotion, idleEnabled])
+
   useFrame((state) => {
     const motion = motionRef.current
     const breath = breathRef.current
@@ -147,25 +220,26 @@ export default function Mascot3D({
     }
 
     /**
-     * Mirada: se proyecta el cursor al espacio 3D y se apunta al punto, en
-     * vez de rotar en proporcion a la posicion del raton. Asi mira de verdad
-     * a donde esta el cursor —botones incluidos— y los topes impiden que
-     * llegue a darse la vuelta.
+     * Mirada, medida en pantalla y no en el espacio 3D.
+     *
+     * Se proyecta la posicion del personaje a coordenadas de pantalla y se
+     * mide cuanto se aparta el cursor de el. Trabajar en 2D aqui no es una
+     * simplificacion perezosa: el gesto que se busca —"te esta mirando a
+     * ti"— es una relacion entre dos puntos de la pantalla, no entre dos
+     * puntos del mundo.
      */
     let yaw = 0
     let pitch = 0
 
     if (lookEnabled) {
-      const target = new Vector3(pointer.current.x, -pointer.current.y, 0.5).unproject(camera)
-      const origin = motion.getWorldPosition(new Vector3())
-      const toTarget = target.sub(origin)
+      const screen = motion.getWorldPosition(new Vector3()).project(camera)
 
-      yaw = MathUtils.clamp(Math.atan2(toTarget.x, toTarget.z), -MAX_YAW, MAX_YAW)
-      pitch = MathUtils.clamp(
-        -Math.atan2(toTarget.y, Math.hypot(toTarget.x, toTarget.z)),
-        -MAX_PITCH,
-        MAX_PITCH,
-      )
+      // `pointer` viene con +1 abajo y la proyeccion con +1 arriba.
+      const dx = pointer.current.x - screen.x
+      const dy = pointer.current.y + screen.y
+
+      yaw = MathUtils.clamp((dx / LOOK_SATURATION) * MAX_YAW, -MAX_YAW, MAX_YAW)
+      pitch = MathUtils.clamp((dy / LOOK_SATURATION) * MAX_PITCH, -MAX_PITCH, MAX_PITCH)
     }
 
     // `turnAway` va de 0 a 1 y suma media vuelta: es como se gira de espaldas

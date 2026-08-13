@@ -1,25 +1,61 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import gsap from 'gsap'
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+
+/**
+ * Pantalla de carga.
+ *
+ * Es donde vive el logotipo. En la portada competia con el personaje y se
+ * leia como una pegatina; aqui es lo unico en pantalla, tiene todo el espacio
+ * y es lo primero que se ve de la marca.
+ *
+ * Las letras no aparecen de golpe: se descubren de izquierda a derecha con
+ * una mascara, como si alguien las estuviera escribiendo.
+ */
 
 // Red de seguridad: pase lo que pase con los eventos de carga, el preloader
-// se quita. Es preferible enseñar una escena a medio cargar que dejar al
-// usuario mirando una pantalla en blanco.
+// se quita. Mejor una escena a medio cargar que una pantalla en blanco.
 const HARD_TIMEOUT_MS = 8000
 
-// Si en este tiempo no se ha registrado ninguna descarga, es que la carga ya
-// había terminado antes de montar este componente (useGLTF.preload arranca
-// en tiempo de import, antes del primer render de React).
+// Si en este tiempo no se ha registrado ninguna descarga, la carga ya habia
+// terminado antes de montar este componente.
 const NOTHING_LOADING_MS = 1200
 
 export default function Preloader() {
   const { progress, total, active } = useProgress()
   const [hidden, setHidden] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const reducedMotion = usePrefersReducedMotion()
+
   const rootRef = useRef(null)
+  const logoRef = useRef(null)
   const barRef = useRef(null)
   const numberRef = useRef(null)
   const shownRef = useRef({ value: 0 })
+
+  /** Entrada del logotipo. */
+  useEffect(() => {
+    if (reducedMotion || !logoRef.current) return
+
+    const timeline = gsap.timeline()
+    timeline
+      .fromTo(
+        logoRef.current,
+        { clipPath: 'inset(0 100% 0 0)', y: 14 },
+        { clipPath: 'inset(0 0% 0 0)', y: 0, duration: 1.15, ease: 'power3.inOut' },
+      )
+      // Respiracion muy leve mientras carga: da a entender que sigue vivo.
+      .to(logoRef.current, {
+        scale: 1.014,
+        duration: 1.8,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      })
+
+    return () => timeline.kill()
+  }, [reducedMotion])
 
   useEffect(() => {
     gsap.to(shownRef.current, {
@@ -35,20 +71,15 @@ export default function Preloader() {
   }, [progress, total])
 
   /**
-   * Tope duro, en su propio efecto y sin dependencias.
-   *
-   * Antes vivía junto a la comprobación de progreso, así que se cancelaba y
-   * se rearmaba en cada cambio de progreso: si una descarga fallaba y
-   * reintentaba, el temporizador no llegaba a saltar nunca y el preloader se
-   * quedaba tapando la pantalla para siempre. Aislado, no se puede reiniciar.
+   * Tope duro, en su propio efecto y sin dependencias: si viviera junto a la
+   * comprobacion de progreso se cancelaria en cada cambio y no llegaria a
+   * saltar nunca, que es lo que dejaba la pantalla tapada para siempre.
    */
   useEffect(() => {
     const timer = setTimeout(() => setDismissed(true), HARD_TIMEOUT_MS)
     return () => clearTimeout(timer)
   }, [])
 
-  // Nada registrado tras la espera de cortesía: la carga terminó antes de
-  // montar este componente.
   useEffect(() => {
     const timer = setTimeout(() => {
       if (total === 0) setDismissed(true)
@@ -67,7 +98,7 @@ export default function Preloader() {
 
     const tween = gsap.to(rootRef.current, {
       autoAlpha: 0,
-      duration: 0.6,
+      duration: 0.7,
       ease: 'power2.inOut',
       onComplete: () => setHidden(true),
     })
@@ -80,22 +111,33 @@ export default function Preloader() {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-cream px-6 pb-10 sm:px-10 sm:pb-14"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cream px-6"
       role="status"
       aria-live="polite"
       aria-label="Cargando"
     >
-      <div className="mx-auto flex w-full max-w-6xl items-end justify-between">
-        <span className="text-[13px] text-coco-mid">CocoBrain</span>
+      <img
+        ref={logoRef}
+        src="/img/wordmark.webp"
+        srcSet="/img/wordmark-sm.webp 640w, /img/wordmark.webp 1200w"
+        sizes="(max-width: 640px) 78vw, 460px"
+        alt="CocoBrain"
+        width="1200"
+        height="214"
+        className="h-auto w-[78vw] max-w-[460px]"
+      />
+
+      <div className="mt-10 flex w-[78vw] max-w-[460px] items-end justify-between">
+        <span className="font-mono text-[11px] text-coco-mid">cargando</span>
         <span
           ref={numberRef}
-          className="font-medium tabular-nums leading-none text-coco-dark text-[clamp(3rem,12vw,9rem)] tracking-[-0.04em]"
+          className="font-mono text-[11px] tabular-nums text-coco-dark"
         >
           00
         </span>
       </div>
 
-      <div className="mx-auto mt-6 h-px w-full max-w-6xl bg-coco-light/35">
+      <div className="mt-2 h-px w-[78vw] max-w-[460px] bg-coco-light/35">
         <div
           ref={barRef}
           className="h-px origin-left bg-coco-dark"

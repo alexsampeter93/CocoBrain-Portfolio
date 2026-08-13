@@ -4,7 +4,6 @@ import { ContactShadows, Environment, PerformanceMonitor, Sparkles, Stats } from
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, MathUtils, Vector3 } from 'three'
 import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
-import Wordmark3D from './Wordmark3D'
 import NeuralNodes from './NeuralNodes'
 import CameraRig from './CameraRig'
 import GlowingBrain from './GlowingBrain'
@@ -104,8 +103,6 @@ function OuterScene({ model, xRatio, brainTransform, reaction, startle, turnAway
       <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
-      <Wordmark3D position={[0, 0.25, -3.2]} />
-
       <OffsetGroup xRatio={xRatio}>
         <Mascot3D
           url={model}
@@ -113,6 +110,7 @@ function OuterScene({ model, xRatio, brainTransform, reaction, startle, turnAway
           startle={startle}
           turnAway={turnAway}
           lookEnabled={turnAway < 0.05}
+          idleEnabled={turnAway < 0.05}
         >
           {glow}
         </Mascot3D>
