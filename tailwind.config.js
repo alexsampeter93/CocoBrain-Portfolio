@@ -17,6 +17,8 @@ export default {
       },
       fontFamily: {
         sans: ['Outfit', 'system-ui', 'sans-serif'],
+        // Capa de instrumento: lecturas, índices de nodo y coordenadas.
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
     },
   },

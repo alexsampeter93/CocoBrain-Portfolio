@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import Scene, { SWAP_POINT } from './components/three/Scene'
 import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
+import Hud from './components/ui/Hud'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { sections } from './data/sections'
 
@@ -91,34 +92,14 @@ export default function App() {
         aria-hidden="true"
       />
 
-      <header className="fixed inset-x-0 top-0 z-40 flex items-baseline justify-between px-6 py-6 sm:px-10">
-        <button
-          type="button"
-          onClick={close}
-          className="text-[13px] font-medium text-coco-mid transition-colors hover:text-coco-dark"
-        >
-          CocoBrain
-        </button>
-
-        <nav aria-label="Secciones">
-          <ul className="flex gap-6 text-[13px]">
-            {sections.map((section) => (
-              <li key={section.id}>
-                <button
-                  type="button"
-                  onClick={() => setActiveSection(section.id)}
-                  aria-current={activeSection === section.id ? 'true' : undefined}
-                  className={`underline-offset-4 transition-colors hover:text-coco-dark hover:underline ${
-                    activeSection === section.id ? 'text-coco-dark underline' : 'text-coco-mid'
-                  }`}
-                >
-                  {section.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </header>
+      <Hud
+        sections={sections}
+        activeSection={activeSection}
+        onSelect={setActiveSection}
+        onClose={close}
+        progress={progress}
+        inside={inside}
+      />
 
       {/* Contenedor alto: es lo que da recorrido al scroll. La escena está
           fija detrás, así que aquí solo hay altura y texto. */}
@@ -135,7 +116,14 @@ export default function App() {
                 <span className="block text-coco-light">desarrollo web</span>
               </h1>
 
-              <p className="mt-7 text-[17px] leading-[1.5]">
+              <div className="mt-6 flex items-center gap-3">
+                <span className="h-px w-8 bg-coco-light" aria-hidden="true" />
+                <span className="font-mono text-[9px] tracking-[0.14em] text-coco-mid/70">
+                  SUJETO — ALEX · CAPA EXTERIOR
+                </span>
+              </div>
+
+              <p className="mt-6 text-[17px] leading-[1.5]">
                 Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue
                 una vez nuestra mayor{' '}
                 <em className="not-italic text-coco-light">debilidad</em>.
@@ -145,7 +133,7 @@ export default function App() {
                 Construyo webs y aplicaciones, y las firmo como CocoBrain.
               </p>
 
-              <p className="mt-10 text-[13px] text-coco-mid">
+              <p className="mt-10 font-mono text-[11px] text-coco-mid">
                 Baja para entrar <span aria-hidden="true">↓</span>
               </p>
             </div>
@@ -168,9 +156,13 @@ export default function App() {
       {active && (
         <div className="pointer-events-none fixed inset-0 z-20 flex items-end px-6 pb-16 sm:px-10">
           <div className="pointer-events-auto mx-auto w-full max-w-6xl">
-            <div className="max-w-md">
-              <p className="text-[13px] text-coco-mid">Sección</p>
-              <h2 className="mt-1 text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.03em]">
+            {/* Panel anclado por una regla vertical, no una tarjeta flotante:
+                se lee como una anotación del instrumento. */}
+            <div className="max-w-md border-l border-coco-light pl-5">
+              <span className="font-mono text-[9px] tracking-[0.14em] text-coco-mid/70">
+                {active.nodeName.replace('node_', 'NODO N')} — ENFOCADO
+              </span>
+              <h2 className="mt-2 text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
                 {active.label}
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-coco-mid">
@@ -179,9 +171,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={close}
-                className="mt-6 border-b-2 border-coco-dark pb-1 text-[15px] font-medium transition-colors hover:border-brain-glow hover:text-brain-glow"
+                className="mt-6 font-mono text-[11px] text-coco-dark transition-colors hover:text-brain-glow"
               >
-                Volver <span className="text-coco-mid">(Esc)</span>
+                ← Volver <span className="text-coco-mid/70">[ESC]</span>
               </button>
             </div>
           </div>

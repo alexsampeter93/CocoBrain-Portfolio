@@ -81,7 +81,12 @@ function Node({ section, position, phase, active, onSelect }) {
 
       {highlighted && (
         <Html center distanceFactor={7} position={[0, NODE_RADIUS * 3.4, 0]}>
-          <span className="whitespace-nowrap rounded-full bg-coco-dark px-3 py-1 text-[11px] font-medium text-cream">
+          {/* Etiqueta como lectura de instrumento, no como globo de tooltip:
+              índice, regla vertical y nombre en monoespaciada. */}
+          <span className="flex items-center gap-2 whitespace-nowrap border-l-2 border-brain-glow bg-cream/90 py-1 pl-2 pr-3 font-mono text-[11px] leading-none text-coco-dark">
+            <span className="tabular-nums text-[9px] text-coco-mid/70">
+              {section.nodeName.replace('node_', 'N')}
+            </span>
             {section.label}
           </span>
         </Html>
