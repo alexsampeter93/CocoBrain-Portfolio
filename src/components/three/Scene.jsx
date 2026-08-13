@@ -1,7 +1,7 @@
 import { Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Environment, Lightformer, PerformanceMonitor, Stats } from '@react-three/drei'
-import Title3D from './Title3D'
+import Logo3D from './Logo3D'
 
 const CREAM = '#F5E6D3'
 
@@ -78,7 +78,7 @@ export default function Scene() {
 
       <Suspense fallback={null}>
         <StudioEnvironment />
-        <Title3D />
+        <Logo3D />
       </Suspense>
 
       {/* Contador de fps: fuera del build de producción */}
