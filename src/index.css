@@ -17,9 +17,16 @@
   }
 
   body {
-    @apply bg-cream text-coco-dark font-sans antialiased;
+    @apply text-coco-dark font-sans antialiased;
     margin: 0;
     overscroll-behavior-y: none;
+    /* Degradado radial en vez de crema plano: da profundidad al fondo y es
+       lo que separa el modelo 3D de la pared. Va en CSS y no en la escena
+       porque así no cuesta ni un frame. */
+    background:
+      radial-gradient(120% 90% at 50% 8%, #FFF6EA 0%, #F5E6D3 45%, #E8D2B8 100%),
+      #f5e6d3;
+    background-attachment: fixed;
   }
 
   /* Foco visible: los nodos y la nav se recorren con teclado */

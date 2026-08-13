@@ -1,6 +1,14 @@
 import { Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Environment, Lightformer, PerformanceMonitor, Stats } from '@react-three/drei'
+import {
+  ContactShadows,
+  Environment,
+  Lightformer,
+  PerformanceMonitor,
+  Stats,
+} from '@react-three/drei'
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
+import { ACESFilmicToneMapping } from 'three'
 import Logo3D from './Logo3D'
 
 const CREAM = '#F5E6D3'
@@ -70,11 +78,17 @@ export default function Scene() {
       dpr={dpr}
       // Sin OrbitControls: la cámara la dirige el CameraRig en la fase 8.
       camera={{ position: [0, 0, 5.5], fov: 40, near: 0.1, far: 100 }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
-      // La escena es decorativa: el contenido real vive en el DOM.
+      gl={{
+        antialias: true,
+        powerPreference: 'high-performance',
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 1.15,
+      }}
+      // Canvas transparente a propósito: el fondo lo pone un degradado radial
+      // en CSS. Un color plano detrás es justo lo que hace que el modelo
+      // parezca recortado y pegado encima.
       aria-hidden="true"
     >
-      <color attach="background" args={[CREAM]} />
 
       {/* Si el framerate cae, baja el dpr antes que la calidad visual */}
       <PerformanceMonitor
@@ -91,7 +105,25 @@ export default function Scene() {
       <Suspense fallback={null}>
         <StudioEnvironment />
         <Logo3D />
+
+        {/* Sombra de contacto: sin esto el modelo flota sin apoyarse en nada
+            y el ojo lo lee como un recorte pegado sobre el fondo. */}
+        <ContactShadows
+          position={[0, -1.45, 0]}
+          scale={9}
+          opacity={0.42}
+          blur={2.6}
+          far={4}
+          resolution={512}
+          color="#4A2F1C"
+        />
       </Suspense>
+
+      <EffectComposer disableNormalPass>
+        {/* Solo brilla el cerebro rosa: umbral alto para no lavar el crema */}
+        <Bloom intensity={0.5} luminanceThreshold={0.82} luminanceSmoothing={0.3} mipmapBlur />
+        <Vignette offset={0.3} darkness={0.4} />
+      </EffectComposer>
 
       {/* Contador de fps: fuera del build de producción */}
       {import.meta.env.DEV && <Stats />}
