@@ -6,6 +6,8 @@ import { ACESFilmicToneMapping, MathUtils } from 'three'
 import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
 import NeuralNodes from './NeuralNodes'
 import CameraRig from './CameraRig'
+import GlowingBrain from './GlowingBrain'
+import { DEFAULT_BRAIN_TRANSFORM } from '../ui/TuningPanel'
 
 const IS_COARSE_POINTER =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -64,14 +66,19 @@ function ScrollDolly({ progress, inside, enabled }) {
 }
 
 /** Primera pantalla: Olaz grande con el cerebro en la mano. */
-function OuterScene({ model, xRatio, sections, activeSection, onSelect }) {
+function OuterScene({ model, xRatio, sections, activeSection, onSelect, brainTransform }) {
   return (
     <>
       <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
       <OffsetGroup xRatio={xRatio}>
-        <Mascot3D url={model} />
+        <Mascot3D url={model}>
+          <GlowingBrain
+            position={[brainTransform.x, brainTransform.y, brainTransform.z]}
+            scale={brainTransform.scale}
+          />
+        </Mascot3D>
 
         <NeuralNodes
           sections={sections}
@@ -122,6 +129,7 @@ export default function Scene({
   activeSection,
   onSelect,
   progress = 0,
+  brainTransform = DEFAULT_BRAIN_TRANSFORM,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
   const inside = progress >= SWAP_POINT
@@ -163,6 +171,7 @@ export default function Scene({
             sections={sections}
             activeSection={activeSection}
             onSelect={onSelect}
+            brainTransform={brainTransform}
           />
         )}
       </Suspense>

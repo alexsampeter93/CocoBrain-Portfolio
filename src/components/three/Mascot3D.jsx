@@ -24,17 +24,21 @@ const FILL_HEIGHT = 0.72
 const FLOAT_AMPLITUDE = 0.05
 const FLOAT_SPEED = 0.6
 
-// Cuánto se gira hacia el cursor, en radianes. El valor anterior (0.35) era
-// tan corto que no se percibía que estuviera mirando a nada.
-const LOOK_YAW = 0.62
-const LOOK_PITCH = 0.22
+// Cuánto se gira hacia el cursor, en radianes. Un cuarto de vuelta a cada
+// lado: por debajo de esto el gesto no se lee como "te está mirando".
+const LOOK_YAW = 0.95
+const LOOK_PITCH = 0.32
 
-// Deriva de reposo: sigue girando despacio aunque el cursor no se mueva, para
-// que nunca se quede clavado como una figura de museo.
-const DRIFT_AMOUNT = 0.16
-const DRIFT_SPEED = 0.22
+// Con qué rapidez alcanza la posición del cursor. Alto = responde; el valor
+// anterior (0.045) hacía que llegara tan tarde que parecía no reaccionar.
+const LOOK_EASING = 0.1
 
-export default function Mascot3D({ url }) {
+// Deriva de reposo: mucho más lenta y corta que el seguimiento, para que se
+// distinga sin dudas cuándo se mueve solo y cuándo te está siguiendo.
+const DRIFT_AMOUNT = 0.07
+const DRIFT_SPEED = 0.09
+
+export default function Mascot3D({ url, children }) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const viewport = useThree((state) => state.viewport)
   const reducedMotion = usePrefersReducedMotion()
@@ -97,8 +101,12 @@ export default function Mascot3D({ url }) {
 
     // Lerp siempre: sin suavizado persigue el ratón a tirones y parece un
     // objeto arrastrado, no un personaje mirando.
-    group.rotation.y = MathUtils.lerp(group.rotation.y, x * LOOK_YAW + driftYaw, 0.045)
-    group.rotation.x = MathUtils.lerp(group.rotation.x, -y * LOOK_PITCH + driftPitch, 0.045)
+    group.rotation.y = MathUtils.lerp(group.rotation.y, x * LOOK_YAW + driftYaw, LOOK_EASING)
+    group.rotation.x = MathUtils.lerp(
+      group.rotation.x,
+      -y * LOOK_PITCH + driftPitch,
+      LOOK_EASING,
+    )
   })
 
   return (
@@ -106,6 +114,10 @@ export default function Mascot3D({ url }) {
       <group ref={motionRef}>
         <group ref={fitRef}>
           <primitive object={tuned} />
+          {/* Los hijos van dentro del grupo escalado: así sus coordenadas se
+              expresan en el espacio del modelo y acompañan al personaje
+              cuando gira, en vez de quedarse flotando aparte. */}
+          {children}
         </group>
       </group>
     </group>

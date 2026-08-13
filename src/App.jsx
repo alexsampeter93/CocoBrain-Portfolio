@@ -3,6 +3,7 @@ import Scene, { SWAP_POINT } from './components/three/Scene'
 import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
 import Hud from './components/ui/Hud'
+import TuningPanel, { readBrainTransform } from './components/ui/TuningPanel'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { sections } from './data/sections'
 
@@ -45,6 +46,7 @@ export default function App() {
   const wide = useWideLayout()
   const progress = useScrollProgress()
   const [activeSection, setActiveSection] = useState(null)
+  const [brainTransform, setBrainTransform] = useState(readBrainTransform)
 
   const close = useCallback(() => setActiveSection(null), [])
 
@@ -81,6 +83,7 @@ export default function App() {
             activeSection={activeSection}
             onSelect={setActiveSection}
             progress={progress}
+            brainTransform={brainTransform}
           />
         </Suspense>
       </div>
@@ -98,17 +101,23 @@ export default function App() {
         onSelect={setActiveSection}
         onClose={close}
         progress={progress}
-        inside={inside}
       />
+
+      {import.meta.env.DEV && (
+        <TuningPanel value={brainTransform} onChange={setBrainTransform} />
+      )}
 
       {/* Contenedor alto: es lo que da recorrido al scroll. La escena está
           fija detrás, así que aquí solo hay altura y texto. */}
-      <div className="relative h-[420vh]">
+      {/* pointer-events-none es imprescindible aquí: este contenedor cubre el
+          canvas entero, y sin ello el ratón nunca llega a la escena — ni el
+          seguimiento del cursor ni los clics en los nodos funcionan. */}
+      <div className="pointer-events-none relative h-[420vh]">
         <div className="sticky top-0 flex h-[100dvh] items-center px-6 sm:px-10">
           <div className="mx-auto w-full max-w-6xl">
             {/* Portada */}
             <div
-              className="max-w-[26rem] transition-opacity duration-200 lg:max-w-[24rem]"
+              className="pointer-events-auto max-w-[26rem] transition-opacity duration-200 lg:max-w-[24rem]"
               style={{ opacity: heroOpacity, pointerEvents: heroOpacity < 0.2 ? 'none' : 'auto' }}
             >
               <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
