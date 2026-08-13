@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { Box3, MathUtils, Vector3 } from 'three'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import { usePointer } from '../../hooks/usePointer'
 
 /**
  * Ojo con los nombres: los que puso Meshy no corresponden con lo que
@@ -24,24 +25,22 @@ const FILL_HEIGHT = 0.72
 const FLOAT_AMPLITUDE = 0.05
 const FLOAT_SPEED = 0.6
 
-// Cuánto se gira hacia el cursor, en radianes. Un cuarto de vuelta a cada
-// lado: por debajo de esto el gesto no se lee como "te está mirando".
-const LOOK_YAW = 0.95
-const LOOK_PITCH = 0.32
+// Vuelta completa: recorrer la pantalla de lado a lado con el cursor da la
+// vuelta entera al personaje. Media vuelta a cada lado desde el centro.
+const LOOK_YAW = Math.PI
+const LOOK_PITCH = 0.34
+const LOOK_EASING = 0.11
 
-// Con qué rapidez alcanza la posición del cursor. Alto = responde; el valor
-// anterior (0.045) hacía que llegara tan tarde que parecía no reaccionar.
-const LOOK_EASING = 0.1
-
-// Deriva de reposo: mucho más lenta y corta que el seguimiento, para que se
-// distinga sin dudas cuándo se mueve solo y cuándo te está siguiendo.
-const DRIFT_AMOUNT = 0.07
-const DRIFT_SPEED = 0.09
+// Deriva de reposo: minúscula al lado del seguimiento, para que no haya duda
+// de cuándo se mueve solo y cuándo te está siguiendo a ti.
+const DRIFT_AMOUNT = 0.05
+const DRIFT_SPEED = 0.08
 
 export default function Mascot3D({ url, children }) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const viewport = useThree((state) => state.viewport)
   const reducedMotion = usePrefersReducedMotion()
+  const pointer = usePointer()
   const fitRef = useRef(null)
   const motionRef = useRef(null)
 
@@ -95,7 +94,9 @@ export default function Mascot3D({ url, children }) {
     // Mirada = deriva lenta + cursor. Sumar las dos es lo que hace que
     // parezca que piensa por su cuenta y además te ha visto; solo con el
     // cursor se queda inmóvil en cuanto sueltas el ratón.
-    const { x, y } = state.pointer
+    // Cursor leído de la ventana, no del canvas: cualquier capa por encima
+    // dejaba al personaje sin datos y por eso parecía no reaccionar.
+    const { x, y } = pointer.current
     const driftYaw = Math.sin(t * DRIFT_SPEED) * DRIFT_AMOUNT
     const driftPitch = Math.cos(t * DRIFT_SPEED * 0.7) * DRIFT_AMOUNT * 0.35
 
@@ -104,7 +105,7 @@ export default function Mascot3D({ url, children }) {
     group.rotation.y = MathUtils.lerp(group.rotation.y, x * LOOK_YAW + driftYaw, LOOK_EASING)
     group.rotation.x = MathUtils.lerp(
       group.rotation.x,
-      -y * LOOK_PITCH + driftPitch,
+      y * LOOK_PITCH + driftPitch,
       LOOK_EASING,
     )
   })

@@ -1,71 +1,84 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Sparkles, useGLTF } from '@react-three/drei'
+import { Sparkles } from '@react-three/drei'
+import { AdditiveBlending, CanvasTexture } from 'three'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 /**
- * El cerebro luminoso que Olaz sostiene en la mano.
+ * Resplandor sobre el cerebro que Olaz ya sostiene en la mano.
  *
- * Va como objeto aparte y superpuesto porque el modelo de Olaz es una única
- * malla con un solo material: no hay forma de hacer que brille solo esa parte.
- * Con un objeto propio, además, el brillo es luz de verdad —emisivo, bloom,
- * destellos y una luz puntual que tiñe la mano— y no una textura pintada.
+ * No añade ninguna malla. El primer intento superponía el modelo del cerebro
+ * encima, pero el que viene pintado en la textura de Olaz sigue ahí debajo y
+ * no hay tamaño que lo tape sin quedar deforme.
+ *
+ * Así que se ilumina el que ya existe: un halo aditivo, una luz puntual corta
+ * que tiñe la mano, y destellos. El resultado es que brilla el cerebro de
+ * verdad, no una copia colocada encima.
  */
-const MODEL_URL = '/preview/brain-orb.glb'
-const DRACO_PATH = '/draco/'
 
-export default function GlowingBrain({ position, scale = 1, visible = true }) {
-  const { scene } = useGLTF(MODEL_URL, DRACO_PATH)
-  const groupRef = useRef(null)
+/** Halo radial generado en un canvas: no hace falta traer una textura. */
+function useGlowTexture() {
+  return useMemo(() => {
+    const size = 128
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+
+    const context = canvas.getContext('2d')
+    const gradient = context.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2,
+    )
+    // Centro casi blanco y caída rápida: un degradado lineal se ve como un
+    // disco de niebla, no como una luz.
+    gradient.addColorStop(0, 'rgba(255,235,238,0.95)')
+    gradient.addColorStop(0.25, 'rgba(255,107,133,0.55)')
+    gradient.addColorStop(1, 'rgba(255,107,133,0)')
+
+    context.fillStyle = gradient
+    context.fillRect(0, 0, size, size)
+
+    return new CanvasTexture(canvas)
+  }, [])
+}
+
+export default function GlowingBrain({ position, scale = 1 }) {
+  const texture = useGlowTexture()
+  const haloRef = useRef(null)
+  const lightRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
-  const tuned = useMemo(() => {
-    const clone = scene.clone(true)
-    clone.traverse((object) => {
-      if (!object.isMesh || !object.material) return
-      const material = object.material.clone()
-      material.metalness = 0
-      material.roughness = 0.45
-      material.emissive?.set('#FF6B85')
-      material.emissiveIntensity = 1.6
-      material.toneMapped = false
-      object.material = material
-    })
-    return clone
-  }, [scene])
-
   useFrame((state) => {
-    const group = groupRef.current
-    if (!group || reducedMotion) return
-
+    if (reducedMotion) return
     const t = state.clock.elapsedTime
-    group.rotation.y = t * 0.35
-    group.position.y = Math.sin(t * 1.1) * 0.02
-
-    // Latido en la intensidad, no en la escala: un cerebro que crece y
-    // encoge parece un globo; uno que palpita de brillo parece encendido.
-    group.traverse((object) => {
-      if (object.isMesh && object.material) {
-        object.material.emissiveIntensity = 1.35 + Math.sin(t * 2.4) * 0.35
-      }
-    })
+    // Latido en la intensidad y en el tamaño del halo, nunca en la geometría:
+    // lo que palpita es la luz, no el objeto.
+    const pulse = 1 + Math.sin(t * 2.4) * 0.14
+    if (haloRef.current) haloRef.current.scale.setScalar(pulse)
+    if (lightRef.current) lightRef.current.intensity = 1.6 + Math.sin(t * 2.4) * 0.5
   })
-
-  if (!visible) return null
 
   return (
     <group position={position} scale={scale}>
-      <group ref={groupRef}>
-        <primitive object={tuned} />
-      </group>
+      {/* El sprite siempre mira a cámara, así el halo no se ve de canto. */}
+      <sprite ref={haloRef} scale={[4.2, 4.2, 1]}>
+        <spriteMaterial
+          map={texture}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          depthTest={false}
+          transparent
+          toneMapped={false}
+        />
+      </sprite>
 
-      {/* Luz puntual corta: tiñe la mano y el pecho de rosa, que es lo que
-          vende que el brillo procede del objeto. */}
-      <pointLight color="#FF6B85" intensity={2.2} distance={1.6} decay={2} />
+      <pointLight ref={lightRef} color="#FF6B85" intensity={1.6} distance={4} decay={2} />
 
-      <Sparkles count={22} scale={0.75} size={1.6} speed={0.5} color="#FFC2CC" opacity={0.9} />
+      <Sparkles count={18} scale={2.6} size={2.2} speed={0.45} color="#FFC2CC" opacity={0.85} />
     </group>
   )
 }
-
-useGLTF.preload(MODEL_URL, DRACO_PATH)

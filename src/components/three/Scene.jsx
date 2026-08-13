@@ -4,6 +4,7 @@ import { ContactShadows, Environment, PerformanceMonitor, Sparkles, Stats } from
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, MathUtils } from 'three'
 import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
+import MascotRig from './MascotRig'
 import NeuralNodes from './NeuralNodes'
 import CameraRig from './CameraRig'
 import GlowingBrain from './GlowingBrain'
@@ -66,24 +67,38 @@ function ScrollDolly({ progress, inside, enabled }) {
 }
 
 /** Primera pantalla: Olaz grande con el cerebro en la mano. */
-function OuterScene({ model, xRatio, sections, activeSection, onSelect, brainTransform }) {
+function OuterScene({
+  model,
+  xRatio,
+  sections,
+  activeSection,
+  onSelect,
+  brainTransform,
+  rigParts,
+}) {
+  {/* Suspense propio: si el cerebro tarda o falla, el personaje se ve igual.
+      Compartir el Suspense del padre hacía que un asset secundario bloqueara
+      la escena entera. */}
+  const glow = (
+    <Suspense fallback={null}>
+      <GlowingBrain
+        position={[brainTransform.x, brainTransform.y, brainTransform.z]}
+        scale={brainTransform.scale}
+      />
+    </Suspense>
+  )
+
   return (
     <>
       <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
       <OffsetGroup xRatio={xRatio}>
-        <Mascot3D url={model}>
-          {/* Suspense propio: si el cerebro tarda o falla, el personaje se ve
-              igual. Compartir el Suspense del padre hacía que un asset
-              secundario bloqueara la escena entera. */}
-          <Suspense fallback={null}>
-            <GlowingBrain
-              position={[brainTransform.x, brainTransform.y, brainTransform.z]}
-              scale={brainTransform.scale}
-            />
-          </Suspense>
-        </Mascot3D>
+        {rigParts ? (
+          <MascotRig parts={rigParts} />
+        ) : (
+          <Mascot3D url={model}>{glow}</Mascot3D>
+        )}
 
         <NeuralNodes
           sections={sections}
@@ -135,6 +150,7 @@ export default function Scene({
   onSelect,
   progress = 0,
   brainTransform = DEFAULT_BRAIN_TRANSFORM,
+  rigParts = null,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
   const inside = progress >= SWAP_POINT
@@ -177,6 +193,7 @@ export default function Scene({
             activeSection={activeSection}
             onSelect={onSelect}
             brainTransform={brainTransform}
+            rigParts={rigParts}
           />
         )}
       </Suspense>

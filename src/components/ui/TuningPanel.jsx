@@ -16,7 +16,8 @@ import { useEffect, useState } from 'react'
  */
 const STORAGE_KEY = 'cb_tuning_brain'
 
-export const DEFAULT_BRAIN_TRANSFORM = { x: -0.62, y: -0.12, z: 0.42, scale: 0.3 }
+// Valores fijados por Alex sobre la mano de Olaz.
+export const DEFAULT_BRAIN_TRANSFORM = { x: -0.53, y: 0.23, z: 0.66, scale: 0.17 }
 
 export function readBrainTransform() {
   if (typeof window === 'undefined') return DEFAULT_BRAIN_TRANSFORM

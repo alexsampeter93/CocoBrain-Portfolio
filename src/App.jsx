@@ -4,6 +4,8 @@ import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
 import Hud from './components/ui/Hud'
 import TuningPanel, { readBrainTransform } from './components/ui/TuningPanel'
+import RigPanel from './components/ui/RigPanel'
+import { readRigLayout } from './data/rigLayout'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { sections } from './data/sections'
 
@@ -48,6 +50,14 @@ export default function App() {
   const [activeSection, setActiveSection] = useState(null)
   const [brainTransform, setBrainTransform] = useState(readBrainTransform)
 
+  // Modo montaje: /?rig sustituye el modelo fusionado por las cinco piezas
+  // sueltas y saca el panel de deslizadores. Solo en desarrollo.
+  const rigMode =
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('rig')
+  const [rigParts, setRigParts] = useState(readRigLayout)
+
   const close = useCallback(() => setActiveSection(null), [])
 
   useEffect(() => {
@@ -84,6 +94,7 @@ export default function App() {
             onSelect={setActiveSection}
             progress={progress}
             brainTransform={brainTransform}
+            rigParts={rigMode ? rigParts : null}
           />
         </Suspense>
       </div>
@@ -103,9 +114,12 @@ export default function App() {
         progress={progress}
       />
 
-      {import.meta.env.DEV && (
-        <TuningPanel value={brainTransform} onChange={setBrainTransform} />
-      )}
+      {import.meta.env.DEV &&
+        (rigMode ? (
+          <RigPanel parts={rigParts} onChange={setRigParts} />
+        ) : (
+          <TuningPanel value={brainTransform} onChange={setBrainTransform} />
+        ))}
 
       {/* Contenedor alto: es lo que da recorrido al scroll. La escena está
           fija detrás, así que aquí solo hay altura y texto. */}
