@@ -2,6 +2,7 @@ import { Suspense, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer, PerformanceMonitor, Stats } from '@react-three/drei'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import Title3D from './Title3D'
 
 const CREAM = '#F5E6D3'
 
@@ -108,6 +109,7 @@ export default function Scene() {
 
       <Suspense fallback={null}>
         <StudioEnvironment />
+        <Title3D position={[0, 1.6, 0]} scale={0.6} />
         <TestCube />
       </Suspense>
 
