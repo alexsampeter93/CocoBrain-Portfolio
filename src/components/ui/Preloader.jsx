@@ -2,30 +2,29 @@ import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import gsap from 'gsap'
 
-/**
- * Pantalla de carga. No es decoración: la escena carga un HDRI y un modelo de
- * 2,5 MB, y sin esto el usuario ve el fondo vacío durante un par de segundos
- * y da por hecho que la web está rota.
- *
- * El contador sube suavizado en vez de saltar con los eventos de carga, que
- * llegan a trompicones y hacen que el número pegue brincos.
- */
+// Red de seguridad: pase lo que pase con los eventos de carga, el preloader
+// se quita. Es preferible enseñar una escena a medio cargar que dejar al
+// usuario mirando una pantalla en blanco.
+const HARD_TIMEOUT_MS = 8000
+
+// Si en este tiempo no se ha registrado ninguna descarga, es que la carga ya
+// había terminado antes de montar este componente (useGLTF.preload arranca
+// en tiempo de import, antes del primer render de React).
+const NOTHING_LOADING_MS = 1200
+
 export default function Preloader() {
-  const { progress, total } = useProgress()
+  const { progress, total, active } = useProgress()
   const [hidden, setHidden] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const rootRef = useRef(null)
   const barRef = useRef(null)
   const numberRef = useRef(null)
   const shownRef = useRef({ value: 0 })
 
   useEffect(() => {
-    // `total === 0` significa que aún no se ha registrado ninguna descarga:
-    // tratarlo como 100% cerraría el preloader antes de empezar.
-    const target = total === 0 ? 0 : progress
-
     gsap.to(shownRef.current, {
-      value: target,
-      duration: 0.6,
+      value: total === 0 ? 0 : progress,
+      duration: 0.5,
       ease: 'power2.out',
       onUpdate: () => {
         const value = Math.round(shownRef.current.value)
@@ -35,17 +34,39 @@ export default function Preloader() {
     })
   }, [progress, total])
 
+  // Tres caminos para darse por terminado.
   useEffect(() => {
-    if (total === 0 || progress < 100) return
+    if (dismissed) return
 
-    const timeline = gsap.timeline({
-      delay: 0.35,
+    const timers = []
+
+    if (total > 0 && progress >= 100 && !active) {
+      timers.push(setTimeout(() => setDismissed(true), 300))
+    }
+
+    timers.push(
+      setTimeout(() => {
+        if (total === 0) setDismissed(true)
+      }, NOTHING_LOADING_MS),
+    )
+
+    timers.push(setTimeout(() => setDismissed(true), HARD_TIMEOUT_MS))
+
+    return () => timers.forEach(clearTimeout)
+  }, [progress, total, active, dismissed])
+
+  useEffect(() => {
+    if (!dismissed || !rootRef.current) return
+
+    const tween = gsap.to(rootRef.current, {
+      autoAlpha: 0,
+      duration: 0.6,
+      ease: 'power2.inOut',
       onComplete: () => setHidden(true),
     })
-    timeline.to(rootRef.current, { autoAlpha: 0, duration: 0.7, ease: 'power2.inOut' })
 
-    return () => timeline.kill()
-  }, [progress, total])
+    return () => tween.kill()
+  }, [dismissed])
 
   if (hidden) return null
 

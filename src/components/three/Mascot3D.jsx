@@ -90,4 +90,5 @@ export default function Mascot3D({ url, xRatio = 0 }) {
   )
 }
 
-Object.values(MASCOT_MODELS).forEach((url) => useGLTF.preload(url, DRACO_PATH))
+// No se precargan los dos modelos: son 10,8 MB juntos y solo se ve uno.
+// El que toque lo pide `useGLTF` al montar.
