@@ -1,13 +1,18 @@
 import { Suspense } from 'react'
 import Hero from './components/ui/Hero'
+import HeroCopy from './components/ui/HeroCopy'
 import Scene from './components/three/Scene'
 import { sections } from './data/sections'
 
 /**
- * La portada es 2D: el arte de la marca a resolución nativa.
- * La escena 3D (Scene.jsx, Logo3D.jsx, Title3D.jsx) sigue en el repo y se
- * volverá a montar cuando haya render de Blender que reproducir.
+ * TEMPORAL — interruptor para comparar las dos portadas sin tocar código:
+ * localhost:5173      → portada 3D
+ * localhost:5173/?2d  → portada 2D con el arte de marca
+ * Desaparece en cuanto decidamos cuál se queda.
  */
+const USE_2D_HERO =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('2d')
+
 export default function App() {
   return (
     <>
@@ -15,14 +20,13 @@ export default function App() {
         Saltar al contenido
       </a>
 
-      {/* Capa 3D: va detrás del arte 2D y no captura el ratón. Aquí el
-          tiempo real hace lo que se le da bien —profundidad, brillo,
-          movimiento— en vez de intentar renderizar un personaje. */}
-      <div className="pointer-events-none fixed inset-0 -z-10 h-[100dvh] w-full">
-        <Suspense fallback={null}>
-          <Scene />
-        </Suspense>
-      </div>
+      {!USE_2D_HERO && (
+        <div className="pointer-events-none fixed inset-0 -z-10 h-[100dvh] w-full">
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
+        </div>
+      )}
 
       <header className="fixed inset-x-0 top-0 z-20 flex items-baseline justify-between px-6 py-5 sm:px-10">
         <span className="text-[13px] font-medium text-coco-mid">
@@ -44,7 +48,7 @@ export default function App() {
         </nav>
       </header>
 
-      <Hero />
+      {USE_2D_HERO ? <Hero /> : <HeroCopy />}
 
       <main id="contenido" className="relative px-6 py-24 sm:px-10">
         <div className="mx-auto max-w-6xl">

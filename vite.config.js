@@ -10,7 +10,13 @@ export default defineConfig({
       // nunca carga. Vigilarlos revienta el watcher con EBUSY en Windows.
       // public/draco y public/preview son binarios estáticos: vigilarlos no
       // aporta HMR y da EBUSY en Windows si se reescriben en caliente.
-      ignored: ['**/Assets/**', '**/_docs/**', '**/public/draco/**', '**/public/preview/**'],
+      ignored: [
+        '**/Assets/**',
+        '**/_docs/**',
+        '**/public/draco/**',
+        '**/public/preview/**',
+        '**/public/hdri/**',
+      ],
     },
   },
   build: {
