@@ -1,7 +1,8 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
-import Scene from './components/three/Scene'
+import Scene, { SWAP_POINT } from './components/three/Scene'
 import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
+import { useScrollProgress } from './hooks/useScrollProgress'
 import { sections } from './data/sections'
 
 /**
@@ -18,7 +19,6 @@ function useSelectedModel() {
   return url
 }
 
-/** En pantallas anchas el personaje se va a la derecha; en estrechas se centra. */
 function useWideLayout() {
   const [wide, setWide] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
@@ -34,9 +34,15 @@ function useWideLayout() {
   return wide
 }
 
+// Ancho de la zona en la que el fundido tapa el cambio de escena. Más
+// estrecho y se ve el salto; más ancho y la pantalla se queda en blanco
+// demasiado rato.
+const FADE_WIDTH = 0.075
+
 export default function App() {
   const model = useSelectedModel()
   const wide = useWideLayout()
+  const progress = useScrollProgress()
   const [activeSection, setActiveSection] = useState(null)
 
   const close = useCallback(() => setActiveSection(null), [])
@@ -50,6 +56,12 @@ export default function App() {
   }, [close])
 
   const active = sections.find((section) => section.id === activeSection)
+  const inside = progress >= SWAP_POINT
+
+  // Opaco justo en el punto de cambio, transparente fuera de la franja.
+  const fade = Math.max(0, 1 - Math.abs(progress - SWAP_POINT) / FADE_WIDTH)
+  // La portada se va desvaneciendo mientras la cámara se acerca.
+  const heroOpacity = Math.max(0, 1 - progress / (SWAP_POINT * 0.7))
 
   return (
     <>
@@ -59,8 +71,6 @@ export default function App() {
 
       <Preloader />
 
-      {/* El canvas sí recibe el ratón: los nodos se pulsan. La cabecera va
-          por encima con z-index, así que la navegación HTML sigue mandando. */}
       <div className="fixed inset-0 -z-10 h-[100dvh] w-full">
         <Suspense fallback={null}>
           <Scene
@@ -69,11 +79,19 @@ export default function App() {
             sections={sections}
             activeSection={activeSection}
             onSelect={setActiveSection}
+            progress={progress}
           />
         </Suspense>
       </div>
 
-      <header className="fixed inset-x-0 top-0 z-20 flex items-baseline justify-between px-6 py-6 sm:px-10">
+      {/* Fundido que tapa el cambio de escena. */}
+      <div
+        className="pointer-events-none fixed inset-0 z-30 bg-cream"
+        style={{ opacity: fade }}
+        aria-hidden="true"
+      />
+
+      <header className="fixed inset-x-0 top-0 z-40 flex items-baseline justify-between px-6 py-6 sm:px-10">
         <button
           type="button"
           onClick={close}
@@ -91,9 +109,7 @@ export default function App() {
                   onClick={() => setActiveSection(section.id)}
                   aria-current={activeSection === section.id ? 'true' : undefined}
                   className={`underline-offset-4 transition-colors hover:text-coco-dark hover:underline ${
-                    activeSection === section.id
-                      ? 'text-coco-dark underline'
-                      : 'text-coco-mid'
+                    activeSection === section.id ? 'text-coco-dark underline' : 'text-coco-mid'
                   }`}
                 >
                   {section.label}
@@ -104,43 +120,53 @@ export default function App() {
         </nav>
       </header>
 
-      {/* Portada. Se aparta cuando la cámara viaja a un nodo. */}
-      <section
-        className={`pointer-events-none relative flex min-h-[100dvh] items-center px-6 transition-opacity duration-500 sm:px-10 ${
-          active ? 'opacity-0' : 'opacity-100'
-        }`}
-        aria-hidden={active ? 'true' : undefined}
-      >
-        <div className="mx-auto w-full max-w-6xl">
-          <div className="pointer-events-auto max-w-[26rem] lg:max-w-[24rem]">
-            <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
-              Alex
-              <span className="block text-coco-light">desarrollo web</span>
-            </h1>
-
-            <p className="mt-7 text-[17px] leading-[1.5]">
-              Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue
-              una vez nuestra mayor{' '}
-              <em className="not-italic text-coco-light">debilidad</em>.
-            </p>
-
-            <p className="mt-4 text-[15px] leading-relaxed text-coco-mid">
-              Construyo webs y aplicaciones, y las firmo como CocoBrain.
-            </p>
-
-            <a
-              href="#contenido"
-              className="mt-8 inline-block border-b-2 border-coco-dark pb-1 text-[15px] font-medium transition-colors hover:border-brain-glow hover:text-brain-glow"
+      {/* Contenedor alto: es lo que da recorrido al scroll. La escena está
+          fija detrás, así que aquí solo hay altura y texto. */}
+      <div className="relative h-[420vh]">
+        <div className="sticky top-0 flex h-[100dvh] items-center px-6 sm:px-10">
+          <div className="mx-auto w-full max-w-6xl">
+            {/* Portada */}
+            <div
+              className="max-w-[26rem] transition-opacity duration-200 lg:max-w-[24rem]"
+              style={{ opacity: heroOpacity, pointerEvents: heroOpacity < 0.2 ? 'none' : 'auto' }}
             >
-              Ver proyectos
-            </a>
+              <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+                Alex
+                <span className="block text-coco-light">desarrollo web</span>
+              </h1>
+
+              <p className="mt-7 text-[17px] leading-[1.5]">
+                Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue
+                una vez nuestra mayor{' '}
+                <em className="not-italic text-coco-light">debilidad</em>.
+              </p>
+
+              <p className="mt-4 text-[15px] leading-relaxed text-coco-mid">
+                Construyo webs y aplicaciones, y las firmo como CocoBrain.
+              </p>
+
+              <p className="mt-10 text-[13px] text-coco-mid">
+                Baja para entrar <span aria-hidden="true">↓</span>
+              </p>
+            </div>
+
+            {/* Dentro del cerebro */}
+            {inside && !active && (
+              <div className="pointer-events-none absolute inset-x-6 bottom-16 sm:inset-x-10">
+                <div className="mx-auto max-w-6xl">
+                  <p className="max-w-sm text-[15px] leading-relaxed text-coco-mid">
+                    Estás dentro. Cada nodo es una sección — pulsa uno.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Panel de sección. Contenido real pendiente de los proyectos. */}
+      {/* Panel de sección. */}
       {active && (
-        <div className="pointer-events-none fixed inset-0 z-10 flex items-end px-6 pb-16 sm:px-10">
+        <div className="pointer-events-none fixed inset-0 z-20 flex items-end px-6 pb-16 sm:px-10">
           <div className="pointer-events-auto mx-auto w-full max-w-6xl">
             <div className="max-w-md">
               <p className="text-[13px] text-coco-mid">Sección</p>
@@ -162,13 +188,9 @@ export default function App() {
         </div>
       )}
 
-      <main id="contenido" className="relative px-6 py-24 sm:px-10">
-        <div className="mx-auto max-w-6xl">
-          <p className="max-w-xl text-coco-mid">
-            {/* TODO: secciones reales desde sections.js y projects.js */}
-            Contenido pendiente: necesito tus proyectos para montarlo.
-          </p>
-        </div>
+      <main id="contenido" className="sr-only">
+        <h2>Proyectos</h2>
+        <p>Contenido pendiente: necesito tus proyectos para montarlo.</p>
       </main>
     </>
   )
