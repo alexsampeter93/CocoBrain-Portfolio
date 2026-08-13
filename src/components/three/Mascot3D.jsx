@@ -4,9 +4,15 @@ import { useGLTF } from '@react-three/drei'
 import { Box3, MathUtils, Vector3 } from 'three'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
+/**
+ * Ojo con los nombres: los que puso Meshy no corresponden con lo que
+ * contienen los archivos. `Coco_Thinker` es el que sostiene el cerebro en la
+ * mano, y `Brainy_Coconut` es el pensativo. Las claves de aquí sí describen
+ * lo que se ve.
+ */
 export const MASCOT_MODELS = {
-  thinker: '/preview/olaz-thinker.glb',
-  brain: '/preview/olaz-brain.glb',
+  brain: '/preview/olaz-thinker.glb',
+  thinker: '/preview/olaz-brain.glb',
 }
 
 const DRACO_PATH = '/draco/'
@@ -15,8 +21,18 @@ const DRACO_PATH = '/draco/'
 // afecta a que la composición respire: por encima de 0.8 se sale por arriba.
 const FILL_HEIGHT = 0.72
 
-const FLOAT_AMPLITUDE = 0.035
+const FLOAT_AMPLITUDE = 0.05
 const FLOAT_SPEED = 0.6
+
+// Cuánto se gira hacia el cursor, en radianes. El valor anterior (0.35) era
+// tan corto que no se percibía que estuviera mirando a nada.
+const LOOK_YAW = 0.62
+const LOOK_PITCH = 0.22
+
+// Deriva de reposo: sigue girando despacio aunque el cursor no se mueva, para
+// que nunca se quede clavado como una figura de museo.
+const DRIFT_AMOUNT = 0.16
+const DRIFT_SPEED = 0.22
 
 export default function Mascot3D({ url }) {
   const { scene } = useGLTF(url, DRACO_PATH)
@@ -67,13 +83,22 @@ export default function Mascot3D({ url }) {
     if (!group || reducedMotion) return
 
     const t = state.clock.elapsedTime
-    group.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE
 
-    // Se gira hacia el cursor con lerp. Sin suavizado persigue el ratón a
-    // tirones y parece un objeto arrastrado, no un personaje mirando.
+    // Flotación y un balanceo lateral mínimo: peso, no levitación.
+    group.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE
+    group.rotation.z = MathUtils.lerp(group.rotation.z, Math.sin(t * 0.4) * 0.035, 0.05)
+
+    // Mirada = deriva lenta + cursor. Sumar las dos es lo que hace que
+    // parezca que piensa por su cuenta y además te ha visto; solo con el
+    // cursor se queda inmóvil en cuanto sueltas el ratón.
     const { x, y } = state.pointer
-    group.rotation.y = MathUtils.lerp(group.rotation.y, x * 0.35, 0.05)
-    group.rotation.x = MathUtils.lerp(group.rotation.x, -y * 0.12, 0.05)
+    const driftYaw = Math.sin(t * DRIFT_SPEED) * DRIFT_AMOUNT
+    const driftPitch = Math.cos(t * DRIFT_SPEED * 0.7) * DRIFT_AMOUNT * 0.35
+
+    // Lerp siempre: sin suavizado persigue el ratón a tirones y parece un
+    // objeto arrastrado, no un personaje mirando.
+    group.rotation.y = MathUtils.lerp(group.rotation.y, x * LOOK_YAW + driftYaw, 0.045)
+    group.rotation.x = MathUtils.lerp(group.rotation.x, -y * LOOK_PITCH + driftPitch, 0.045)
   })
 
   return (

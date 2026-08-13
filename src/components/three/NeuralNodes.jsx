@@ -8,13 +8,33 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 const GLOW = '#FF6B85'
 const LINE = '#B08355'
 
-// Nodos pequeños. La versión anterior usaba esferas de radio 0.13 con un halo
-// del doble: a tamaño de pantalla parecían chicles y dominaban la escena por
-// encima del personaje.
 const NODE_RADIUS = 0.055
 const HOVER_SCALE = 1.7
 
+// Campo neuronal de fondo. No son navegables: existen para que la escena
+// parezca una mente pensando y no cinco puntos flotando en el vacío.
+const FIELD_COUNT = 38
+const FIELD_INNER_RADIUS = 2.1
+const FIELD_OUTER_RADIUS = 5.2
+const FIELD_NEIGHBOURS = 2
+
 const PULSE_SPEED = 0.14
+
+// Pulsos obsesivos: recorren la misma conexión de ida y vuelta sin llegar a
+// resolverse nunca. Es el guiño al TOC — un pensamiento que vuelve.
+const OBSESSIVE_COUNT = 2
+const OBSESSIVE_SPEED = 0.42
+
+/** PRNG con semilla: el campo tiene que ser el mismo en cada render. */
+function mulberry32(seed) {
+  return function random() {
+    seed |= 0
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
 
 function Node({ section, position, phase, active, onSelect }) {
   const meshRef = useRef(null)
@@ -70,8 +90,8 @@ function Node({ section, position, phase, active, onSelect }) {
   )
 }
 
-/** Punto de luz recorriendo una conexión. */
-function Pulse({ curve, offset }) {
+/** Señal recorriendo una conexión de un nodo al siguiente. */
+function Pulse({ curve, offset, obsessive = false }) {
   const ref = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
@@ -81,60 +101,133 @@ function Pulse({ curve, offset }) {
       ref.current.position.copy(curve.getPointAt(0.5))
       return
     }
-    const t = (state.clock.elapsedTime * PULSE_SPEED + offset) % 1
+
+    const elapsed = state.clock.elapsedTime
+    let t
+
+    if (obsessive) {
+      // Onda triangular: llega al final, se da la vuelta y repite. No avanza,
+      // no se resuelve. Va más rápido que los demás para que se note el
+      // ritmo compulsivo frente al flujo normal.
+      const raw = (elapsed * OBSESSIVE_SPEED + offset) % 2
+      t = raw > 1 ? 2 - raw : raw
+    } else {
+      t = (elapsed * PULSE_SPEED + offset) % 1
+    }
+
     ref.current.position.copy(curve.getPointAt(t))
-    // Se apaga en los extremos: nace y muere en los nodos, en vez de
+    // Se apaga en los extremos: nace y muere dentro de los nodos en vez de
     // aparecer de la nada a mitad del recorrido.
-    ref.current.material.opacity = Math.sin(t * Math.PI) * 0.75
+    ref.current.material.opacity = Math.sin(t * Math.PI) * (obsessive ? 0.95 : 0.75)
   })
 
   return (
     <mesh ref={ref}>
-      <sphereGeometry args={[0.022, 10, 8]} />
+      <sphereGeometry args={[obsessive ? 0.028 : 0.022, 10, 8]} />
       <meshBasicMaterial color={GLOW} transparent depthWrite={false} />
     </mesh>
   )
 }
 
-/** Polvo en suspensión. Barato y es lo que da atmósfera y sensación de aire. */
-function Dust({ count = 90 }) {
-  const ref = useRef(null)
+/**
+ * Campo neuronal de fondo: puntos en una capa esférica alrededor del
+ * personaje, unidos a sus vecinos más cercanos.
+ *
+ * Va todo en dos geometrías —un `points` y un `lineSegments`— en lugar de un
+ * objeto por nodo. Con 38 nodos y ~70 aristas, una malla por elemento serían
+ * cien y pico llamadas de dibujo por frame para algo que es decorado.
+ */
+function NeuralField() {
+  const groupRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
-  const positions = useMemo(() => {
-    const array = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      array[i * 3] = (Math.random() - 0.5) * 8
-      array[i * 3 + 1] = (Math.random() - 0.5) * 6
-      array[i * 3 + 2] = (Math.random() - 0.5) * 5
+  const { points, segments } = useMemo(() => {
+    const random = mulberry32(20260813)
+    const positions = []
+
+    for (let i = 0; i < FIELD_COUNT; i++) {
+      // Distribución en capa esférica: se evita el centro, que es donde está
+      // el personaje. Si no, aparecen puntos dentro de su cabeza.
+      const radius =
+        FIELD_INNER_RADIUS + random() * (FIELD_OUTER_RADIUS - FIELD_INNER_RADIUS)
+      const theta = random() * Math.PI * 2
+      const phi = Math.acos(2 * random() - 1)
+
+      positions.push(
+        new Vector3(
+          radius * Math.sin(phi) * Math.cos(theta),
+          radius * Math.sin(phi) * Math.sin(theta) * 0.62,
+          radius * Math.cos(phi) * 0.5,
+        ),
+      )
     }
-    return array
-  }, [count])
+
+    const points = new Float32Array(positions.length * 3)
+    positions.forEach((vector, index) => {
+      points.set([vector.x, vector.y, vector.z], index * 3)
+    })
+
+    // Cada nodo se une a sus vecinos más próximos. Un grafo por cercanía se
+    // lee como tejido; uno aleatorio se lee como ruido.
+    const seen = new Set()
+    const segmentList = []
+
+    positions.forEach((from, i) => {
+      const nearest = positions
+        .map((to, j) => ({ j, distance: from.distanceTo(to) }))
+        .filter((entry) => entry.j !== i)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, FIELD_NEIGHBOURS)
+
+      nearest.forEach(({ j }) => {
+        const key = i < j ? `${i}-${j}` : `${j}-${i}`
+        if (seen.has(key)) return
+        seen.add(key)
+        segmentList.push(from, positions[j])
+      })
+    })
+
+    const segments = new Float32Array(segmentList.length * 3)
+    segmentList.forEach((vector, index) => {
+      segments.set([vector.x, vector.y, vector.z], index * 3)
+    })
+
+    return { points, segments }
+  }, [])
 
   useFrame((state) => {
-    if (!ref.current || reducedMotion) return
-    ref.current.rotation.y = state.clock.elapsedTime * 0.02
+    if (!groupRef.current || reducedMotion) return
+    // Rotación muy lenta: da vida sin que se lea como "algo está girando".
+    groupRef.current.rotation.y = state.clock.elapsedTime * 0.018
   })
 
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.022}
-        color={LINE}
-        transparent
-        opacity={0.45}
-        sizeAttenuation
-        depthWrite={false}
-      />
-    </points>
+    <group ref={groupRef}>
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[segments, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color={LINE} transparent opacity={0.16} depthWrite={false} />
+      </lineSegments>
+
+      <points>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[points, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          size={0.035}
+          color={LINE}
+          transparent
+          opacity={0.65}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+    </group>
   )
 }
 
 export default function NeuralNodes({ sections, activeSection, onSelect }) {
-  // Curvas y geometría fuera del bucle de render.
   const { nodes, curves } = useMemo(() => {
     const positions = previewNodePositions
 
@@ -167,9 +260,20 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
     [curves],
   )
 
+  const obsessivePulses = useMemo(
+    () =>
+      Array.from({ length: OBSESSIVE_COUNT }, (_, index) => ({
+        // Siempre las mismas aristas: la gracia es que sean reconocibles,
+        // que el ojo acabe notando que ahí hay algo que no avanza.
+        curve: curves[index % curves.length],
+        offset: index * 0.55,
+      })),
+    [curves],
+  )
+
   return (
     <group>
-      <Dust />
+      <NeuralField />
 
       {curves.map((curve, index) => (
         <Line
@@ -184,6 +288,15 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
 
       {pulses.map((pulse, index) => (
         <Pulse key={`pulse-${index}`} curve={pulse.curve} offset={pulse.offset} />
+      ))}
+
+      {obsessivePulses.map((pulse, index) => (
+        <Pulse
+          key={`obsessive-${index}`}
+          curve={pulse.curve}
+          offset={pulse.offset}
+          obsessive
+        />
       ))}
 
       {nodes.map((node) => (
