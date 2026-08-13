@@ -24,29 +24,39 @@ function StudioEnvironment() {
       {/* Cúpula cálida: es lo que tiñe toda la escena de crema */}
       <Lightformer
         form="rect"
-        intensity={1.6}
+        intensity={0.85}
         color={CREAM}
         scale={[12, 12, 1]}
         position={[0, 6, 0]}
         rotation={[Math.PI / 2, 0, 0]}
       />
-      {/* Key frontal suave */}
+      {/* Key alta y lateral. Estrecha a propósito: una fuente ancha aplana
+          el relieve de las letras y la cara del coco queda de plastilina. */}
       <Lightformer
         form="rect"
-        intensity={2.2}
+        intensity={2.6}
         color="#FFFFFF"
-        scale={[6, 6, 1]}
-        position={[3, 3, 5]}
-        rotation={[0, -Math.PI / 8, 0]}
+        scale={[2.5, 5, 1]}
+        position={[4, 4, 4]}
+        rotation={[0, -Math.PI / 6, 0]}
       />
       {/* Rebote rosa por la izquierda: liga la escena con el cerebro */}
       <Lightformer
         form="rect"
-        intensity={1.1}
+        intensity={0.6}
         color="#F2939E"
         scale={[5, 5, 1]}
         position={[-5, 1.5, 2]}
         rotation={[0, Math.PI / 3, 0]}
+      />
+      {/* Contra por detrás: separa la silueta del fondo crema */}
+      <Lightformer
+        form="rect"
+        intensity={1.4}
+        color="#FFE9CC"
+        scale={[4, 2, 1]}
+        position={[-1, 2, -5]}
+        rotation={[0, Math.PI, 0]}
       />
     </Environment>
   )
@@ -72,9 +82,11 @@ export default function Scene() {
         onIncline={() => setDpr(MAX_DPR)}
       />
 
-      <ambientLight intensity={0.7} color="#FFF0DC" />
-      <directionalLight position={[4, 6, 4]} intensity={1.5} color="#FFF6EA" />
-      <directionalLight position={[-4, 2, -3]} intensity={0.45} color="#F2939E" />
+      {/* Ambiente bajo: el relleno lo pone el entorno. Subirlo aquí es lo
+          que dejaba la escena plana y sin volumen. */}
+      <ambientLight intensity={0.22} color="#FFF0DC" />
+      <directionalLight position={[4, 5, 4]} intensity={2.1} color="#FFF6EA" />
+      <directionalLight position={[-4, 1, -3]} intensity={0.5} color="#F2939E" />
 
       <Suspense fallback={null}>
         <StudioEnvironment />

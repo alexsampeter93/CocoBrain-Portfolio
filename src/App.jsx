@@ -3,10 +3,10 @@ import Scene from './components/three/Scene'
 import { sections } from './data/sections'
 
 /**
- * Fases 1-2.
- * La escena 3D es decorativa y va detrás: todo el contenido con significado
- * vive en el DOM y se puede leer sin WebGL. El contenido real entra en la
- * fase 10.
+ * Fases 1-2 + 5.
+ * El logo 3D es el titular de la primera pantalla, así que el DOM no repite
+ * el nombre encima: se aparta y deja respirar la escena. El contenido real
+ * de las secciones entra en la fase 10.
  */
 export default function App() {
   return (
@@ -22,30 +22,17 @@ export default function App() {
         </Suspense>
       </div>
 
-      <main
-        id="contenido"
-        className="mx-auto flex min-h-[100dvh] max-w-3xl flex-col justify-center px-6 py-20"
-      >
-        <p className="text-sm uppercase tracking-[0.3em] text-coco-light">
-          CocoBrain
-        </p>
-
-        <h1 className="mt-4 text-5xl font-bold leading-tight sm:text-6xl">
-          Portfolio de Alex
-        </h1>
-
-        <p className="mt-6 max-w-xl text-lg text-coco-mid">
-          Nuestra mayor inspiración fue una vez nuestra mayor debilidad.
-        </p>
-
-        <nav aria-label="Secciones" className="mt-12">
-          <ul className="flex flex-wrap gap-3">
+      <header className="fixed inset-x-0 top-0 z-10 flex items-baseline justify-between px-6 py-5 sm:px-10">
+        <span className="text-[13px] font-medium text-coco-mid">
+          Alex — desarrollo web
+        </span>
+        <nav aria-label="Secciones">
+          <ul className="flex gap-5 text-[13px]">
             {sections.map((section) => (
               <li key={section.id}>
                 <a
                   href={`#${section.id}`}
-                  className="inline-block rounded-full border-2 bg-cream/70 px-5 py-2 font-medium backdrop-blur-sm transition-colors hover:bg-coco-dark hover:text-cream"
-                  style={{ borderColor: section.accent }}
+                  className="text-coco-mid underline-offset-4 hover:text-coco-dark hover:underline"
                 >
                   {section.label}
                 </a>
@@ -53,6 +40,28 @@ export default function App() {
             ))}
           </ul>
         </nav>
+      </header>
+
+      {/* Primera pantalla: solo la escena. El h1 existe para lectores de
+          pantalla y buscadores, porque el logo 3D no es texto indexable. */}
+      <section className="relative flex h-[100dvh] flex-col justify-end px-6 pb-10 sm:px-10">
+        <h1 className="sr-only">CocoBrain — portfolio de Alex, desarrollador web</h1>
+        <p className="max-w-sm text-[15px] leading-relaxed text-coco-mid">
+          Nuestra mayor inspiración fue una vez nuestra mayor debilidad.
+        </p>
+        <a
+          href="#contenido"
+          className="mt-6 w-fit text-[13px] text-coco-dark underline underline-offset-4"
+        >
+          Ver proyectos
+        </a>
+      </section>
+
+      <main id="contenido" className="relative bg-cream px-6 py-24 sm:px-10">
+        <p className="max-w-xl text-coco-mid">
+          {/* TODO(fase 10): secciones reales desde sections.js y projects.js */}
+          Contenido pendiente de la fase 10.
+        </p>
       </main>
     </>
   )

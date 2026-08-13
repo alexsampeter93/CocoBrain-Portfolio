@@ -8,7 +8,9 @@ export default defineConfig({
     watch: {
       // Assets/ son los originales crudos: cientos de MB que el navegador
       // nunca carga. Vigilarlos revienta el watcher con EBUSY en Windows.
-      ignored: ['**/Assets/**', '**/_docs/**'],
+      // public/draco y public/preview son binarios estáticos: vigilarlos no
+      // aporta HMR y da EBUSY en Windows si se reescriben en caliente.
+      ignored: ['**/Assets/**', '**/_docs/**', '**/public/draco/**', '**/public/preview/**'],
     },
   },
   build: {
