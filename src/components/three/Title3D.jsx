@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useThree } from '@react-three/fiber'
 import { Text3D } from '@react-three/drei'
 
 const FONT_URL = '/fonts/cocobrain.typeface.json'
@@ -15,6 +16,12 @@ const COCO_DIAMETER = SIZE * 0.78
 
 // El cerebro que hace de punto de la "i".
 const ORB_RADIUS = SIZE * 0.11
+
+// El título se escala solo para ocupar esta fracción del ancho visible, con
+// un tope para que en pantallas anchas no se vuelva gigante. Sin esto, en
+// móvil vertical la palabra se sale por los lados.
+const FILL_RATIO = 0.82
+const MAX_SCALE = 0.85
 
 // La "i" sin punto. Si la fuente convertida no la trae, caemos a la "i"
 // normal y avisamos: es preferible un punto de más que un hueco.
@@ -88,6 +95,7 @@ function CocoSphere() {
 
 export default function Title3D({ position = [0, 0, 0], ...props }) {
   const { data: font, missing } = useTypeface(FONT_URL)
+  const viewportWidth = useThree((state) => state.viewport.width)
   const groupRef = useRef(null)
   const itemRefs = useRef([])
 
@@ -138,58 +146,69 @@ export default function Title3D({ position = [0, 0, 0], ...props }) {
       group.position.x = cursor
       cursor += widths[index] + TRACKING
     })
-  }, [font, hasDotlessI])
+
+    // Encaje responsive: el ancho real de la palabra se acaba de medir, así
+    // que aquí ya sabemos cuánto hay que escalar para que quepa.
+    if (groupRef.current && totalWidth > 0) {
+      const fit = Math.min(MAX_SCALE, (viewportWidth * FILL_RATIO) / totalWidth)
+      groupRef.current.scale.setScalar(fit)
+    }
+  }, [font, hasDotlessI, viewportWidth])
 
   if (missing || !font) return null
 
   return (
     <group ref={groupRef} position={position} {...props}>
-      {TITLE_ITEMS.map((item, index) => (
-        <group
-          key={item.key}
-          ref={(node) => {
-            itemRefs.current[index] = node
-          }}
-          // La intro anima cada letra por separado: se identifican por índice.
-          userData={{ letterIndex: index, kind: item.kind }}
-        >
-          {item.kind === 'coco' ? (
-            <CocoSphere />
-          ) : (
-            <Text3D
-              font={font}
-              size={SIZE}
-              height={DEPTH}
-              curveSegments={8}
-              bevelEnabled
-              bevelThickness={0.02}
-              bevelSize={0.012}
-              bevelSegments={3}
-            >
-              {item.kind === 'dotless-i' ? (hasDotlessI ? DOTLESS_I : 'i') : item.char}
-              <meshStandardMaterial
-                color={item.color}
-                roughness={0.42}
-                metalness={0.02}
-              />
-            </Text3D>
-          )}
+      {/* La línea base de Text3D está en y=0, así que la palabra entera
+          cuelga hacia arriba. Este offset la centra sobre su propio eje. */}
+      <group position={[0, -SIZE * 0.36, 0]}>
+        {TITLE_ITEMS.map((item, index) => (
+          <group
+            key={item.key}
+            ref={(node) => {
+              itemRefs.current[index] = node
+            }}
+            // La intro anima cada letra por separado: se identifican por índice.
+            userData={{ letterIndex: index, kind: item.kind }}
+          >
+            {item.kind === 'coco' ? (
+              <CocoSphere />
+            ) : (
+              <Text3D
+                font={font}
+                size={SIZE}
+                height={DEPTH}
+                curveSegments={8}
+                bevelEnabled
+                bevelThickness={0.02}
+                bevelSize={0.012}
+                bevelSegments={3}
+              >
+                {item.kind === 'dotless-i' ? (hasDotlessI ? DOTLESS_I : 'i') : item.char}
+                <meshStandardMaterial
+                  color={item.color}
+                  roughness={0.42}
+                  metalness={0.02}
+                />
+              </Text3D>
+            )}
 
-          {/* El punto de la "i" es el cerebro. En la fase 6 lo sustituye el
-              brain_orb del GLB; hasta entonces marca la posición. */}
-          {item.kind === 'dotless-i' && (
-            <mesh position={[SIZE * 0.11, SIZE * 0.86, DEPTH / 2]}>
-              <sphereGeometry args={[ORB_RADIUS, 20, 16]} />
-              <meshStandardMaterial
-                color="#F2939E"
-                emissive="#FF6B85"
-                emissiveIntensity={0.35}
-                roughness={0.6}
-              />
-            </mesh>
-          )}
-        </group>
-      ))}
+            {/* El punto de la "i" es el cerebro. En la fase 6 lo sustituye el
+                brain_orb del GLB; hasta entonces marca la posición. */}
+            {item.kind === 'dotless-i' && (
+              <mesh position={[SIZE * 0.11, SIZE * 0.86, DEPTH / 2]}>
+                <sphereGeometry args={[ORB_RADIUS, 20, 16]} />
+                <meshStandardMaterial
+                  color="#F2939E"
+                  emissive="#FF6B85"
+                  emissiveIntensity={0.35}
+                  roughness={0.6}
+                />
+              </mesh>
+            )}
+          </group>
+        ))}
+      </group>
     </group>
   )
 }

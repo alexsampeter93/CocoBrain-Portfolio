@@ -1,7 +1,6 @@
-import { Suspense, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Suspense, useState } from 'react'
+import { Canvas } from '@react-three/fiber'
 import { Environment, Lightformer, PerformanceMonitor, Stats } from '@react-three/drei'
-import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import Title3D from './Title3D'
 
 const CREAM = '#F5E6D3'
@@ -12,28 +11,6 @@ const IS_COARSE_POINTER =
 
 // dpr máximo por dispositivo. Presupuesto: [1,2] escritorio, [1,1.5] móvil.
 const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
-
-/**
- * TEMPORAL — fase 2. Sirve para comprobar que la escena renderiza y va a
- * 60 fps. Se borra en la fase 3, cuando entre el GLB de la mascota.
- */
-function TestCube() {
-  const ref = useRef()
-  const reducedMotion = usePrefersReducedMotion()
-
-  useFrame((_, delta) => {
-    if (reducedMotion || !ref.current) return
-    ref.current.rotation.y += delta * 0.6
-    ref.current.rotation.x += delta * 0.25
-  })
-
-  return (
-    <mesh ref={ref} position={[0, 0.9, 0]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#C99B6E" roughness={0.55} metalness={0.05} />
-    </mesh>
-  )
-}
 
 /**
  * Entorno generado en el propio navegador con Lightformers.
@@ -82,7 +59,7 @@ export default function Scene() {
     <Canvas
       dpr={dpr}
       // Sin OrbitControls: la cámara la dirige el CameraRig en la fase 8.
-      camera={{ position: [0, 1.4, 5.5], fov: 40, near: 0.1, far: 100 }}
+      camera={{ position: [0, 0, 5.5], fov: 40, near: 0.1, far: 100 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       // La escena es decorativa: el contenido real vive en el DOM.
       aria-hidden="true"
@@ -96,21 +73,12 @@ export default function Scene() {
       />
 
       <ambientLight intensity={0.7} color="#FFF0DC" />
-      <directionalLight
-        position={[4, 6, 4]}
-        intensity={1.5}
-        color="#FFF6EA"
-      />
-      <directionalLight
-        position={[-4, 2, -3]}
-        intensity={0.45}
-        color="#F2939E"
-      />
+      <directionalLight position={[4, 6, 4]} intensity={1.5} color="#FFF6EA" />
+      <directionalLight position={[-4, 2, -3]} intensity={0.45} color="#F2939E" />
 
       <Suspense fallback={null}>
         <StudioEnvironment />
-        <Title3D position={[0, 1.6, 0]} scale={0.6} />
-        <TestCube />
+        <Title3D />
       </Suspense>
 
       {/* Contador de fps: fuera del build de producción */}
