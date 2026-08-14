@@ -122,6 +122,53 @@ Y el HDRI es la pieza gorda: casi toda la luz de la escena sale de ahí. Cuando
 iluminaba con tres focos sueltos los modelos se veían mal y llegué a pensar que
 los assets no servían. Sí servían.
 
+## El tirón que no era rendimiento
+
+Durante días di por hecho que los tirones eran coste: demasiados triángulos,
+demasiados efectos. Lo que me sacó del error fue un dato que parecía no
+encajar: **el contador marcaba 60 fps de mínimo y aun así la cámara se paraba
+a medias**.
+
+Si van sobrados de frames, el problema no es cuánto cuesta dibujar. Es *qué* se
+dibuja en cada uno. Y el fallo estaba escrito en la tabla, a la vista:
+
+```js
+{ at: 0.38, position: …, ease: 'in' },
+{ at: 0.56, position: …, ease: 'in' },
+```
+
+`ease: 'in'` es `k * k`: arranca parado y termina a velocidad máxima. Dos
+tramos seguidos con arranque suave significa que el primero **acaba lanzado** y
+el siguiente **empieza clavado**. La cámara se detenía en seco en cada punto de
+la tabla.
+
+Lo que hay que entender es que **una animación puede pasar por todas las
+posiciones correctas y aun así verse mal**, porque el ojo no lee posiciones,
+lee velocidades. Un cambio brusco de velocidad se ve como un tirón aunque la
+trayectoria sea perfecta.
+
+Y había un segundo problema del mismo tipo, más escondido: los tramos tenían
+duraciones parecidas pero distancias muy distintas. El tercero era **3,6 veces
+más rápido** que el segundo. Eso también es un cambio de velocidad, y también
+se ve.
+
+La solución es una `CatmullRomCurve3`: una curva que pasa por todos los puntos
+encadenando la velocidad y la dirección entre ellos. No hay tramos, hay un solo
+vuelo. Y de paso el recorrido deja de ser una polilínea con esquinas.
+
+```js
+new CatmullRomCurve3(positions, false, 'centripetal')
+```
+
+`centripetal` importa. El Catmull-Rom normal se pasa de frenada cuando dos
+puntos están muy juntos —y los dos del acercamiento al cerebro lo están—, así
+que la cámara habría hecho un bucle alrededor del cerebro en vez de acercarse.
+La variante centrípeta está diseñada justo para que eso no pase.
+
+Los tiempos los he repartido según la **distancia** de cada tramo, no a ojo. El
+único desequilibrio que queda es a propósito: el acercamiento es el tramo más
+lento, porque es el plano en el que hay que mirar.
+
 ## Estado
 
 - [x] Olaz en el hueco, encuadrado y sin reescalarse al acercarse

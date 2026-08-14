@@ -164,6 +164,16 @@ export default function Preloader() {
           se posiciona en porcentaje y queda colgado de la C a cualquier
           tamano de pantalla sin recalcular nada. */}
       <div className="relative w-[78vw] max-w-[460px]">
+        {/*
+          El logotipo va POR ENCIMA de Olaz, y ese orden es todo el truco.
+
+          Con la mano dibujada delante de la C, el puño se leía flotando: está
+          cerrado, pero no agarra nada. Poniéndolo detrás, el trazo de la letra
+          tapa media mano y el cerebro completa el resto —da por hecho que los
+          dedos siguen por detrás—. Es lo más cerca que se puede estar de
+          agarrar con dos imágenes planas; agarrar de verdad exigiría que la C
+          atravesara el puño, y eso ya es modelado.
+        */}
         <img
           ref={logoRef}
           src="/img/wordmark.webp"
@@ -172,7 +182,7 @@ export default function Preloader() {
           alt="CocoBrain"
           width="1200"
           height="214"
-          className="h-auto w-full"
+          className="relative z-10 h-auto w-full"
         />
 
         {/* Colgado del arco inferior de la C. El recorte viene sobre blanco
@@ -183,17 +193,23 @@ export default function Preloader() {
           ref={olazRef}
           src="/img/olaz-hanging.webp"
           srcSet="/img/olaz-hanging-sm.webp 280w, /img/olaz-hanging.webp 520w"
-          sizes="(max-width: 640px) 20vw, 120px"
+          sizes="(max-width: 640px) 19vw, 110px"
           alt=""
           aria-hidden="true"
           width="520"
           height="693"
-          className="absolute left-[-1%] top-[72%] w-[26%] opacity-0"
+          // Colocado para que el puño caiga sobre el arco inferior de la C, no
+          // al lado. Las cifras salen de la posición medida del puño dentro de
+          // su propio recorte, no de probar valores hasta que cuadra.
+          className="absolute left-[-1%] top-[64%] w-[24%] opacity-0"
           style={{ transformOrigin: FIST_ORIGIN }}
         />
       </div>
 
-      <div className="mt-24 flex w-[78vw] max-w-[460px] items-end justify-between">
+      {/* Hueco calculado, no elegido: Olaz cuelga hasta un 25% de la anchura
+          del logotipo por debajo de él. Con menos margen, la fila del contador
+          le tapaba las zapatillas por la mitad. */}
+      <div className="mt-36 flex w-[78vw] max-w-[460px] items-end justify-between">
         <span className="font-mono text-[11px] text-coco-mid">cargando</span>
         <span
           ref={numberRef}
