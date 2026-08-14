@@ -153,12 +153,15 @@ function InnerScene({ sections, activeSection, onSelect }) {
   return (
     <>
       {/*
-        Niebla de profundidad. Es lo que convierte una constelacion vista
-        desde fuera en un espacio en el que se esta dentro: lo lejano se
-        disuelve y el ojo deja de poder medir el fondo. El color coincide con
-        el degradado de la pagina para que la disolucion sea invisible.
+        Niebla de profundidad: lo lejano se disuelve y el ojo deja de poder
+        medir donde acaba el espacio. El color coincide con el degradado de
+        la pagina para que la disolucion sea invisible.
+
+        La densidad es baja a proposito. Mas espesa daba mas atmosfera pero
+        se comia los nodos del fondo, y los nodos son navegacion: no pueden
+        depender de que se vean o no.
       */}
-      <fogExp2 attach="fog" args={['#F0DDC6', 0.115]} />
+      <fogExp2 attach="fog" args={['#F0DDC6', 0.055]} />
 
       <Environment files="/hdri/studio.hdr" environmentIntensity={0.7} />
       <directionalLight position={[2, 3, 4]} intensity={0.45} color="#FFE8E4" />

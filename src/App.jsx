@@ -67,17 +67,21 @@ export default function App() {
   }, [progress])
 
   /**
-   * Al elegir una seccion desde la cabecera hay que estar dentro del cerebro:
-   * los nodos solo existen ahi. Si aun estamos fuera, se baja primero.
+   * Elegir una seccion.
+   *
+   * Antes esto abria un panel flotante con el mismo contenido que ya estaba
+   * mas abajo en la pagina: la misma informacion dos veces y unos nodos que
+   * no llevaban a ninguna parte. Ahora el nodo **es** el enlace — la camara
+   * lo enfoca un momento y despues la pagina baja a esa seccion.
    */
   const selectSection = useCallback((id) => {
-    const insideNow = window.scrollY / (window.innerHeight * JOURNEY_SCREENS) >= SWAP_POINT
-    if (!insideNow) {
-      const target = window.innerHeight * JOURNEY_SCREENS * (SWAP_POINT + 0.06)
-      window.scrollTo({ top: target, behavior: 'smooth' })
-    }
     setActiveSection(id)
     setReaction((value) => value + 1)
+
+    window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setActiveSection(null)
+    }, 700)
   }, [])
 
   useEffect(() => {
@@ -210,28 +214,6 @@ export default function App() {
         ))}
       </main>
 
-      {/* Panel de sección, solo mientras se está dentro del cerebro. */}
-      {active && inside && progress < INSIDE_END && (
-        <div className="pointer-events-none fixed inset-0 z-20 flex items-end px-6 pb-24 sm:px-10">
-          <div className="pointer-events-auto mx-auto w-full max-w-6xl">
-            <div className="max-w-md border-l border-coco-light pl-5">
-              <span className="font-mono text-[11px] text-coco-mid">
-                {active.nodeName.replace('node_', 'NODO N')}
-              </span>
-              <h2 className="mt-2 text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
-                {active.label}
-              </h2>
-              <button
-                type="button"
-                onClick={close}
-                className="mt-5 font-mono text-[12px] text-coco-dark transition-colors hover:text-brain-glow"
-              >
-                ← Volver <span className="text-coco-mid">[ESC]</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
