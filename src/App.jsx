@@ -71,6 +71,25 @@ export default function App() {
   const [reaction, setReaction] = useState(0)
   const poke = useCallback(() => setReaction((value) => value + 1), [])
 
+  /**
+   * La informacion vive en los nodos. Pulsar uno abre su contenido ahi
+   * mismo, sin sacarte del espacio 3D. Las secciones de mas abajo siguen
+   * existiendo en el DOM porque son el contenido accesible e indexable, no
+   * un duplicado que haya que mantener a mano: salen de los mismos datos.
+   */
+  const [openNode, setOpenNode] = useState(null)
+  const active = sections.find((section) => section.id === openNode)
+
+  const closeNode = useCallback(() => setOpenNode(null), [])
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenNode(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   const goToSection = useCallback((id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
@@ -116,7 +135,8 @@ export default function App() {
                     onPoke={poke}
                     active={heroVisible}
                     sections={sections}
-                    onSelectSection={goToSection}
+                    activeSection={openNode}
+                    onSelectSection={setOpenNode}
                   />
                 </Suspense>
               </div>
@@ -152,9 +172,50 @@ export default function App() {
                 className="pointer-events-none absolute inset-x-0 bottom-20 px-6 opacity-0 sm:px-10"
               >
                 <p className="mx-auto max-w-6xl font-mono text-[12px] text-coco-mid">
-                  Toca un nodo para ir a su sección.
+                  Toca un nodo para abrirlo.
                 </p>
               </div>
+
+              {/* Contenido del nodo abierto. */}
+              {active && (
+                <div className="absolute inset-0 flex items-end bg-coco-dark/35 px-6 pb-16 backdrop-blur-[2px] sm:px-10">
+                  <div className="mx-auto w-full max-w-6xl">
+                    <div className="max-w-xl border-l-2 border-brain-glow bg-cream/95 p-6 sm:p-8">
+                      <span className="font-mono text-[11px] text-coco-mid">
+                        {active.nodeName.replace('node_', 'NODO N')}
+                      </span>
+                      <h2 className="mt-2 text-[clamp(1.6rem,4vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+                        {active.label}
+                      </h2>
+
+                      <div className="mt-5 max-h-[38dvh] overflow-y-auto pr-2">
+                        {(sectionContent[active.id] ?? []).length > 0 ? (
+                          sectionContent[active.id].map((text) => (
+                            <p
+                              key={text.slice(0, 24)}
+                              className="mb-3 text-[15px] leading-relaxed last:mb-0"
+                            >
+                              {text}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-[15px] leading-relaxed text-coco-mid">
+                            Contenido pendiente.
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={closeNode}
+                        className="mt-6 font-mono text-[12px] text-coco-dark transition-colors hover:text-brain-glow"
+                      >
+                        ← Volver <span className="text-coco-mid">[ESC]</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

@@ -5,7 +5,7 @@ import { ACESFilmicToneMapping, Vector3 } from 'three'
 import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
 import GlowingBrain from './GlowingBrain'
 import NeuralNodes from './NeuralNodes'
-import BrainInterior from './BrainInterior'
+import FloatingBrain from './FloatingBrain'
 import { journey } from '../../state/journey'
 
 /**
@@ -53,7 +53,7 @@ function CameraPath({ xRatio }) {
     return {
       start: new Vector3(0, 0, 6),
       gate: new Vector3(heroX + BRAIN_TRANSFORM.x * 1.4, 0.1, 1.1),
-      end: new Vector3(0, 0.2, INSIDE_CENTER.z + 3.1),
+      end: new Vector3(0, 0.15, INSIDE_CENTER.z + 7.4),
       heroLook: new Vector3(heroX, 0, 0),
     }
   }, [width, xRatio])
@@ -90,6 +90,7 @@ export default function Scene({
   onPoke,
   active = true,
   sections,
+  activeSection,
   onSelectSection,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
@@ -149,23 +150,23 @@ export default function Scene({
 
         {/* Interior del cerebro */}
         <group position={INSIDE_CENTER}>
-          <BrainInterior />
+          <FloatingBrain fadeRange={INSIDE_FADE} />
 
           <NeuralNodes
             sections={sections}
+            activeSection={activeSection}
             onSelect={onSelectSection}
             fadeRange={INSIDE_FADE}
           />
 
-          {/* Aqui dentro la fuente de luz es el propio cerebro. */}
-          <pointLight position={[0, 0.4, 1.6]} intensity={5} color="#FF6B85" distance={9} />
+          {/* Polvo lejano. La luz cercana la pone el propio cerebro. */}
           <Sparkles
-            count={compact ? 30 : 60}
-            scale={6}
-            size={2.2}
-            speed={0.26}
+            count={compact ? 26 : 48}
+            scale={9}
+            size={1.8}
+            speed={0.22}
             color="#FF9AAA"
-            opacity={0.6}
+            opacity={0.45}
           />
         </group>
       </Suspense>

@@ -8,12 +8,17 @@
  * distintas profundidades y ningún par simétrico. Un grafo regular parece un
  * diagrama de organigrama, no una red.
  */
+/**
+ * Los nodos orbitan el cerebro, que ocupa unas 2,1 unidades de diametro. Por
+ * eso ninguno cae a menos de 2,2 del centro: mas cerca y se meterian dentro
+ * del modelo.
+ */
 export const previewNodePositions = {
-  node_01: [-1.9, 0.95, 0.7],
-  node_02: [-2.3, -0.75, -0.5],
-  node_03: [1.5, 1.5, -0.8],
-  node_04: [2.25, -0.25, 0.6],
-  node_05: [0.15, -1.75, -0.35],
+  node_01: [-2.55, 1.15, 0.5],
+  node_02: [-2.85, -0.85, -0.7],
+  node_03: [0.15, 2.35, -0.4],
+  node_04: [2.75, 0.55, 0.8],
+  node_05: [1.85, -1.75, -0.5],
 }
 
 /** Qué nodos se unen. No es un grafo completo: unir todo con todo da maraña. */
