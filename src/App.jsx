@@ -4,7 +4,11 @@ import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
 import Hud from './components/ui/Hud'
 import { getCalmMode, subscribeCalmMode, toggleCalmMode } from './state/calmMode'
+import { useScrollProgress } from './hooks/useScrollProgress'
 import { sections } from './data/sections'
+
+// Alturas de pantalla que dura el recorrido hasta el interior del cerebro.
+const JOURNEY_SCREENS = 2.5
 
 /**
  * TEMPORAL — comparador sin tocar codigo:
@@ -78,6 +82,11 @@ export default function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
+  // Un solo valor manda sobre todo el recorrido: camara, portada e interior.
+  const journey = useScrollProgress({ screens: JOURNEY_SCREENS })
+  const heroTextFade = Math.max(0, 1 - journey / 0.26)
+  const insideTextFade = Math.max(0, Math.min(1, (journey - 0.55) / 0.15))
+
   return (
     <>
       <a className="skip-link" href="#contenido">
@@ -101,23 +110,30 @@ export default function App() {
         limpia. Asi la portada se va con el scroll, sin coreografia que
         sincronizar y sin nada que se solape.
       */}
-      <section
-        ref={heroRef}
-        className="relative flex h-[100dvh] flex-col justify-end overflow-hidden px-6 pb-24 sm:px-10 lg:justify-center lg:pb-0"
-      >
-        <div className="absolute inset-0" aria-hidden="true">
-          <Suspense fallback={null}>
-            <Scene
-              model={model}
-              compact={!wide}
-              reaction={reaction}
-              onPoke={poke}
-              active={heroVisible}
-            />
-          </Suspense>
-        </div>
+      <section ref={heroRef} className="relative" style={{ height: `${JOURNEY_SCREENS * 100}vh` }}>
+        <div className="sticky top-0 h-[100dvh] overflow-hidden">
+          <div className="absolute inset-0" aria-hidden="true">
+            <Suspense fallback={null}>
+              <Scene
+                model={model}
+                compact={!wide}
+                reaction={reaction}
+                onPoke={poke}
+                active={heroVisible}
+                progress={journey}
+                sections={sections}
+                onSelectSection={goToSection}
+              />
+            </Suspense>
+          </div>
 
-        <div className="relative mx-auto w-full max-w-6xl">
+          {/* Texto de portada. Se desvanece con el mismo valor que mueve la
+              camara, asi que no puede ir a destiempo. */}
+          <div
+            className="absolute inset-x-0 bottom-24 px-6 transition-opacity duration-150 sm:px-10 lg:top-1/2 lg:bottom-auto lg:-translate-y-1/2"
+            style={{ opacity: heroTextFade, pointerEvents: heroTextFade < 0.4 ? 'none' : 'auto' }}
+          >
+            <div className="mx-auto w-full max-w-6xl">
           <div className="max-w-[20rem] sm:max-w-[26rem] lg:max-w-[24rem]">
             <h1 className="text-[clamp(1.9rem,7vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
               Alex
@@ -139,6 +155,18 @@ export default function App() {
             >
               Ver proyectos
             </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Aviso de dentro del cerebro. */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-20 px-6 transition-opacity duration-150 sm:px-10"
+            style={{ opacity: insideTextFade }}
+          >
+            <p className="mx-auto max-w-6xl font-mono text-[12px] text-coco-mid">
+              Toca un nodo para ir a su sección.
+            </p>
           </div>
         </div>
       </section>

@@ -69,6 +69,7 @@ export default function Mascot3D({
   idleEnabled = true,
   fillWidth = FILL_WIDTH,
   fillHeight = FILL_HEIGHT,
+  fade = 1,
   onPoke,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
@@ -219,6 +220,26 @@ export default function Mascot3D({
     schedule()
     return () => clearTimeout(timer)
   }, [reducedMotion, idleEnabled])
+
+  /**
+   * Desvanecido por opacidad en vez de desmontar el modelo.
+   *
+   * Es lo que permite que la camara atraviese la portada sin tirones: la
+   * malla sigue en memoria y en la GPU, solo deja de verse. Desmontarla a
+   * mitad de recorrido era la causa de los saltos.
+   */
+  useFrame(() => {
+    const visible = fade > 0.01
+    tuned.visible = visible
+    if (!visible) return
+
+    tuned.traverse((object) => {
+      if (!object.isMesh || !object.material) return
+      object.material.transparent = fade < 0.999
+      object.material.opacity = fade
+      object.material.depthWrite = fade > 0.5
+    })
+  })
 
   useFrame((state) => {
     const motion = motionRef.current

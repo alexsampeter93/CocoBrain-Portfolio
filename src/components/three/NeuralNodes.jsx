@@ -48,7 +48,16 @@ function mulberry32(seed) {
   }
 }
 
-function Node({ section, position, phase, active, onSelect, onAwaken }) {
+function Node({
+  section,
+  position,
+  phase,
+  active,
+  onSelect,
+  onAwaken,
+  interactive = true,
+  fade = 1,
+}) {
   const meshRef = useRef(null)
   const [hovered, setHovered] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
@@ -73,6 +82,7 @@ function Node({ section, position, phase, active, onSelect, onAwaken }) {
       */}
       <mesh
         visible={false}
+        raycast={interactive ? undefined : () => null}
         onPointerOver={(event) => {
           event.stopPropagation()
           setHovered(true)
@@ -104,12 +114,14 @@ function Node({ section, position, phase, active, onSelect, onAwaken }) {
         <meshStandardMaterial
           color={section.accent}
           emissive={GLOW}
-          emissiveIntensity={highlighted ? 1.1 : 0.35}
+          emissiveIntensity={(highlighted ? 1.1 : 0.35) * fade}
           roughness={0.3}
+          transparent
+          opacity={fade}
         />
       </mesh>
 
-      {highlighted && (
+      {highlighted && interactive && (
         <Html center distanceFactor={7} position={[0, NODE_RADIUS * 3.4, 0]}>
           <span className="flex items-center gap-2 whitespace-nowrap border-l-2 border-brain-glow bg-cream/90 py-1 pl-2 pr-3 font-mono text-[11px] leading-none text-coco-dark">
             <span className="tabular-nums text-[9px] text-coco-mid">
@@ -245,7 +257,11 @@ function NeuralField() {
   )
 }
 
-export default function NeuralNodes({ sections, activeSection, onSelect }) {
+export default function NeuralNodes({ sections, activeSection, onSelect, fade = 1 }) {
+  // Por debajo de este umbral no se dibuja nada ni se puede pulsar: la
+  // constelacion existe desde el primer frame, pero no debe interceptar
+  // clics mientras el visitante sigue en la portada.
+  const interactive = fade > 0.5
   const { nodes, curves, edgesByNode } = useMemo(() => {
     const positions = previewNodePositions
 
@@ -378,6 +394,8 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
     })
   })
 
+  if (fade <= 0.01) return null
+
   return (
     <group>
       <NeuralField />
@@ -389,7 +407,7 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
           color={new Color(LINE)}
           lineWidth={0.9}
           transparent
-          opacity={0.28}
+          opacity={0.28 * fade}
         />
       ))}
 
@@ -429,6 +447,8 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
           active={activeSection === node.section.id}
           onSelect={onSelect}
           onAwaken={awaken}
+          interactive={interactive}
+          fade={fade}
         />
       ))}
     </group>

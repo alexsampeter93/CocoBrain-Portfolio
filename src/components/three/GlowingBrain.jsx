@@ -46,21 +46,31 @@ function useGlowTexture() {
   }, [])
 }
 
-export default function GlowingBrain({ position, scale = 1 }) {
+export default function GlowingBrain({ position, scale = 1, fade = 1 }) {
   const texture = useGlowTexture()
   const haloRef = useRef(null)
   const lightRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
   useFrame((state) => {
-    if (reducedMotion) return
     const t = state.clock.elapsedTime
     // Latido en la intensidad y en el tamaño del halo, nunca en la geometría:
     // lo que palpita es la luz, no el objeto.
-    const pulse = 1 + Math.sin(t * 2.4) * 0.14
-    if (haloRef.current) haloRef.current.scale.setScalar(pulse)
-    if (lightRef.current) lightRef.current.intensity = 1.6 + Math.sin(t * 2.4) * 0.5
+    const pulse = reducedMotion ? 1 : 1 + Math.sin(t * 2.4) * 0.14
+
+    if (haloRef.current) {
+      haloRef.current.scale.setScalar(pulse)
+      haloRef.current.material.opacity = fade
+      haloRef.current.visible = fade > 0.01
+    }
+
+    if (lightRef.current) {
+      const base = reducedMotion ? 1.6 : 1.6 + Math.sin(t * 2.4) * 0.5
+      lightRef.current.intensity = base * fade
+    }
   })
+
+  if (fade <= 0.01) return null
 
   return (
     // Nombre para que la camara del scroll pueda localizarlo y volar hacia
