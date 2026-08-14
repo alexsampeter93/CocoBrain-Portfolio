@@ -57,6 +57,24 @@ export default function App() {
   const poke = useCallback(() => setReaction((value) => value + 1), [])
 
   /**
+   * Nodo abierto. La información vive en los nodos, así que pulsar uno abre su
+   * contenido ahí mismo sin sacarte del espacio 3D. Las secciones de más abajo
+   * siguen existiendo porque son el contenido accesible e indexable, y salen
+   * de los mismos datos: no hay nada que mantener por duplicado.
+   */
+  const [openNode, setOpenNode] = useState(null)
+  const activeSection = sections.find((section) => section.id === openNode)
+  const closeNode = useCallback(() => setOpenNode(null), [])
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenNode(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  /**
    * La navegación mueve la CÁMARA, no la página.
    *
    * Antes hacía `scrollIntoView` sobre el texto de abajo, así que pulsar
@@ -107,11 +125,54 @@ export default function App() {
                   compact={compact}
                   reaction={reaction}
                   onPoke={poke}
+                  activeSection={openNode}
+                  onSelectSection={setOpenNode}
                   active={onScreen}
                 />
               </div>
 
               <HeroCopy />
+
+              {activeSection && (
+                <div className="absolute inset-0 flex items-end px-6 pb-16 sm:px-10">
+                  <div className="mx-auto w-full max-w-6xl">
+                    <div className="max-w-xl border-l border-brain-glow bg-coco-dark/80 p-6 backdrop-blur-sm sm:p-8">
+                      <span className="font-mono text-[11px] text-coco-light">
+                        {activeSection.nodeName.replace('node_', 'nodo ')}
+                      </span>
+
+                      <h2 className="mt-2 text-[clamp(1.6rem,4vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-cream">
+                        {activeSection.label}
+                      </h2>
+
+                      <div className="mt-5 max-h-[34dvh] overflow-y-auto pr-2">
+                        {(sectionContent[activeSection.id] ?? []).length > 0 ? (
+                          sectionContent[activeSection.id].map((text) => (
+                            <p
+                              key={text.slice(0, 24)}
+                              className="mb-3 text-[15px] leading-relaxed text-cream/85 last:mb-0"
+                            >
+                              {text}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-[15px] leading-relaxed text-cream/60">
+                            Contenido pendiente.
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={closeNode}
+                        className="mt-6 font-mono text-[12px] text-cream transition-colors hover:text-brain-glow"
+                      >
+                        ← Volver <span className="text-coco-light">[esc]</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

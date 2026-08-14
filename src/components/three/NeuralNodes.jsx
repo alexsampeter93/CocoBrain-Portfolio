@@ -1,24 +1,36 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, Line } from '@react-three/drei'
-import { CatmullRomCurve3, Color, Vector3 } from 'three'
+import { AdditiveBlending, CatmullRomCurve3, Color, Vector3 } from 'three'
 import { nodePositions, nodeConnections } from '../../data/nodeLayout'
 import { journey } from '../../journey/clock'
-import { ramp } from '../../journey/stages'
+import { layerOpacity } from '../../journey/stages'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 const GLOW = '#FF6B85'
 const LINE = '#B08355'
 
-const NODE_RADIUS = 0.055
-// Radio de la zona sensible. Seis veces el nodo: es lo que hace que se pueda
-// acertar con el dedo sin engordar la bolita.
-const HIT_RADIUS = 0.34
+/**
+ * Todas las medidas salen del radio de la constelacion, no son fijas.
+ *
+ * Antes eran numeros absolutos, y en movil —donde todo es mas pequeno— los
+ * nodos quedaban desproporcionados. Ademas los cinco nodos eran identicos al
+ * polvo del fondo, asi que la escena se leia como puntos sueltos y no como una
+ * red: no habia jerarquia que mirar.
+ *
+ * Estos cinco son los protagonistas y se nota. El campo de fondo es
+ * deliberadamente pequeno y apagado: esta ahi para dar profundidad, no para
+ * competir.
+ */
+const NODE_SCALE = 0.038
+// Zona sensible, casi tres veces el nodo. Es lo que hace que se pueda acertar
+// con el dedo sin engordar la bolita.
+const HIT_SCALE = 0.11
 const HOVER_SCALE = 1.7
 
 const FIELD_COUNT = 38
-const FIELD_INNER_RADIUS = 2.1
-const FIELD_OUTER_RADIUS = 5.2
+const FIELD_INNER = 1.35
+const FIELD_OUTER = 2.6
 const FIELD_NEIGHBOURS = 2
 
 const AMBIENT_PULSE_SPEED = 0.14
@@ -50,16 +62,7 @@ function mulberry32(seed) {
   }
 }
 
-function Node({
-  section,
-  position,
-  phase,
-  active,
-  onSelect,
-  onAwaken,
-  interactive = true,
-  fade = 1,
-}) {
+function Node({ section, position, phase, active, onSelect, onAwaken, nodeRadius, hitRadius }) {
   const meshRef = useRef(null)
   const [hovered, setHovered] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
@@ -106,23 +109,37 @@ function Node({
           onSelect(section.id)
         }}
       >
-        <sphereGeometry args={[HIT_RADIUS, 12, 10]} />
+        <sphereGeometry args={[hitRadius, 12, 10]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       <mesh ref={meshRef} raycast={() => null}>
-        <sphereGeometry args={[NODE_RADIUS, 20, 16]} />
+        <sphereGeometry args={[nodeRadius, 20, 16]} />
         <meshStandardMaterial
           color={section.accent}
           emissive={GLOW}
-          emissiveIntensity={highlighted ? 1.1 : 0.35}
+          emissiveIntensity={highlighted ? 1.4 : 0.55}
           roughness={0.3}
           transparent
         />
       </mesh>
 
+      {/* Halo que da cuerpo al nodo. Un punto emisivo pelado se lee como un
+          píxel encendido; con el halo se lee como algo que emite luz. */}
+      <mesh raycast={() => null} scale={highlighted ? 2.6 : 2}>
+        <sphereGeometry args={[nodeRadius, 16, 12]} />
+        <meshBasicMaterial
+          color={GLOW}
+          transparent
+          opacity={0.16}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
       {highlighted && (
-        <Html center distanceFactor={7} position={[0, NODE_RADIUS * 3.4, 0]}>
+        <Html center distanceFactor={7} position={[0, nodeRadius * 3.4, 0]}>
           <span className="flex items-center gap-2 whitespace-nowrap border-l-2 border-brain-glow bg-cream/90 py-1 pl-2 pr-3 font-mono text-[11px] leading-none text-coco-dark">
             <span className="tabular-nums text-[9px] text-coco-mid">
               {section.nodeName.replace('node_', 'N')}
@@ -136,7 +153,7 @@ function Node({
 }
 
 /** Flujo de fondo: recorre una conexion en bucle, sin relacion con el cursor. */
-function AmbientPulse({ curve, offset, obsessive = false }) {
+function AmbientPulse({ curve, offset, size, obsessive = false }) {
   const ref = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
@@ -165,14 +182,14 @@ function AmbientPulse({ curve, offset, obsessive = false }) {
 
   return (
     <mesh ref={ref}>
-      <sphereGeometry args={[obsessive ? 0.028 : 0.022, 10, 8]} />
+      <sphereGeometry args={[size * (obsessive ? 0.55 : 0.42), 10, 8]} />
       <meshBasicMaterial color={GLOW} transparent depthWrite={false} />
     </mesh>
   )
 }
 
 /** Campo de fondo: dos geometrias en total, no un objeto por punto. */
-function NeuralField() {
+function NeuralField({ scale }) {
   const groupRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
@@ -181,8 +198,8 @@ function NeuralField() {
     const positions = []
 
     for (let i = 0; i < FIELD_COUNT; i++) {
-      // Capa esferica: se evita el centro, que es donde esta el personaje.
-      const radius = FIELD_INNER_RADIUS + random() * (FIELD_OUTER_RADIUS - FIELD_INNER_RADIUS)
+      // Capa esferica: se evita el centro, que es donde esta el cerebro.
+      const radius = scale * (FIELD_INNER + random() * (FIELD_OUTER - FIELD_INNER))
       const theta = random() * Math.PI * 2
       const phi = Math.acos(2 * random() - 1)
 
@@ -224,7 +241,7 @@ function NeuralField() {
     })
 
     return { points, segments }
-  }, [])
+  }, [scale])
 
   useFrame((state) => {
     if (!groupRef.current || reducedMotion) return
@@ -244,11 +261,13 @@ function NeuralField() {
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[points, 3]} />
         </bufferGeometry>
+        {/* Pequeño y apagado a propósito: el campo da profundidad, no compite
+            con los cinco nodos que sí importan. */}
         <pointsMaterial
-          size={0.035}
+          size={scale * 0.009}
           color={LINE}
           transparent
-          opacity={0.65}
+          opacity={0.5}
           sizeAttenuation
           depthWrite={false}
         />
@@ -257,9 +276,19 @@ function NeuralField() {
   )
 }
 
-export default function NeuralNodes({ sections, activeSection, onSelect, fadeRange, radius = 3.4 }) {
+export default function NeuralNodes({
+  sections,
+  activeSection,
+  onSelect,
+  radius = 3.4,
+  layer = 'nodes',
+}) {
   const rootRef = useRef(null)
-  const basesRef = useRef(new Map())
+  const basesRef = useRef(null)
+  const fadeRef = useRef(-1)
+
+  const nodeRadius = radius * NODE_SCALE
+  const hitRadius = radius * HIT_SCALE
 
   /**
    * El desvanecido se aplica aqui dentro, leyendo el progreso del scroll en
@@ -274,23 +303,28 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
     const root = rootRef.current
     if (!root) return
 
-    const fade = ramp(journey.progress, fadeRange[0], fadeRange[1])
+    const fade = layerOpacity(layer, journey.progress)
+    // Fuera del tramo de aparicion el valor no se mueve, y esos son casi todos
+    // los frames. Recorrer el grafo entero en cada uno para no cambiar nada
+    // era trabajo puro.
+    if (Math.abs(fade - fadeRef.current) < 0.002) return
+    fadeRef.current = fade
+
     root.visible = fade > 0.02
     if (!root.visible) return
 
-    root.traverse((object) => {
-      const material = object.material
-      if (!material) return
+    // El grafo se recorre una sola vez, guardando la opacidad original de cada
+    // material. A partir de ahi solo se multiplican valores.
+    if (!basesRef.current) {
+      basesRef.current = []
+      root.traverse((object) => {
+        if (!object.material) return
+        object.material.transparent = true
+        basesRef.current.push([object.material, object.material.opacity])
+      })
+    }
 
-      let base = basesRef.current.get(material)
-      if (base === undefined) {
-        base = material.opacity
-        basesRef.current.set(material, base)
-      }
-
-      material.transparent = true
-      material.opacity = base * fade
-    })
+    for (const [material, base] of basesRef.current) material.opacity = base * fade
   })
   const { nodes, curves, edgesByNode } = useMemo(() => {
     // El radio viene de `tokens.mind.radius`, asi que la constelacion se
@@ -316,8 +350,8 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
         // Punto medio desplazado: una recta entre dos nodos parece un cable;
         // una curva suave parece una conexion.
         const mid = a.clone().lerp(b, 0.5)
-        mid.z += 0.4
-        mid.y += 0.15
+        mid.z += radius * 0.12
+        mid.y += radius * 0.045
 
         const curve = new CatmullRomCurve3([a, mid, b])
         curves.push(curve)
@@ -427,22 +461,27 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
   })
 
   return (
-    <group ref={rootRef}>
-      <NeuralField />
+    <group ref={rootRef} visible={false}>
+      <NeuralField scale={radius} />
 
       {curves.map((curve, index) => (
         <Line
           key={`line-${index}`}
           points={curve.getPoints(28)}
           color={new Color(LINE)}
-          lineWidth={0.9}
+          lineWidth={1.4}
           transparent
-          opacity={0.28}
+          opacity={0.34}
         />
       ))}
 
       {ambient.map((pulse, index) => (
-        <AmbientPulse key={`ambient-${index}`} curve={pulse.curve} offset={pulse.offset} />
+        <AmbientPulse
+          key={`ambient-${index}`}
+          curve={pulse.curve}
+          offset={pulse.offset}
+          size={nodeRadius}
+        />
       ))}
 
       {obsessive.map((pulse, index) => (
@@ -450,6 +489,7 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
           key={`obsessive-${index}`}
           curve={pulse.curve}
           offset={pulse.offset}
+          size={nodeRadius}
           obsessive
         />
       ))}
@@ -463,7 +503,7 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
           }}
           visible={false}
         >
-          <sphereGeometry args={[0.03, 10, 8]} />
+          <sphereGeometry args={[nodeRadius * 0.5, 10, 8]} />
           <meshBasicMaterial color="#FFD2DA" transparent depthWrite={false} toneMapped={false} />
         </mesh>
       ))}
@@ -477,6 +517,8 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
           active={activeSection === node.section.id}
           onSelect={onSelect}
           onAwaken={awaken}
+          nodeRadius={nodeRadius}
+          hitRadius={hitRadius}
         />
       ))}
     </group>

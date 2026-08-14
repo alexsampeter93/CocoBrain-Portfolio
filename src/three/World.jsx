@@ -5,7 +5,7 @@ import { ACESFilmicToneMapping, Vector3 } from 'three'
 import { advance, journey } from '../journey/clock'
 import { cameraPath, sampleCamera } from '../journey/stages'
 import MascotStage from './MascotStage'
-import MindBlockout from './Blockout'
+import MindStage from './MindStage'
 
 /**
  * El mundo. Un solo canvas, una sola escena, montada una vez.
@@ -89,6 +89,8 @@ export default function World({
   compact = false,
   reaction,
   onPoke,
+  activeSection,
+  onSelectSection,
   active = true,
 }) {
   const [dpr, setDpr] = useState(pickDpr)
@@ -162,7 +164,12 @@ export default function World({
         />
       </Suspense>
 
-      <MindBlockout tokens={tokens} sections={sections} />
+      <MindStage
+        tokens={tokens}
+        sections={sections}
+        activeSection={activeSection}
+        onSelectSection={onSelectSection}
+      />
 
       {import.meta.env.DEV && <Stats />}
     </Canvas>

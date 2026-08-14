@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { Sparkles, useGLTF } from '@react-three/drei'
 import { Box3, Color, Vector3 } from 'three'
 import { journey } from '../../journey/clock'
-import { ramp } from '../../journey/stages'
+import { layerOpacity } from '../../journey/stages'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 /**
@@ -17,17 +17,16 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 const MODEL_URL = '/preview/brain-orb.glb'
 const DRACO_PATH = '/draco/'
 
-// Diametro objetivo en unidades de mundo. Los nodos orbitan mas lejos.
-const TARGET_SIZE = 2.1
-
-export default function FloatingBrain({ fadeRange }) {
+export default function FloatingBrain({ size = 2.1, layer = 'mind' }) {
   const { scene } = useGLTF(MODEL_URL, DRACO_PATH)
   const rootRef = useRef(null)
   const spinRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
+  const fadeRef = useRef(-1)
 
-  const { model, scale } = useMemo(() => {
+  const { model, scale, materials } = useMemo(() => {
     const clone = scene.clone(true)
+    const list = []
 
     clone.traverse((object) => {
       if (!object.isMesh || !object.material) return
@@ -40,27 +39,30 @@ export default function FloatingBrain({ fadeRange }) {
       material.emissiveIntensity = 0.45
       material.transparent = true
       object.material = material
+      list.push(material)
     })
 
-    const size = new Box3().setFromObject(clone).getSize(new Vector3())
-    const largest = Math.max(size.x, size.y, size.z) || 1
+    const bounds = new Box3().setFromObject(clone).getSize(new Vector3())
+    const largest = Math.max(bounds.x, bounds.y, bounds.z) || 1
 
-    return { model: clone, scale: TARGET_SIZE / largest }
-  }, [scene])
+    return { model: clone, scale: size / largest, materials: list }
+  }, [scene, size])
 
   useFrame((state) => {
     const root = rootRef.current
     if (!root) return
 
-    const fade = ramp(journey.progress, fadeRange[0], fadeRange[1])
-    root.visible = fade > 0.02
-    if (!root.visible) return
+    const fade = layerOpacity(layer, journey.progress)
 
-    root.traverse((object) => {
-      if (object.isMesh && object.material) object.material.opacity = fade
-    })
+    // Los materiales solo se tocan cuando el desvanecido se mueve de verdad,
+    // que son unos pocos frames de todo el recorrido.
+    if (Math.abs(fade - fadeRef.current) > 0.002) {
+      fadeRef.current = fade
+      root.visible = fade > 0.02
+      for (const material of materials) material.opacity = fade
+    }
 
-    if (reducedMotion) return
+    if (!root.visible || reducedMotion) return
 
     const t = state.clock.elapsedTime
     if (spinRef.current) {
@@ -75,10 +77,19 @@ export default function FloatingBrain({ fadeRange }) {
         <primitive object={model} />
       </group>
 
-      {/* La luz nace del cerebro y alcanza a los nodos que lo rodean. */}
-      <pointLight color="#FF6B85" intensity={9} distance={7} decay={2} />
+      {/* La luz nace del cerebro y alcanza a los nodos que lo rodean. Su
+          alcance sale del tamaño: en móvil todo es más pequeño y una luz de
+          alcance fijo se comería la escena entera. */}
+      <pointLight color="#FF6B85" intensity={9} distance={size * 3.4} decay={2} />
 
-      <Sparkles count={26} scale={3.2} size={2.4} speed={0.3} color="#FFC2CC" opacity={0.8} />
+      <Sparkles
+        count={26}
+        scale={size * 1.5}
+        size={2.4}
+        speed={0.3}
+        color="#FFC2CC"
+        opacity={0.8}
+      />
     </group>
   )
 }
