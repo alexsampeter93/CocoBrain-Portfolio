@@ -1,9 +1,10 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Scene, { INSIDE_END, SWAP_POINT } from './components/three/Scene'
 import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
 import Hud from './components/ui/Hud'
-import { useScrollProgress } from './hooks/useScrollProgress'
+import { useDocumentProgress, useScrollProgress } from './hooks/useScrollProgress'
+import { getCalmMode, subscribeCalmMode, toggleCalmMode } from './state/calmMode'
 import { sections } from './data/sections'
 
 /**
@@ -52,6 +53,8 @@ export default function App() {
   const model = useSelectedModel()
   const wide = useWideLayout()
   const progress = useScrollProgress({ screens: JOURNEY_SCREENS })
+  const contentProgress = useDocumentProgress({ afterScreens: JOURNEY_SCREENS })
+  const calm = useSyncExternalStore(subscribeCalmMode, getCalmMode, () => false)
   const [activeSection, setActiveSection] = useState(null)
 
   // Contadores, no booleanos: cada incremento dispara la animacion de nuevo
@@ -103,8 +106,11 @@ export default function App() {
 
   const fade = Math.max(0, 1 - Math.abs(progress - SWAP_POINT) / FADE_WIDTH)
   const heroOpacity = Math.max(0, 1 - progress / (SWAP_POINT * 0.6))
-  // Al terminar el interior, la escena se retira y la pagina sigue normal.
-  const sceneOpacity = Math.max(0, 1 - (progress - INSIDE_END) / 0.12)
+  /**
+   * Pasado el cerebro la escena no se retira: baja a segundo plano y se
+   * queda de fondo del contenido, donde la red crece con el scroll.
+   */
+  const sceneOpacity = progress > INSIDE_END ? 0.55 : 1
 
   return (
     <>
@@ -129,6 +135,7 @@ export default function App() {
             reaction={reaction}
             startle={startle}
             compact={!wide}
+            contentProgress={contentProgress}
             onPoke={poke}
           />
         </Suspense>
@@ -146,7 +153,8 @@ export default function App() {
         activeSection={activeSection}
         onSelect={selectSection}
         onClose={close}
-        progress={progress}
+        calm={calm}
+        onToggleCalm={toggleCalmMode}
       />
 
       {/* Recorrido 3D. pointer-events-none es imprescindible: este contenedor
@@ -195,7 +203,9 @@ export default function App() {
       </div>
 
       {/* A partir de aquí, página normal. */}
-      <main id="contenido" className="relative bg-cream">
+      {/* Sin fondo opaco: la red crece detras del contenido y tiene que
+          verse. La legibilidad la da el degradado del body. */}
+      <main id="contenido" className="relative">
         {sections.map((section) => (
           <section
             key={section.id}

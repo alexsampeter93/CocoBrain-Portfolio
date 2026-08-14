@@ -7,6 +7,7 @@ import Mascot3D, { MASCOT_MODELS } from './Mascot3D'
 import NeuralNodes from './NeuralNodes'
 import CameraRig from './CameraRig'
 import GlowingBrain from './GlowingBrain'
+import GrowingNetwork from './GrowingNetwork'
 
 const IS_COARSE_POINTER =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -199,10 +200,12 @@ export default function Scene({
   reaction = 0,
   startle = 0,
   compact = false,
+  contentProgress = 0,
   onPoke,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
   const inside = progress >= SWAP_POINT
+  const past = progress >= INSIDE_END
 
   // De 0 a 1 en la franja previa al cambio: es lo que gira a Olaz de espaldas
   // justo antes de entrar.
@@ -225,14 +228,21 @@ export default function Scene({
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(MAX_DPR)} />
 
-      <ScrollDolly progress={progress} inside={inside} enabled={!activeSection} />
+      <ScrollDolly
+        progress={progress}
+        inside={inside}
+        enabled={!activeSection && !past}
+      />
 
       {activeSection && (
         <CameraRigBridge xRatio={0} sections={sections} activeSection={activeSection} />
       )}
 
       <Suspense fallback={null}>
-        {inside ? (
+        {past ? (
+          /* Pasado el cerebro, la red acompana al contenido y crece con el. */
+          <GrowingNetwork density={0.06 + contentProgress * 0.94} />
+        ) : inside ? (
           <InnerScene
             sections={sections}
             activeSection={activeSection}

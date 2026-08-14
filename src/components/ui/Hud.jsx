@@ -21,7 +21,14 @@ function CornerTicks() {
   )
 }
 
-export default function Hud({ sections, activeSection, onSelect, onClose, progress }) {
+export default function Hud({
+  sections,
+  activeSection,
+  onSelect,
+  onClose,
+  calm,
+  onToggleCalm,
+}) {
   const logoRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
@@ -54,6 +61,28 @@ export default function Hud({ sections, activeSection, onSelect, onClose, progre
           className="pointer-events-auto block pl-9 pt-9 font-mono text-[11px] text-coco-mid transition-colors hover:text-coco-dark"
         >
           CocoBrain — Alex
+        </button>
+      </div>
+
+      {/*
+        Modo "cabeza despejada". Es el interruptor accesible de la web y a la
+        vez parte del tema: una mente que no para, y la posibilidad de
+        pararla. No se esconde en un menu de ajustes por eso mismo.
+      */}
+      <div className="pointer-events-none fixed right-6 top-6 z-40 sm:right-10 sm:top-10">
+        <button
+          type="button"
+          onClick={onToggleCalm}
+          aria-pressed={calm}
+          className="pointer-events-auto flex items-center gap-2 pr-9 pt-9 font-mono text-[11px] text-coco-mid transition-colors hover:text-coco-dark"
+        >
+          <span
+            aria-hidden="true"
+            className={`h-[7px] w-[7px] border transition-colors ${
+              calm ? 'border-brain-glow bg-brain-glow' : 'border-coco-light'
+            }`}
+          />
+          cabeza despejada
         </button>
       </div>
 

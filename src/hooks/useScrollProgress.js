@@ -49,3 +49,50 @@ export function useScrollProgress({ smoothing = 0.08, screens = 3 } = {}) {
 
   return progress
 }
+
+/**
+ * Progreso a lo largo del contenido que hay DESPUES del recorrido 3D.
+ *
+ * Va aparte del recorrido porque miden cosas distintas: aquel se mide sobre
+ * una distancia fija para que la coreografia no se descoloque al anadir
+ * contenido, y este se mide sobre lo que haya, que es justo lo que tiene que
+ * crecer con el.
+ */
+export function useDocumentProgress({ afterScreens = 3, smoothing = 0.1 } = {}) {
+  const [progress, setProgress] = useState(0)
+  const targetRef = useRef(0)
+  const currentRef = useRef(0)
+
+  useEffect(() => {
+    const read = () => {
+      const start = window.innerHeight * afterScreens
+      const end = document.documentElement.scrollHeight - window.innerHeight
+      const span = end - start
+      targetRef.current =
+        span > 0 ? Math.min(1, Math.max(0, (window.scrollY - start) / span)) : 0
+    }
+
+    read()
+    window.addEventListener('scroll', read, { passive: true })
+    window.addEventListener('resize', read)
+
+    let frame = 0
+    const tick = () => {
+      const next = currentRef.current + (targetRef.current - currentRef.current) * smoothing
+      if (Math.abs(next - currentRef.current) > 0.0005) {
+        currentRef.current = next
+        setProgress(next)
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+
+    return () => {
+      window.removeEventListener('scroll', read)
+      window.removeEventListener('resize', read)
+      cancelAnimationFrame(frame)
+    }
+  }, [afterScreens, smoothing])
+
+  return progress
+}
