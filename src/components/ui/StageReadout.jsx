@@ -15,11 +15,36 @@ import { STAGES } from '../../journey/stages'
 export default function StageReadout() {
   const barRef = useRef(null)
   const textRef = useRef(null)
+  const peakRef = useRef(null)
 
   useEffect(() => {
     let frame
+    let previous = performance.now()
+    let worst = 0
+    let windowStart = previous
 
     const tick = () => {
+      const now = performance.now()
+      const elapsed = now - previous
+      previous = now
+
+      /**
+       * El peor frame del último segundo, en milisegundos.
+       *
+       * Es el dato que faltaba. Un contador de fps da la MEDIA, y una media de
+       * 146 puede esconder perfectamente un frame de 90 ms cada segundo —que
+       * es justo lo que se ve como tirón. Aquí se busca el pico, no el
+       * promedio.
+       *
+       * Referencia: 16 es un frame a 60 Hz. Por encima de 33 hay salto visible.
+       */
+      if (elapsed > worst) worst = elapsed
+      if (now - windowStart > 1000) {
+        if (peakRef.current) peakRef.current.textContent = `${worst.toFixed(0)}ms`
+        worst = 0
+        windowStart = now
+      }
+
       const p = journey.progress
       const stage = STAGES.reduce((found, s) => (p >= s.from ? s : found), STAGES[0])
 
@@ -41,6 +66,13 @@ export default function StageReadout() {
         <span
           ref={textRef}
           className="font-mono text-[10px] tracking-[0.08em] text-coco-mid"
+        />
+        {/* Pico de frame del último segundo. 16 = 60 Hz; por encima de 33 hay
+            salto visible. */}
+        <span
+          ref={peakRef}
+          className="font-mono text-[10px] tabular-nums text-brain-glow"
+          title="Peor frame del último segundo"
         />
         <div className="h-px flex-1 bg-coco-light/40">
           <div

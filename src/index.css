@@ -12,21 +12,51 @@
     --brain-glow: #ff6b85;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
+  /*
+    OJO: aquí NO va `scroll-behavior: smooth`.
 
+    Estuvo puesto y era la mitad del problema de "va lento y a tirones". Esa
+    regla hace que el navegador ANIME cada desplazamiento con su propia curva
+    de unos 300 ms. Cada muesca de la rueda arrancaba una animación que la
+    siguiente interrumpía y reiniciaba, mientras el recorrido intentaba leer
+    una posición que nunca paraba quieta.
+
+    Lo peor es que no se ve al leer el JavaScript, y por eso sobrevivió a
+    varias rondas de buscar la causa en el sitio equivocado.
+
+    El desplazamiento suave de la navegación sigue funcionando: se pide
+    explícitamente con `behavior: 'smooth'` donde hace falta, en vez de
+    imponerlo a todo el documento.
+  */
   body {
     @apply text-coco-dark font-sans antialiased;
     margin: 0;
     overscroll-behavior-y: none;
-    /* Degradado radial en vez de crema plano: da profundidad al fondo y es
-       lo que separa el modelo 3D de la pared. Va en CSS y no en la escena
-       porque así no cuesta ni un frame. */
+    background: var(--cream-bg);
+  }
+
+  /*
+    El degradado del fondo, en su propia capa fija.
+
+    Antes estaba en `body` con `background-attachment: fixed`, y esa
+    combinación es de las peores que hay para el scroll: obliga al navegador a
+    REPINTAR el fondo de toda la ventana en cada frame de desplazamiento, y le
+    impide usar el camino rápido en el que el scroll lo resuelve la tarjeta
+    gráfica sola. Con un canvas de WebGL a pantalla completa encima, se paga
+    dos veces.
+
+    Un elemento con `position: fixed` consigue exactamente el mismo efecto
+    visual —el fondo no se mueve al bajar— pero el navegador lo trata como una
+    capa aparte que compone una vez y reutiliza. Coste de scroll: cero.
+  */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background:
-      radial-gradient(120% 90% at 50% 8%, #FFF6EA 0%, #F5E6D3 45%, #E8D2B8 100%),
-      #f5e6d3;
-    background-attachment: fixed;
+      radial-gradient(120% 90% at 50% 8%, #fff6ea 0%, #f5e6d3 45%, #e8d2b8 100%),
+      var(--cream-bg);
   }
 
   /* Foco visible: los nodos y la nav se recorren con teclado */
@@ -48,9 +78,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
   *,
   *::before,
   *::after {
