@@ -179,5 +179,10 @@ lento, porque es el plano en el que hay que mirar.
 
 ## Siguiente
 
-Fase 2: sustituir las cajas del interior por el universo neuronal de verdad.
+Antes de la fase 2 hubo que parar a resolver los tirones del scroll, que
+resultaron ser cinco problemas distintos apilados. Está contado en
+[02 · El caso de los tirones](02-el-caso-de-los-tirones.md), que es la entrada
+que más enseña de las tres.
+
+Luego sí: sustituir las cajas del interior por el universo neuronal de verdad.
 Fondo propio, nodos con jerarquía y conexiones con luz.
