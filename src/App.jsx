@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import World from './three/World'
 import JourneyScroll, { scrollToProgress } from './journey/JourneyScroll'
 import StageReadout from './components/ui/StageReadout'
+import HeroCopy from './components/ui/HeroCopy'
+import Preloader from './components/ui/Preloader'
 import Hud from './components/ui/Hud'
 import { tokensFor } from './layout/tokens'
 import { useCompact } from './layout/useCompact'
@@ -50,6 +52,10 @@ export default function App() {
 
   const tokens = tokensFor(compact)
 
+  /** Pulsar a Olaz le hace saltar. Un contador basta: cada subida es un salto. */
+  const [reaction, setReaction] = useState(0)
+  const poke = useCallback(() => setReaction((value) => value + 1), [])
+
   /**
    * La navegación mueve la CÁMARA, no la página.
    *
@@ -73,6 +79,8 @@ export default function App() {
         nuestra mayor debilidad.
       </h1>
 
+      <Preloader />
+
       <Hud
         sections={sections}
         onSelect={goToMind}
@@ -91,10 +99,21 @@ export default function App() {
             ref={trackRef}
             className="relative"
             style={{ height: `${JOURNEY_SCREENS * 100}vh` }}
-            aria-hidden="true"
           >
             <div ref={pinRef} className="h-[100dvh] w-full overflow-hidden">
-              <World tokens={tokens} sections={sections} active={onScreen} />
+              {/* La escena no es texto indexable: el h1 de arriba es el que
+                  cuenta para buscadores y lectores de pantalla. */}
+              <div className="absolute inset-0" aria-hidden="true">
+                <World
+                  tokens={tokens}
+                  sections={sections}
+                  reaction={reaction}
+                  onPoke={poke}
+                  active={onScreen}
+                />
+              </div>
+
+              <HeroCopy />
             </div>
           </section>
 

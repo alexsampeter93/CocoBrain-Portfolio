@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, PerformanceMonitor, Stats } from '@react-three/drei'
 import { ACESFilmicToneMapping, Vector3 } from 'three'
 import { journey } from '../journey/clock'
 import { cameraPath, sampleCamera } from '../journey/stages'
-import Blockout from './Blockout'
+import MascotStage from './MascotStage'
+import MindBlockout from './Blockout'
 
 /**
  * El mundo. Un solo canvas, una sola escena, montada una vez.
@@ -27,9 +28,9 @@ const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
  * Mueve la cámara leyendo la tabla. No tiene lógica propia: si el recorrido
  * está mal, se corrige en `stages.js`, no aquí.
  */
-function CameraDirector({ tokens }) {
+function CameraDirector({ tokens, handBrain }) {
   const camera = useThree((state) => state.camera)
-  const path = useMemo(() => cameraPath(tokens), [tokens])
+  const path = useMemo(() => cameraPath(tokens, handBrain), [tokens, handBrain])
 
   const position = useRef(new Vector3())
   const target = useRef(new Vector3())
@@ -43,8 +44,16 @@ function CameraDirector({ tokens }) {
   return null
 }
 
-export default function World({ tokens, sections, active = true }) {
+export default function World({ tokens, sections, model, reaction, onPoke, active = true }) {
   const [dpr, setDpr] = useState(MAX_DPR)
+
+  /**
+   * Dónde ha quedado el cerebro de la mano una vez encuadrado el modelo. Es
+   * el único dato del mundo que no se puede escribir a mano: depende de la
+   * malla. Se mide una vez al cargar y se reconstruye el recorrido con él.
+   */
+  const [handBrain, setHandBrain] = useState(null)
+  const onAnchor = useCallback((point) => setHandBrain(point), [])
 
   return (
     <Canvas
@@ -62,14 +71,24 @@ export default function World({ tokens, sections, active = true }) {
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(MAX_DPR)} />
 
-      <CameraDirector tokens={tokens} />
+      <CameraDirector tokens={tokens} handBrain={handBrain} />
 
       {/* HDRI de estudio (Poly Haven, CC0). De aquí sale casi toda la luz: es
           la diferencia entre un visor de modelos y una escena dirigida. */}
       <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
-      <Blockout tokens={tokens} sections={sections} />
+      <Suspense fallback={null}>
+        <MascotStage
+          tokens={tokens}
+          model={model}
+          onAnchor={onAnchor}
+          reaction={reaction}
+          onPoke={onPoke}
+        />
+      </Suspense>
+
+      <MindBlockout tokens={tokens} sections={sections} />
 
       {import.meta.env.DEV && <Stats />}
     </Canvas>

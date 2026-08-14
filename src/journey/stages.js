@@ -43,6 +43,9 @@ export function stageAt(progress) {
  * de negro entre una cosa y otra.
  */
 export const LAYERS = {
+  // El titular se va mucho antes que el personaje: si aguanta hasta que la
+  // cámara ya está encima del cerebro, se lee encima del modelo y ensucia.
+  heroCopy: { in: null, out: [0.04, 0.22] },
   mascot: { in: null, out: [0.4, 0.54] },
   handBrain: { in: null, out: [0.52, 0.61] },
   mind: { in: [0.44, 0.64], out: null },
@@ -79,9 +82,11 @@ export function layerOpacity(name, progress) {
  * de él. Aquí la mirada se queda clavada en el cerebro hasta que se está
  * encima (0.38), y solo entonces se abre hacia el fondo.
  */
-export function cameraPath(t) {
+export function cameraPath(t, measuredHandBrain = null) {
   const mascot = new Vector3(...t.mascot.position)
-  const hand = new Vector3(...t.handBrain.position)
+  // La posición medida sobre el modelo manda sobre la del token: el token es
+  // solo el valor con el que se trabaja hasta que el GLB carga.
+  const hand = measuredHandBrain ? measuredHandBrain.clone() : new Vector3(...t.handBrain.position)
   const mind = new Vector3(...t.mind.center)
 
   // A la altura del pecho, no de los pies: encuadrar por el centro de masa

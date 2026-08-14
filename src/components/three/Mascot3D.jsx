@@ -6,7 +6,7 @@ import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { usePointer } from '../../hooks/usePointer'
 import { journey } from '../../journey/clock'
-import { ramp } from '../../journey/stages'
+import { layerOpacity } from '../../journey/stages'
 
 /**
  * Ojo con los nombres: los que puso Meshy no corresponden con lo que
@@ -19,16 +19,6 @@ export const MASCOT_MODELS = {
 }
 
 const DRACO_PATH = '/draco/'
-
-/**
- * Encuadre: se respeta el limite mas restrictivo de los dos.
- *
- * Ajustar solo por altura funcionaba en escritorio y rompia en movil: en una
- * pantalla alta y estrecha, el alto visible en unidades de mundo es grande y
- * el personaje se salia por los lados.
- */
-const FILL_HEIGHT = 0.72
-const FILL_WIDTH = 0.58
 
 /**
  * Limites de la mirada. 65 grados es lo maximo que deja la cara legible:
@@ -69,14 +59,19 @@ export default function Mascot3D({
   turnAway = 0,
   lookEnabled = true,
   idleEnabled = true,
-  fillWidth = FILL_WIDTH,
-  fillHeight = FILL_HEIGHT,
-  fadeRange = null,
+  /** Altura del personaje en unidades de mundo. Sale de `tokens.mascot.height`. */
+  height = 3,
+  /** Tope de anchura, tambien en unidades de mundo. */
+  maxWidth = Infinity,
+  /** Capa de `LAYERS` que decide cuando se desvanece. */
+  layer = 'mascot',
+  /** Punto del modelo cuya posicion en el mundo hay que medir y reportar. */
+  anchorLocal = null,
+  onAnchor,
   onPoke,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const camera = useThree((state) => state.camera)
-  const viewport = useThree((state) => state.viewport)
   const reducedMotion = usePrefersReducedMotion()
   const pointer = usePointer()
 
@@ -98,6 +93,18 @@ export default function Mascot3D({
     return scene
   }, [scene])
 
+  /**
+   * Encuadre en unidades de mundo, no en fraccion de pantalla.
+   *
+   * Antes el tamano salia del `viewport` de R3F, que se mide a la distancia a
+   * la que esta la camara. Como la camara se mueve durante el recorrido, el
+   * personaje se reescalaba mientras te acercabas: de ahi salia parte de la
+   * sensacion de que "todo bailaba".
+   *
+   * Ahora Olaz mide lo que dice `tokens.mascot.height` y no cambia nunca. Solo
+   * se comprueba que no se salga de ancho, porque en una pantalla alta y
+   * estrecha el hueco horizontal es mucho menor que el vertical.
+   */
   useLayoutEffect(() => {
     const group = fitRef.current
     if (!group) return
@@ -110,13 +117,20 @@ export default function Mascot3D({
     const center = box.getCenter(new Vector3())
     if (size.y === 0) return
 
-    const fit = Math.min(
-      (viewport.height * fillHeight) / size.y,
-      (viewport.width * fillWidth) / size.x,
-    )
+    const fit = Math.min(height / size.y, maxWidth / size.x)
     group.scale.setScalar(fit)
     group.position.set(-center.x * fit, -center.y * fit, -center.z * fit)
-  }, [tuned, viewport.height, viewport.width, fillWidth, fillHeight])
+
+    /**
+     * El cerebro de la mano es la puerta por la que entra la camara, asi que
+     * su posicion tiene que ser la de verdad y no una estimacion. Se mide una
+     * vez, al terminar el encuadre, y se reporta hacia arriba.
+     */
+    if (anchorLocal && onAnchor) {
+      group.updateWorldMatrix(true, false)
+      onAnchor(group.localToWorld(anchorLocal.clone()))
+    }
+  }, [tuned, height, maxWidth, anchorLocal, onAnchor])
 
   /** Salto con aplastado: la unica deformacion que aguanta una malla fusionada. */
   useEffect(() => {
@@ -232,7 +246,7 @@ export default function Mascot3D({
    * mitad de recorrido era la causa de los saltos.
    */
   useFrame(() => {
-    const fade = fadeRange ? 1 - ramp(journey.progress, fadeRange[0], fadeRange[1]) : 1
+    const fade = layerOpacity(layer, journey.progress)
     fadeRef.current = fade
 
     const visible = fade > 0.01

@@ -19,6 +19,9 @@ import { nodeConnections, nodePositions } from '../data/nodeLayout'
  *
  * Cada caja de aquí ocupa el hueco exacto que ocupará su modelo, porque los
  * dos leen la posición del mismo sitio: `tokens`.
+ *
+ * La portada ya tiene su modelo (fase 1). Lo que queda en cajas es el interior
+ * del cerebro, que llega en la fase 2.
  */
 
 function useFade(layer) {
@@ -38,49 +41,6 @@ function useFade(layer) {
   })
 
   return ref
-}
-
-/** Hueco de la mascota: un bloque con la altura real que tendrá Olaz. */
-function MascotBlock({ tokens }) {
-  const ref = useFade('mascot')
-  const { position, height } = tokens.mascot
-
-  return (
-    <group ref={ref} position={position}>
-      <mesh position={[0, height * 0.25, 0]}>
-        <capsuleGeometry args={[height * 0.26, height * 0.42, 4, 16]} />
-        <meshStandardMaterial color="#C99B6E" roughness={0.7} transparent />
-      </mesh>
-
-      {/* La marca del suelo: sin ella no se juzga si el personaje flota. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -height * 0.5, 0]}>
-        <ringGeometry args={[height * 0.22, height * 0.3, 32]} />
-        <meshBasicMaterial color="#6B4530" transparent opacity={0.25} />
-      </mesh>
-    </group>
-  )
-}
-
-/** La puerta: el cerebro de la mano por el que entra la cámara. */
-function HandBrainBlock({ tokens }) {
-  const ref = useFade('handBrain')
-  const { position, size } = tokens.handBrain
-
-  return (
-    <group ref={ref} position={position}>
-      <mesh>
-        <icosahedronGeometry args={[size, 1]} />
-        <meshStandardMaterial
-          color="#F2939E"
-          emissive="#FF6B85"
-          emissiveIntensity={0.8}
-          roughness={0.35}
-          transparent
-        />
-      </mesh>
-      <pointLight color="#FF6B85" intensity={2.5} distance={3} decay={2} />
-    </group>
-  )
 }
 
 function Connections({ positions }) {
@@ -126,8 +86,11 @@ function quadratic(from, control, to, t, out) {
   out.push(TMP_A.x, TMP_A.y, TMP_A.z)
 }
 
-/** El universo neuronal: el cerebro flotante y los cinco nodos que lo rodean. */
-function MindBlock({ tokens, sections }) {
+/**
+ * El universo neuronal, todavía en cajas: el cerebro flotante y los cinco
+ * nodos que lo rodean. Lo sustituye el modelo real en la fase 2.
+ */
+export default function MindBlockout({ tokens, sections }) {
   const mindRef = useFade('mind')
   const nodesRef = useFade('nodes')
   const { center, radius } = tokens.mind
@@ -172,15 +135,5 @@ function MindBlock({ tokens, sections }) {
         })}
       </group>
     </group>
-  )
-}
-
-export default function Blockout({ tokens, sections }) {
-  return (
-    <>
-      <MascotBlock tokens={tokens} />
-      <HandBrainBlock tokens={tokens} />
-      <MindBlock tokens={tokens} sections={sections} />
-    </>
   )
 }

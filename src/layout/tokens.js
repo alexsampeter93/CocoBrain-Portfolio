@@ -21,12 +21,21 @@ export const COMPACT_QUERY = '(max-width: 1023px)'
  */
 export const tokens = {
   regular: {
-    /** Dónde se planta la mascota y cuánto ocupa de alto. */
-    mascot: { position: [1.75, -0.15, 0], height: 3.1 },
+    /**
+     * Dónde se planta la mascota, cuánto mide de alto y qué fracción del ancho
+     * visible puede ocupar como mucho. En una pantalla apaisada manda la
+     * altura; en una estrecha, el ancho.
+     */
+    mascot: { position: [1.75, -0.15, 0], height: 3.1, widthFill: 0.5 },
 
     /**
-     * El cerebro que sostiene en la mano. Es la puerta: la cámara entra por
-     * aquí, así que su posición manda sobre todo el tramo de acercamiento.
+     * El cerebro que sostiene en la mano. Es la puerta por la que entra la
+     * cámara.
+     *
+     * Estas coordenadas son solo el punto de partida: en cuanto el modelo
+     * carga, la mascota MIDE dónde ha quedado el cerebro de verdad y lo
+     * reporta. Un número escrito a mano aquí se desajustaría en cuanto
+     * cambiase el encuadre.
      */
     handBrain: { position: [0.95, 0.4, 0.85], size: 0.44 },
 
@@ -38,10 +47,10 @@ export const tokens = {
   },
 
   compact: {
-    mascot: { position: [0, 0.55, 0], height: 2.5 },
+    mascot: { position: [0, 0.35, 0], height: 2.1, widthFill: 0.92 },
     handBrain: { position: [-0.52, 0.95, 0.6], size: 0.36 },
     mind: { center: [0, 0, -11], radius: 2.5 },
-    heroDistance: 5.6,
+    heroDistance: 6.6,
   },
 }
 

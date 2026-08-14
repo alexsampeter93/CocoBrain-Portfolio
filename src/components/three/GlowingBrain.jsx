@@ -3,6 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import { Sparkles } from '@react-three/drei'
 import { AdditiveBlending, CanvasTexture } from 'three'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import { journey } from '../../journey/clock'
+import { layerOpacity } from '../../journey/stages'
 
 /**
  * Resplandor sobre el cerebro que Olaz ya sostiene en la mano.
@@ -46,13 +48,27 @@ function useGlowTexture() {
   }, [])
 }
 
-export default function GlowingBrain({ position, scale = 1, fade = 1 }) {
+export default function GlowingBrain({ position, scale = 1, layer = 'handBrain' }) {
   const texture = useGlowTexture()
+  const rootRef = useRef(null)
   const haloRef = useRef(null)
   const lightRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
   useFrame((state) => {
+    // El desvanecido se lee de la tabla en cada frame. Antes llegaba como prop
+    // desde React, lo que obligaba a re-renderizar el árbol en cada píxel de
+    // scroll para mover una opacidad.
+    const fade = layerOpacity(layer, journey.progress)
+
+    const root = rootRef.current
+    if (root) {
+      // Se apaga, nunca se desmonta: quitar la malla a mitad de recorrido
+      // obliga a recompilar su shader al volver, y eso son frames perdidos.
+      root.visible = fade > 0.01
+      if (!root.visible) return
+    }
+
     const t = state.clock.elapsedTime
     // Latido en la intensidad y en el tamaño del halo, nunca en la geometría:
     // lo que palpita es la luz, no el objeto.
@@ -61,7 +77,6 @@ export default function GlowingBrain({ position, scale = 1, fade = 1 }) {
     if (haloRef.current) {
       haloRef.current.scale.setScalar(pulse)
       haloRef.current.material.opacity = fade
-      haloRef.current.visible = fade > 0.01
     }
 
     if (lightRef.current) {
@@ -70,12 +85,10 @@ export default function GlowingBrain({ position, scale = 1, fade = 1 }) {
     }
   })
 
-  if (fade <= 0.01) return null
-
   return (
     // Nombre para que la camara del scroll pueda localizarlo y volar hacia
     // el sin necesidad de duplicar aqui sus coordenadas.
-    <group name="brain-target" position={position} scale={scale}>
+    <group ref={rootRef} name="brain-target" position={position} scale={scale}>
       {/* El sprite siempre mira a cámara, así el halo no se ve de canto. */}
       <sprite ref={haloRef} scale={[4.2, 4.2, 1]}>
         <spriteMaterial
