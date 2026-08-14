@@ -30,29 +30,47 @@ export default function Preloader() {
 
   const rootRef = useRef(null)
   const logoRef = useRef(null)
+  const olazRef = useRef(null)
   const barRef = useRef(null)
   const numberRef = useRef(null)
   const shownRef = useRef({ value: 0 })
 
-  /** Entrada del logotipo. */
+  /** Entrada: se escribe el nombre y Olaz se descuelga de la C. */
   useEffect(() => {
     if (reducedMotion || !logoRef.current) return
 
     const timeline = gsap.timeline()
-    timeline
-      .fromTo(
-        logoRef.current,
-        { clipPath: 'inset(0 100% 0 0)', y: 14 },
-        { clipPath: 'inset(0 0% 0 0)', y: 0, duration: 1.15, ease: 'power3.inOut' },
-      )
-      // Respiracion muy leve mientras carga: da a entender que sigue vivo.
-      .to(logoRef.current, {
-        scale: 1.014,
-        duration: 1.8,
-        ease: 'sine.inOut',
-        repeat: -1,
-        yoyo: true,
-      })
+
+    timeline.fromTo(
+      logoRef.current,
+      { clipPath: 'inset(0 100% 0 0)', y: 14 },
+      { clipPath: 'inset(0 0% 0 0)', y: 0, duration: 1.15, ease: 'power3.inOut' },
+    )
+
+    if (olazRef.current) {
+      timeline
+        .fromTo(
+          olazRef.current,
+          { autoAlpha: 0, rotation: -34, scale: 0.92 },
+          { autoAlpha: 1, rotation: -34, scale: 1, duration: 0.3, ease: 'power2.out' },
+          '-=0.25',
+        )
+        /**
+         * Pendulo amortiguado. Las amplitudes decrecen y las duraciones se
+         * alargan: un balanceo de amplitud constante parece un metronomo,
+         * uno que se apaga parece peso colgando de verdad.
+         */
+        .to(olazRef.current, { rotation: 16, duration: 0.75, ease: 'sine.inOut' })
+        .to(olazRef.current, { rotation: -11, duration: 0.85, ease: 'sine.inOut' })
+        .to(olazRef.current, { rotation: 6, duration: 0.95, ease: 'sine.inOut' })
+        .to(olazRef.current, {
+          rotation: -3,
+          duration: 1.1,
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        })
+    }
 
     return () => timeline.kill()
   }, [reducedMotion])
@@ -116,18 +134,38 @@ export default function Preloader() {
       aria-live="polite"
       aria-label="Cargando"
     >
-      <img
-        ref={logoRef}
-        src="/img/wordmark.webp"
-        srcSet="/img/wordmark-sm.webp 640w, /img/wordmark.webp 1200w"
-        sizes="(max-width: 640px) 78vw, 460px"
-        alt="CocoBrain"
-        width="1200"
-        height="214"
-        className="h-auto w-[78vw] max-w-[460px]"
-      />
+      {/* El contenedor lleva la misma anchura que el logotipo, asi que Olaz
+          se posiciona en porcentaje y queda colgado de la C a cualquier
+          tamano de pantalla sin recalcular nada. */}
+      <div className="relative w-[78vw] max-w-[460px]">
+        <img
+          ref={logoRef}
+          src="/img/wordmark.webp"
+          srcSet="/img/wordmark-sm.webp 640w, /img/wordmark.webp 1200w"
+          sizes="(max-width: 640px) 78vw, 460px"
+          alt="CocoBrain"
+          width="1200"
+          height="214"
+          className="h-auto w-full"
+        />
 
-      <div className="mt-10 flex w-[78vw] max-w-[460px] items-end justify-between">
+        <img
+          ref={olazRef}
+          src="/img/olaz-hanging.webp"
+          srcSet="/img/olaz-hanging-sm.webp 240w, /img/olaz-hanging.webp 420w"
+          sizes="120px"
+          alt=""
+          aria-hidden="true"
+          width="420"
+          height="525"
+          className="absolute left-[-2%] top-[34%] w-[26%] opacity-0"
+          // El origen de giro es su mano: el balanceo tiene que salir del
+          // punto por el que agarra, no del centro de la imagen.
+          style={{ transformOrigin: '34% 8%' }}
+        />
+      </div>
+
+      <div className="mt-24 flex w-[78vw] max-w-[460px] items-end justify-between">
         <span className="font-mono text-[11px] text-coco-mid">cargando</span>
         <span
           ref={numberRef}

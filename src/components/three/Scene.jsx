@@ -87,7 +87,16 @@ function ScrollDolly({ progress, inside, enabled }) {
 }
 
 /** Portada: Olaz con el cerebro encendido y el logotipo al fondo. */
-function OuterScene({ model, xRatio, brainTransform, reaction, startle, turnAway }) {
+function OuterScene({
+  model,
+  xRatio,
+  brainTransform,
+  reaction,
+  startle,
+  turnAway,
+  compact,
+  onPoke,
+}) {
   const glow = (
     // Suspense propio: si el cerebro tarda o falla, el personaje se ve igual.
     <Suspense fallback={null}>
@@ -104,19 +113,25 @@ function OuterScene({ model, xRatio, brainTransform, reaction, startle, turnAway
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
       <OffsetGroup xRatio={xRatio}>
-        <Mascot3D
-          url={model}
-          reaction={reaction}
-          startle={startle}
-          turnAway={turnAway}
-          lookEnabled={turnAway < 0.05}
-          idleEnabled={turnAway < 0.05}
-        >
-          {glow}
-        </Mascot3D>
+        {/* En pantalla estrecha el personaje sube para dejar sitio al texto
+            debajo, en vez de compartir la fila con el. */}
+        <group position={[0, compact ? 0.85 : 0, 0]}>
+          <Mascot3D
+            url={model}
+            reaction={reaction}
+            startle={startle}
+            turnAway={turnAway}
+            lookEnabled={turnAway < 0.05}
+            idleEnabled={turnAway < 0.05}
+            fillWidth={compact ? 0.8 : 0.58}
+            onPoke={onPoke}
+          >
+            {glow}
+          </Mascot3D>
+        </group>
 
         <ContactShadows
-          position={[0, -1.9, 0]}
+          position={[0, compact ? -1.1 : -1.9, 0]}
           scale={7}
           opacity={0.32}
           blur={2.4}
@@ -165,6 +180,8 @@ export default function Scene({
   brainTransform = BRAIN_TRANSFORM,
   reaction = 0,
   startle = 0,
+  compact = false,
+  onPoke,
 }) {
   const [dpr, setDpr] = useState(MAX_DPR)
   const inside = progress >= SWAP_POINT
@@ -211,6 +228,8 @@ export default function Scene({
             reaction={reaction}
             startle={startle}
             turnAway={turnAway}
+            compact={compact}
+            onPoke={onPoke}
           />
         )}
       </Suspense>

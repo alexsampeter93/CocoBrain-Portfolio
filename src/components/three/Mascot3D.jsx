@@ -18,7 +18,15 @@ export const MASCOT_MODELS = {
 
 const DRACO_PATH = '/draco/'
 
+/**
+ * Encuadre: se respeta el limite mas restrictivo de los dos.
+ *
+ * Ajustar solo por altura funcionaba en escritorio y rompia en movil: en una
+ * pantalla alta y estrecha, el alto visible en unidades de mundo es grande y
+ * el personaje se salia por los lados.
+ */
 const FILL_HEIGHT = 0.72
+const FILL_WIDTH = 0.58
 
 /**
  * Limites de la mirada. 65 grados es lo maximo que deja la cara legible:
@@ -59,6 +67,8 @@ export default function Mascot3D({
   turnAway = 0,
   lookEnabled = true,
   idleEnabled = false,
+  fillWidth = FILL_WIDTH,
+  onPoke,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
   const camera = useThree((state) => state.camera)
@@ -95,10 +105,13 @@ export default function Mascot3D({
     const center = box.getCenter(new Vector3())
     if (size.y === 0) return
 
-    const fit = (viewport.height * FILL_HEIGHT) / size.y
+    const fit = Math.min(
+      (viewport.height * FILL_HEIGHT) / size.y,
+      (viewport.width * fillWidth) / size.x,
+    )
     group.scale.setScalar(fit)
     group.position.set(-center.x * fit, -center.y * fit, -center.z * fit)
-  }, [tuned, viewport.height])
+  }, [tuned, viewport.height, viewport.width, fillWidth])
 
   /** Salto con aplastado: la unica deformacion que aguanta una malla fusionada. */
   useEffect(() => {
@@ -262,7 +275,28 @@ export default function Mascot3D({
       <group ref={jumpRef}>
         <group ref={motionRef}>
           <group ref={breathRef}>
-            <group ref={fitRef}>
+            <group
+              ref={fitRef}
+              onClick={
+                onPoke &&
+                ((event) => {
+                  event.stopPropagation()
+                  onPoke()
+                })
+              }
+              onPointerOver={
+                onPoke &&
+                (() => {
+                  document.body.style.cursor = 'pointer'
+                })
+              }
+              onPointerOut={
+                onPoke &&
+                (() => {
+                  document.body.style.cursor = ''
+                })
+              }
+            >
               <primitive object={tuned} />
               {/* Los hijos van dentro del grupo escalado: sus coordenadas se
                   expresan en el espacio del modelo y acompanan al personaje. */}

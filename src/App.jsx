@@ -56,6 +56,9 @@ export default function App() {
 
   const close = useCallback(() => setActiveSection(null), [])
 
+  /** Pulsar a Olaz le hace saltar. Es la accion de la primera pantalla. */
+  const poke = useCallback(() => setReaction((value) => value + 1), [])
+
   /** Respingo la primera vez que se empieza a bajar. */
   useEffect(() => {
     if (startledRef.current || progress <= 0.015) return
@@ -115,6 +118,8 @@ export default function App() {
             progress={progress}
             reaction={reaction}
             startle={startle}
+            compact={!wide}
+            onPoke={poke}
           />
         </Suspense>
       </div>
@@ -140,7 +145,9 @@ export default function App() {
         className="pointer-events-none relative"
         style={{ height: `${JOURNEY_SCREENS * 100}vh` }}
       >
-        <div className="sticky top-0 flex h-[100dvh] items-center px-6 sm:px-10">
+        {/* En estrecho el texto se va abajo, debajo del personaje. En ancho
+            comparte fila con el. */}
+        <div className="sticky top-0 flex h-[100dvh] items-end px-6 pb-28 sm:px-10 lg:items-center lg:pb-0">
           <div className="mx-auto w-full max-w-6xl">
             <div
               className="pointer-events-auto max-w-[26rem] transition-opacity duration-200 lg:max-w-[24rem]"
