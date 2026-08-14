@@ -33,7 +33,16 @@ export default function JourneyScroll({ trackRef, pinRef }) {
           smooth: 1.1,
           smoothTouch: false,
           effects: false,
-          normalizeScroll: true,
+          /**
+           * `normalizeScroll` desactivado.
+           *
+           * Intercepta la rueda del ratón y la reenvía en el siguiente frame.
+           * Con una escena ligera no se nota; con esta, cada evento llegaba un
+           * frame tarde y el movimiento se sentía a trompicones. Como el
+           * suavizado táctil ya está apagado, lo único que aportaba era ese
+           * retardo.
+           */
+          normalizeScroll: false,
         })
       }
 

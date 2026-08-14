@@ -44,16 +44,32 @@ function CameraDirector({ tokens, handBrain }) {
   return null
 }
 
-export default function World({ tokens, sections, model, reaction, onPoke, active = true }) {
+export default function World({
+  tokens,
+  sections,
+  model,
+  compact = false,
+  reaction,
+  onPoke,
+  active = true,
+}) {
   const [dpr, setDpr] = useState(MAX_DPR)
 
   /**
    * Dónde ha quedado el cerebro de la mano una vez encuadrado el modelo. Es
    * el único dato del mundo que no se puede escribir a mano: depende de la
-   * malla. Se mide una vez al cargar y se reconstruye el recorrido con él.
+   * malla. Se mide al cargar y se reconstruye el recorrido con él.
    */
   const [handBrain, setHandBrain] = useState(null)
-  const onAnchor = useCallback((point) => setHandBrain(point), [])
+
+  const onAnchor = useCallback((point) => {
+    // Solo se acepta si de verdad se ha movido. Sin esta guarda, cualquier
+    // remedida devolvía un objeto nuevo, React lo veía como un cambio y
+    // reconstruía el recorrido de la cámara sin motivo.
+    setHandBrain((current) =>
+      current && current.distanceToSquared(point) < 1e-6 ? current : point,
+    )
+  }, [])
 
   return (
     <Canvas
@@ -82,6 +98,7 @@ export default function World({ tokens, sections, model, reaction, onPoke, activ
         <MascotStage
           tokens={tokens}
           model={model}
+          compact={compact}
           onAnchor={onAnchor}
           reaction={reaction}
           onPoke={onPoke}

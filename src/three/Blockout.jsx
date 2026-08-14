@@ -26,18 +26,31 @@ import { nodeConnections, nodePositions } from '../data/nodeLayout'
 
 function useFade(layer) {
   const ref = useRef(null)
+  const materials = useRef(null)
+  const last = useRef(-1)
 
   useFrame(() => {
     const group = ref.current
     if (!group) return
 
     const opacity = layerOpacity(layer, journey.progress)
-    group.visible = opacity > 0.01
+    // Si no ha cambiado no hay nada que escribir, y son casi todos los frames.
+    if (Math.abs(opacity - last.current) < 0.002) return
+    last.current = opacity
 
+    group.visible = opacity > 0.01
     if (!group.visible) return
-    group.traverse((object) => {
-      if (object.material) object.material.opacity = opacity
-    })
+
+    // El grafo se recorre una sola vez; a partir de ahí solo se tocan las
+    // opacidades. Recorrer y tocar son dos cosas distintas.
+    if (!materials.current) {
+      materials.current = []
+      group.traverse((object) => {
+        if (object.material) materials.current.push(object.material)
+      })
+    }
+
+    for (const material of materials.current) material.opacity = opacity
   })
 
   return ref

@@ -4,6 +4,7 @@ import { ContactShadows } from '@react-three/drei'
 import { MathUtils, Vector3 } from 'three'
 import Mascot3D, { MASCOT_MODELS } from '../components/three/Mascot3D'
 import GlowingBrain from '../components/three/GlowingBrain'
+import { useViewportAspect } from '../layout/useViewportAspect'
 
 /**
  * La portada: Olaz en el hueco que la fase 0 dejó validado.
@@ -25,21 +26,35 @@ const HAND_BRAIN_LOCAL = new Vector3(HAND_BRAIN.x, HAND_BRAIN.y, HAND_BRAIN.z)
 /**
  * Ancho visible en unidades de mundo a la distancia de la portada.
  *
- * Hace falta calcularlo a mano en vez de usar el `viewport` de R3F porque ese
- * se mide donde está la cámara AHORA, y la cámara se mueve durante todo el
- * recorrido. Usarlo hacía que el personaje se reescalara mientras te acercabas.
+ * Dos cosas que NO se usan aquí, y por qué:
+ *
+ * - El `viewport` de R3F se mide donde está la cámara AHORA, y la cámara se
+ *   mueve durante todo el recorrido: usarlo reescalaba al personaje mientras
+ *   te acercabas.
+ * - El `size` del canvas cambia cada vez que ScrollTrigger fija y suelta el
+ *   contenedor, así que al volver hacia arriba el encuadre se recalculaba con
+ *   otro número y el personaje se descolocaba.
+ *
+ * La proporción de la ventana no sufre ninguno de los dos problemas.
  */
 function useHeroWidth(tokens) {
-  const size = useThree((state) => state.size)
+  const aspect = useViewportAspect()
   const fov = useThree((state) => state.camera.fov)
 
   return useMemo(() => {
     const visibleHeight = 2 * Math.tan(MathUtils.degToRad(fov) / 2) * tokens.heroDistance
-    return visibleHeight * (size.width / size.height)
-  }, [fov, size.width, size.height, tokens])
+    return visibleHeight * aspect
+  }, [fov, aspect, tokens])
 }
 
-export default function MascotStage({ tokens, model = MASCOT_MODELS.brain, onAnchor, reaction, onPoke }) {
+export default function MascotStage({
+  tokens,
+  model = MASCOT_MODELS.brain,
+  compact = false,
+  onAnchor,
+  reaction,
+  onPoke,
+}) {
   const heroWidth = useHeroWidth(tokens)
   const { position, height, widthFill } = tokens.mascot
 
@@ -64,17 +79,26 @@ export default function MascotStage({ tokens, model = MASCOT_MODELS.brain, onAnc
         />
       </Mascot3D>
 
-      {/* Sombra de contacto: es lo que ancla al personaje al suelo. Sin ella
-          flota, por muy bien iluminado que esté. */}
-      <ContactShadows
-        position={[0, -height * 0.52, 0]}
-        scale={height * 2.4}
-        opacity={0.3}
-        blur={2.4}
-        far={3}
-        resolution={512}
-        color="#4A2F1C"
-      />
+      {/*
+        Sombra de contacto: es lo que ancla al personaje al suelo. Sin ella
+        flota, por muy bien iluminado que esté.
+
+        En móvil se quita ENTERA, no se atenúa. Vuelve a dibujar la profundidad
+        de la escena en cada frame, y en una GPU integrada eso se veía como un
+        parpadeo de luz en la parte baja de la pantalla, además de costar
+        frames. Media sombra barata sigue siendo cara: se corta del todo.
+      */}
+      {!compact && (
+        <ContactShadows
+          position={[0, -height * 0.52, 0]}
+          scale={height * 2.4}
+          opacity={0.3}
+          blur={2.2}
+          far={height}
+          resolution={256}
+          color="#4A2F1C"
+        />
+      )}
     </group>
   )
 }

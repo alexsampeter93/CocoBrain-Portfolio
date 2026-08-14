@@ -45,6 +45,15 @@ const LOOK_SATURATION = 0.55
 // rotando; inclinarse un poco se lee como interes.
 const LEAN_AMOUNT = 0.1
 
+/**
+ * Vector reutilizado para medir la posicion en pantalla.
+ *
+ * Crear un `new Vector3()` dentro del bucle de render son sesenta objetos por
+ * segundo que el recolector de basura tiene que limpiar. Cada limpieza es una
+ * micropausa, y una micropausa en mitad de un scroll se ve como un tiron.
+ */
+const SCRATCH = new Vector3()
+
 const BREATH_SPEED = 1.5
 const BREATH_AMOUNT = 0.016
 
@@ -79,9 +88,21 @@ export default function Mascot3D({
   const motionRef = useRef(null)
   const breathRef = useRef(null)
   const jumpRef = useRef(null)
-  const fadeRef = useRef(1)
+  // -1 para que el primer frame siempre escriba.
+  const fadeRef = useRef(-1)
 
-  const tuned = useMemo(() => {
+  /**
+   * Los materiales se recogen UNA vez en una lista.
+   *
+   * Antes el desvanecido hacia `scene.traverse(...)` en cada frame. Recorrer
+   * el grafo entero de una malla de noventa mil triangulos sesenta veces por
+   * segundo, para tocar unas pocas opacidades, era una de las fuentes reales
+   * de tirones. Recorrer y tocar son dos cosas distintas: lo que hay que hacer
+   * cada frame es tocar.
+   */
+  const { tuned, materials } = useMemo(() => {
+    const list = []
+
     scene.traverse((object) => {
       if (!object.isMesh || !object.material) return
       // Meshy exporta metallic-roughness que bajo un HDRI deja el coco con
@@ -89,8 +110,10 @@ export default function Mascot3D({
       object.material.metalness = 0
       object.material.envMapIntensity = 1.25
       object.material.needsUpdate = true
+      list.push(object.material)
     })
-    return scene
+
+    return { tuned: scene, materials: list }
   }, [scene])
 
   /**
@@ -247,18 +270,22 @@ export default function Mascot3D({
    */
   useFrame(() => {
     const fade = layerOpacity(layer, journey.progress)
+
+    // Durante la mayor parte del recorrido el desvanecido no se mueve (vale 1
+    // en la portada y 0 dentro del cerebro). Si no ha cambiado no hay nada que
+    // escribir, y esos son casi todos los frames.
+    if (Math.abs(fade - fadeRef.current) < 0.002) return
     fadeRef.current = fade
 
     const visible = fade > 0.01
     tuned.visible = visible
     if (!visible) return
 
-    tuned.traverse((object) => {
-      if (!object.isMesh || !object.material) return
-      object.material.transparent = fade < 0.999
-      object.material.opacity = fade
-      object.material.depthWrite = fade > 0.5
-    })
+    for (const material of materials) {
+      material.transparent = fade < 0.999
+      material.opacity = fade
+      material.depthWrite = fade > 0.5
+    }
   })
 
   useFrame((state) => {
@@ -287,7 +314,7 @@ export default function Mascot3D({
     let pitch = 0
 
     if (lookEnabled) {
-      const screen = motion.getWorldPosition(new Vector3()).project(camera)
+      const screen = motion.getWorldPosition(SCRATCH).project(camera)
 
       // `pointer` viene con +1 abajo y la proyeccion con +1 arriba.
       const dx = pointer.current.x - screen.x

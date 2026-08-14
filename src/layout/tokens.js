@@ -47,7 +47,12 @@ export const tokens = {
   },
 
   compact: {
-    mascot: { position: [0, 0.35, 0], height: 2.1, widthFill: 0.92 },
+    /**
+     * Más arriba y algo más pequeño que en escritorio: en vertical el texto
+     * ocupa el tercio inferior, y con el personaje centrado los dos se
+     * solapaban. En móvil no compiten por el espacio, se reparten la pantalla.
+     */
+    mascot: { position: [0, 0.92, 0], height: 1.85, widthFill: 0.86 },
     handBrain: { position: [-0.52, 0.95, 0.6], size: 0.36 },
     mind: { center: [0, 0, -11], radius: 2.5 },
     heroDistance: 6.6,

@@ -107,6 +107,7 @@ export default function App() {
                 <World
                   tokens={tokens}
                   sections={sections}
+                  compact={compact}
                   reaction={reaction}
                   onPoke={poke}
                   active={onScreen}
