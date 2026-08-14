@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Box3, MathUtils, Vector3 } from 'three'
+import { Box3, FrontSide, MathUtils, Vector3 } from 'three'
 import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { usePointer } from '../../hooks/usePointer'
@@ -133,6 +133,13 @@ export default function Mascot3D({
       // brillo de plastico. Se anula y se sube la respuesta al entorno.
       object.material.metalness = 0
       object.material.envMapIntensity = 1.25
+      /**
+       * El exportador marca el material como de doble cara. En una malla
+       * cerrada como esta no aporta nada y sale caro: desactiva el descarte de
+       * caras traseras, asi que la tarjeta rasteriza tambien las mitad de los
+       * triangulos que miran hacia el lado contrario y que nunca se ven.
+       */
+      object.material.side = FrontSide
       object.material.needsUpdate = true
       list.push(object.material)
     })

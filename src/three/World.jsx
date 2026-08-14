@@ -22,7 +22,32 @@ import MindBlockout from './Blockout'
 const IS_COARSE_POINTER =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
-const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
+/**
+ * Presupuesto de píxeles por frame, no de `dpr`.
+ *
+ * Fijar `dpr = 2` parece un límite razonable hasta que alguien abre la web en
+ * una pantalla grande: a 1900 × 1100 de ventana son 8,4 MILLONES de píxeles
+ * que hay que sombrear en cada frame. Con iluminación HDRI y materiales PBR,
+ * eso solo ya se come el presupuesto entero.
+ *
+ * El error es que `dpr` no dice cuánto trabajo hay: dice cuánto trabajo hay
+ * POR PÍXEL DE CSS. El trabajo real es el área, y el área depende del tamaño
+ * de la ventana, que no controlamos. Así que se fija el área y se deduce el
+ * `dpr`, que es al revés de como suele hacerse pero es el orden correcto.
+ */
+const PIXEL_BUDGET = IS_COARSE_POINTER ? 1_800_000 : 3_200_000
+
+function pickDpr() {
+  if (typeof window === 'undefined') return 1
+
+  const ceiling = Math.min(window.devicePixelRatio || 1, IS_COARSE_POINTER ? 1.5 : 2)
+  const area = window.innerWidth * window.innerHeight
+  if (!area) return ceiling
+
+  // El `dpr` escala el área al cuadrado, de ahí la raíz.
+  const affordable = Math.sqrt(PIXEL_BUDGET / area)
+  return Math.max(1, Math.min(ceiling, affordable))
+}
 
 /**
  * Adelanta el reloj antes que nada.
@@ -66,7 +91,7 @@ export default function World({
   onPoke,
   active = true,
 }) {
-  const [dpr, setDpr] = useState(MAX_DPR)
+  const [dpr, setDpr] = useState(pickDpr)
 
   /**
    * Dónde ha quedado el cerebro de la mano una vez encuadrado el modelo. Es
@@ -92,7 +117,9 @@ export default function World({
       frameloop={active ? 'always' : 'never'}
       camera={{ position: [0, 0, 6], fov: 35, near: 0.1, far: 60 }}
       gl={{
-        antialias: true,
+        // El suavizado por multimuestreo cuesta, y por encima de 1,3 de `dpr`
+        // ya está suavizando la propia resolución. Se paga solo si hace falta.
+        antialias: dpr < 1.3,
         powerPreference: 'high-performance',
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 1,
