@@ -22,11 +22,30 @@ const HARD_TIMEOUT_MS = 8000
 // terminado antes de montar este componente.
 const NOTHING_LOADING_MS = 1200
 
+/**
+ * Tiempo minimo en pantalla.
+ *
+ * Sin esto, en local la carga termina antes de que la animacion de entrada
+ * llegue a verse: la marca aparece y desaparece de golpe. Un preloader que
+ * pasa demasiado rapido no informa de nada y ademas desperdicia el unico
+ * momento en que la marca tiene la pantalla entera.
+ */
+const MIN_VISIBLE_MS = 2600
+
+// Interruptor a la espera del recorte limpio de Olaz colgado.
+const HANGING_ASSET_READY = false
+
 export default function Preloader() {
   const { progress, total, active } = useProgress()
   const [hidden, setHidden] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [minElapsed, setMinElapsed] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinElapsed(true), MIN_VISIBLE_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   const rootRef = useRef(null)
   const logoRef = useRef(null)
@@ -100,16 +119,16 @@ export default function Preloader() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (total === 0) setDismissed(true)
+      if (total === 0 && minElapsed) setDismissed(true)
     }, NOTHING_LOADING_MS)
     return () => clearTimeout(timer)
-  }, [total])
+  }, [total, minElapsed])
 
   useEffect(() => {
-    if (dismissed || total === 0 || progress < 100 || active) return
+    if (dismissed || !minElapsed || total === 0 || progress < 100 || active) return
     const timer = setTimeout(() => setDismissed(true), 300)
     return () => clearTimeout(timer)
-  }, [progress, total, active, dismissed])
+  }, [progress, total, active, dismissed, minElapsed])
 
   useEffect(() => {
     if (!dismissed || !rootRef.current) return
@@ -149,6 +168,11 @@ export default function Preloader() {
           className="h-auto w-full"
         />
 
+        {/* Pendiente del asset limpio: el recorte actual, sacado del poster,
+            arrastra el halo de su sombra y no se puede quitar sin comerse las
+            zapatillas, que son casi del mismo crema. La animacion ya esta
+            escrita; en cuanto llegue la imagen se pone esto a true. */}
+        {HANGING_ASSET_READY && (
         <img
           ref={olazRef}
           src="/img/olaz-hanging.webp"
@@ -163,6 +187,7 @@ export default function Preloader() {
           // punto por el que agarra, no del centro de la imagen.
           style={{ transformOrigin: '34% 8%' }}
         />
+        )}
       </div>
 
       <div className="mt-24 flex w-[78vw] max-w-[460px] items-end justify-between">

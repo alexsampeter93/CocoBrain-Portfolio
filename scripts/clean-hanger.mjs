@@ -17,10 +17,22 @@ if (!input || !output) {
   process.exit(1)
 }
 
-// Frontera por debajo de la cual ya no hay letras vecinas, solo personaje.
-const CLEAN_ABOVE_Y = 150
-const COCONUT_FROM_X = 205
+/**
+ * Se limpia en dos bandas porque el brazo y la letra comparten alturas.
+ *
+ * Banda alta (por encima del brazo): se borra todo lo que no sea el guante,
+ * que es casi blanco. Aqui hay que ser agresivo — quitar solo el negro puro
+ * de la C deja su borde suavizado en pie, y ese halo gris sin el resto de la
+ * letra se lee como un palo suelto.
+ *
+ * Banda baja: ya aparece el brazo, marron y de luminosidad media, asi que
+ * solo se borra el negro de la letra.
+ */
+const UPPER_BAND_Y = 95
+const LOWER_BAND_Y = 150
+const GLOVE_LUMINANCE = 205
 const LETTER_LUMINANCE = 70
+const COCONUT_FROM_X = 205
 
 const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
 const { width, height, channels } = info
@@ -32,8 +44,11 @@ for (let y = 0; y < height; y++) {
     const i = (y * width + x) * channels
     const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
 
-    const isCoconut = x > COCONUT_FROM_X && y < CLEAN_ABOVE_Y
-    const isLetter = luminance < LETTER_LUMINANCE && y < CLEAN_ABOVE_Y
+    const isCoconut = x > COCONUT_FROM_X && y < LOWER_BAND_Y
+    const isLetter =
+      y < UPPER_BAND_Y
+        ? luminance < GLOVE_LUMINANCE
+        : y < LOWER_BAND_Y && luminance < LETTER_LUMINANCE
 
     if (isCoconut || isLetter) {
       data[i + 3] = 0

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, Line } from '@react-three/drei'
 import { CatmullRomCurve3, Color, Vector3 } from 'three'
@@ -11,19 +11,28 @@ const LINE = '#B08355'
 const NODE_RADIUS = 0.055
 const HOVER_SCALE = 1.7
 
-// Campo neuronal de fondo. No son navegables: existen para que la escena
-// parezca una mente pensando y no cinco puntos flotando en el vacío.
 const FIELD_COUNT = 38
 const FIELD_INNER_RADIUS = 2.1
 const FIELD_OUTER_RADIUS = 5.2
 const FIELD_NEIGHBOURS = 2
 
-const PULSE_SPEED = 0.14
+const AMBIENT_PULSE_SPEED = 0.14
 
-// Pulsos obsesivos: recorren la misma conexión de ida y vuelta sin llegar a
-// resolverse nunca. Es el guiño al TOC — un pensamiento que vuelve.
+// Pulsos obsesivos: recorren la misma conexion de ida y vuelta sin llegar a
+// resolverse nunca. Es el guino al TOC — un pensamiento que vuelve.
 const OBSESSIVE_COUNT = 2
 const OBSESSIVE_SPEED = 0.42
+
+/**
+ * Senales que se propagan al pasar el cursor.
+ *
+ * Al tocar un nodo sale un impulso hacia cada vecino; al llegar, ese vecino
+ * dispara los suyos. Dos saltos son suficientes: con tres la red entera se
+ * enciende a la vez y el gesto deja de leerse como propagacion.
+ */
+const SIGNAL_SPEED = 1.5
+const SIGNAL_MAX_GENERATION = 2
+const SIGNAL_POOL = 24
 
 /** PRNG con semilla: el campo tiene que ser el mismo en cada render. */
 function mulberry32(seed) {
@@ -36,7 +45,7 @@ function mulberry32(seed) {
   }
 }
 
-function Node({ section, position, phase, active, onSelect }) {
+function Node({ section, position, phase, active, onSelect, onAwaken }) {
   const meshRef = useRef(null)
   const [hovered, setHovered] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
@@ -47,8 +56,8 @@ function Node({ section, position, phase, active, onSelect }) {
     if (!meshRef.current) return
     const breath = reducedMotion ? 1 : 1 + Math.sin(state.clock.elapsedTime * 1.4 + phase) * 0.09
     const target = breath * (highlighted ? HOVER_SCALE : 1)
-    // Lerp en vez de asignar: el cambio de escala al pasar por encima tiene
-    // que sentirse como un músculo, no como un interruptor.
+    // Lerp en vez de asignar: el cambio de escala tiene que sentirse como un
+    // musculo, no como un interruptor.
     meshRef.current.scale.lerp({ x: target, y: target, z: target }, 0.18)
   })
 
@@ -59,6 +68,7 @@ function Node({ section, position, phase, active, onSelect }) {
         onPointerOver={(event) => {
           event.stopPropagation()
           setHovered(true)
+          onAwaken(section.nodeName)
           document.body.style.cursor = 'pointer'
         }}
         onPointerOut={() => {
@@ -81,10 +91,8 @@ function Node({ section, position, phase, active, onSelect }) {
 
       {highlighted && (
         <Html center distanceFactor={7} position={[0, NODE_RADIUS * 3.4, 0]}>
-          {/* Etiqueta como lectura de instrumento, no como globo de tooltip:
-              índice, regla vertical y nombre en monoespaciada. */}
           <span className="flex items-center gap-2 whitespace-nowrap border-l-2 border-brain-glow bg-cream/90 py-1 pl-2 pr-3 font-mono text-[11px] leading-none text-coco-dark">
-            <span className="tabular-nums text-[9px] text-coco-mid/70">
+            <span className="tabular-nums text-[9px] text-coco-mid">
               {section.nodeName.replace('node_', 'N')}
             </span>
             {section.label}
@@ -95,8 +103,8 @@ function Node({ section, position, phase, active, onSelect }) {
   )
 }
 
-/** Señal recorriendo una conexión de un nodo al siguiente. */
-function Pulse({ curve, offset, obsessive = false }) {
+/** Flujo de fondo: recorre una conexion en bucle, sin relacion con el cursor. */
+function AmbientPulse({ curve, offset, obsessive = false }) {
   const ref = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
@@ -112,18 +120,15 @@ function Pulse({ curve, offset, obsessive = false }) {
 
     if (obsessive) {
       // Onda triangular: llega al final, se da la vuelta y repite. No avanza,
-      // no se resuelve. Va más rápido que los demás para que se note el
-      // ritmo compulsivo frente al flujo normal.
+      // no se resuelve.
       const raw = (elapsed * OBSESSIVE_SPEED + offset) % 2
       t = raw > 1 ? 2 - raw : raw
     } else {
-      t = (elapsed * PULSE_SPEED + offset) % 1
+      t = (elapsed * AMBIENT_PULSE_SPEED + offset) % 1
     }
 
     ref.current.position.copy(curve.getPointAt(t))
-    // Se apaga en los extremos: nace y muere dentro de los nodos en vez de
-    // aparecer de la nada a mitad del recorrido.
-    ref.current.material.opacity = Math.sin(t * Math.PI) * (obsessive ? 0.95 : 0.75)
+    ref.current.material.opacity = Math.sin(t * Math.PI) * (obsessive ? 0.95 : 0.7)
   })
 
   return (
@@ -134,14 +139,7 @@ function Pulse({ curve, offset, obsessive = false }) {
   )
 }
 
-/**
- * Campo neuronal de fondo: puntos en una capa esférica alrededor del
- * personaje, unidos a sus vecinos más cercanos.
- *
- * Va todo en dos geometrías —un `points` y un `lineSegments`— en lugar de un
- * objeto por nodo. Con 38 nodos y ~70 aristas, una malla por elemento serían
- * cien y pico llamadas de dibujo por frame para algo que es decorado.
- */
+/** Campo de fondo: dos geometrias en total, no un objeto por punto. */
 function NeuralField() {
   const groupRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -151,10 +149,8 @@ function NeuralField() {
     const positions = []
 
     for (let i = 0; i < FIELD_COUNT; i++) {
-      // Distribución en capa esférica: se evita el centro, que es donde está
-      // el personaje. Si no, aparecen puntos dentro de su cabeza.
-      const radius =
-        FIELD_INNER_RADIUS + random() * (FIELD_OUTER_RADIUS - FIELD_INNER_RADIUS)
+      // Capa esferica: se evita el centro, que es donde esta el personaje.
+      const radius = FIELD_INNER_RADIUS + random() * (FIELD_OUTER_RADIUS - FIELD_INNER_RADIUS)
       const theta = random() * Math.PI * 2
       const phi = Math.acos(2 * random() - 1)
 
@@ -172,8 +168,6 @@ function NeuralField() {
       points.set([vector.x, vector.y, vector.z], index * 3)
     })
 
-    // Cada nodo se une a sus vecinos más próximos. Un grafo por cercanía se
-    // lee como tejido; uno aleatorio se lee como ruido.
     const seen = new Set()
     const segmentList = []
 
@@ -202,7 +196,6 @@ function NeuralField() {
 
   useFrame((state) => {
     if (!groupRef.current || reducedMotion) return
-    // Rotación muy lenta: da vida sin que se lea como "algo está girando".
     groupRef.current.rotation.y = state.clock.elapsedTime * 0.018
   })
 
@@ -233,7 +226,7 @@ function NeuralField() {
 }
 
 export default function NeuralNodes({ sections, activeSection, onSelect }) {
-  const { nodes, curves } = useMemo(() => {
+  const { nodes, curves, edgesByNode } = useMemo(() => {
     const positions = previewNodePositions
 
     const nodes = sections
@@ -244,37 +237,126 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
         phase: index * 1.7,
       }))
 
-    const curves = nodeConnections
+    const curves = []
+    const edgesByNode = new Map()
+
+    nodeConnections
       .filter(([from, to]) => positions[from] && positions[to])
-      .map(([from, to]) => {
+      .forEach(([from, to]) => {
         const a = new Vector3(...positions[from])
         const b = new Vector3(...positions[to])
         // Punto medio desplazado: una recta entre dos nodos parece un cable;
-        // una curva suave parece una conexión.
+        // una curva suave parece una conexion.
         const mid = a.clone().lerp(b, 0.5)
         mid.z += 0.4
         mid.y += 0.15
-        return new CatmullRomCurve3([a, mid, b])
+
+        const curve = new CatmullRomCurve3([a, mid, b])
+        curves.push(curve)
+
+        const register = (origin, target, reversed) => {
+          if (!edgesByNode.has(origin)) edgesByNode.set(origin, [])
+          edgesByNode.get(origin).push({ curve, target, reversed })
+        }
+
+        register(from, to, false)
+        register(to, from, true)
       })
 
-    return { nodes, curves }
+    return { nodes, curves, edgesByNode }
   }, [sections])
 
-  const pulses = useMemo(
+  const ambient = useMemo(
     () => curves.map((curve, index) => ({ curve, offset: index / curves.length })),
     [curves],
   )
 
-  const obsessivePulses = useMemo(
+  const obsessive = useMemo(
     () =>
       Array.from({ length: OBSESSIVE_COUNT }, (_, index) => ({
-        // Siempre las mismas aristas: la gracia es que sean reconocibles,
-        // que el ojo acabe notando que ahí hay algo que no avanza.
+        // Siempre las mismas aristas: la gracia es que el ojo acabe notando
+        // que ahi hay algo que no avanza.
         curve: curves[index % curves.length],
         offset: index * 0.55,
       })),
     [curves],
   )
+
+  /**
+   * Senales vivas. Van en una ref y no en estado: se crean y mueren varias
+   * veces por segundo, y pasar eso por el ciclo de render de React
+   * provocaria cientos de renders por interaccion.
+   */
+  const signalsRef = useRef([])
+  const meshRefs = useRef([])
+
+  const emit = useCallback(
+    (nodeName, generation, time) => {
+      const edges = edgesByNode.get(nodeName)
+      if (!edges) return
+
+      edges.forEach((edge) => {
+        if (signalsRef.current.length >= SIGNAL_POOL) return
+        signalsRef.current.push({
+          curve: edge.curve,
+          reversed: edge.reversed,
+          target: edge.target,
+          generation,
+          birth: time,
+          propagated: false,
+        })
+      })
+    },
+    [edgesByNode],
+  )
+
+  const awaken = useCallback(
+    (nodeName) => {
+      // `performance.now()` en vez del reloj de la escena: el disparo llega
+      // desde un evento del DOM, fuera del bucle de render.
+      emit(nodeName, 0, performance.now() / 1000)
+    },
+    [emit],
+  )
+
+  useFrame((state) => {
+    const now = state.clock.elapsedTime
+    const signals = signalsRef.current
+
+    for (let i = signals.length - 1; i >= 0; i--) {
+      const signal = signals[i]
+      const t = (now - signal.birth) * SIGNAL_SPEED
+
+      if (t >= 1) {
+        // Al llegar, el nodo de destino dispara los suyos.
+        if (!signal.propagated && signal.generation < SIGNAL_MAX_GENERATION) {
+          signal.propagated = true
+          emit(signal.target, signal.generation + 1, now)
+        }
+        signals.splice(i, 1)
+      }
+    }
+
+    // El resto del banco se aparca fuera de cuadro en vez de desmontarse:
+    // crear y destruir mallas por frame es lo que mata el framerate.
+    meshRefs.current.forEach((mesh, index) => {
+      if (!mesh) return
+      const signal = signals[index]
+
+      if (!signal) {
+        mesh.visible = false
+        return
+      }
+
+      const raw = (now - signal.birth) * SIGNAL_SPEED
+      const t = signal.reversed ? 1 - raw : raw
+      mesh.visible = true
+      mesh.position.copy(signal.curve.getPointAt(Math.min(Math.max(t, 0), 1)))
+      mesh.material.opacity = Math.sin(raw * Math.PI) * 0.95
+      const scale = 1 + Math.sin(raw * Math.PI) * 0.8
+      mesh.scale.setScalar(scale)
+    })
+  })
 
   return (
     <group>
@@ -291,17 +373,31 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
         />
       ))}
 
-      {pulses.map((pulse, index) => (
-        <Pulse key={`pulse-${index}`} curve={pulse.curve} offset={pulse.offset} />
+      {ambient.map((pulse, index) => (
+        <AmbientPulse key={`ambient-${index}`} curve={pulse.curve} offset={pulse.offset} />
       ))}
 
-      {obsessivePulses.map((pulse, index) => (
-        <Pulse
+      {obsessive.map((pulse, index) => (
+        <AmbientPulse
           key={`obsessive-${index}`}
           curve={pulse.curve}
           offset={pulse.offset}
           obsessive
         />
+      ))}
+
+      {/* Banco de senales reutilizables. */}
+      {Array.from({ length: SIGNAL_POOL }, (_, index) => (
+        <mesh
+          key={`signal-${index}`}
+          ref={(node) => {
+            meshRefs.current[index] = node
+          }}
+          visible={false}
+        >
+          <sphereGeometry args={[0.03, 10, 8]} />
+          <meshBasicMaterial color="#FFD2DA" transparent depthWrite={false} toneMapped={false} />
+        </mesh>
       ))}
 
       {nodes.map((node) => (
@@ -312,6 +408,7 @@ export default function NeuralNodes({ sections, activeSection, onSelect }) {
           phase={node.phase}
           active={activeSection === node.section.id}
           onSelect={onSelect}
+          onAwaken={awaken}
         />
       ))}
     </group>
