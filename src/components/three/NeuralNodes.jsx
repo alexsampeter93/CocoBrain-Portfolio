@@ -9,6 +9,9 @@ const GLOW = '#FF6B85'
 const LINE = '#B08355'
 
 const NODE_RADIUS = 0.055
+// Radio de la zona sensible. Seis veces el nodo: es lo que hace que se pueda
+// acertar con el dedo sin engordar la bolita.
+const HIT_RADIUS = 0.34
 const HOVER_SCALE = 1.7
 
 const FIELD_COUNT = 38
@@ -63,8 +66,13 @@ function Node({ section, position, phase, active, onSelect, onAwaken }) {
 
   return (
     <group position={position}>
+      {/*
+        Zona sensible invisible, mucho mayor que el nodo. Un nodo de 5,5 cm
+        de radio es imposible de acertar con el dedo: en tactil el objetivo
+        util son unos 9 mm en pantalla, y por eso no funcionaban en movil.
+      */}
       <mesh
-        ref={meshRef}
+        visible={false}
         onPointerOver={(event) => {
           event.stopPropagation()
           setHovered(true)
@@ -75,11 +83,23 @@ function Node({ section, position, phase, active, onSelect, onAwaken }) {
           setHovered(false)
           document.body.style.cursor = ''
         }}
+        // `onPointerDown` ademas de `onClick`: en tactil no hay hover previo,
+        // asi el nodo se enciende en cuanto se toca.
+        onPointerDown={(event) => {
+          event.stopPropagation()
+          setHovered(true)
+          onAwaken(section.nodeName)
+        }}
         onClick={(event) => {
           event.stopPropagation()
           onSelect(section.id)
         }}
       >
+        <sphereGeometry args={[HIT_RADIUS, 12, 10]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
+      <mesh ref={meshRef} raycast={() => null}>
         <sphereGeometry args={[NODE_RADIUS, 20, 16]} />
         <meshStandardMaterial
           color={section.accent}

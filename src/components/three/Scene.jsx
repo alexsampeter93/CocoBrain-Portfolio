@@ -109,13 +109,18 @@ function OuterScene({
 
   return (
     <>
+      {/* Sin niebla en la portada. `attach="fog"` sobrevive al cambio de
+          escena si no se anula aqui de forma explicita, y el velo se quedaba
+          puesto al volver arriba. */}
+      <fog attach="fog" args={['#F5E6D3', 100, 200]} />
+
       <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
       <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
 
       <OffsetGroup xRatio={xRatio}>
         {/* En pantalla estrecha el personaje sube para dejar sitio al texto
             debajo, en vez de compartir la fila con el. */}
-        <group position={[0, compact ? 0.85 : 0, 0]}>
+        <group position={[0, compact ? 1.05 : 0, 0]}>
           <Mascot3D
             url={model}
             reaction={reaction}
@@ -123,7 +128,9 @@ function OuterScene({
             turnAway={turnAway}
             lookEnabled={turnAway < 0.05}
             idleEnabled={turnAway < 0.05}
-            fillWidth={compact ? 0.8 : 0.58}
+            // En movil ocupaba casi todo el ancho y no dejaba sitio al texto.
+            fillWidth={compact ? 0.52 : 0.42}
+            fillHeight={compact ? 0.4 : 0.66}
             onPoke={onPoke}
           >
             {glow}

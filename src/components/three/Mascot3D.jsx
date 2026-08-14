@@ -68,6 +68,7 @@ export default function Mascot3D({
   lookEnabled = true,
   idleEnabled = false,
   fillWidth = FILL_WIDTH,
+  fillHeight = FILL_HEIGHT,
   onPoke,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
@@ -106,12 +107,12 @@ export default function Mascot3D({
     if (size.y === 0) return
 
     const fit = Math.min(
-      (viewport.height * FILL_HEIGHT) / size.y,
+      (viewport.height * fillHeight) / size.y,
       (viewport.width * fillWidth) / size.x,
     )
     group.scale.setScalar(fit)
     group.position.set(-center.x * fit, -center.y * fit, -center.z * fit)
-  }, [tuned, viewport.height, viewport.width, fillWidth])
+  }, [tuned, viewport.height, viewport.width, fillWidth, fillHeight])
 
   /** Salto con aplastado: la unica deformacion que aguanta una malla fusionada. */
   useEffect(() => {

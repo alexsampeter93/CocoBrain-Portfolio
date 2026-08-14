@@ -39,8 +39,14 @@ function useWideLayout() {
 // despues, y anadir mas no descoloca la animacion.
 const JOURNEY_SCREENS = 3
 
-// Franja en la que el fundido tapa el cambio de escena.
-const FADE_WIDTH = 0.07
+/**
+ * Franja en la que el fundido tapa el cambio de escena.
+ *
+ * Estrecha a proposito. Ancha dejaba la pantalla en crema durante casi un
+ * segundo de scroll y la transicion se sentia como un tropiezo en vez de
+ * como un corte.
+ */
+const FADE_WIDTH = 0.035
 
 export default function App() {
   const model = useSelectedModel()
@@ -151,35 +157,37 @@ export default function App() {
       >
         {/* En estrecho el texto se va abajo, debajo del personaje. En ancho
             comparte fila con el. */}
-        <div className="sticky top-0 flex h-[100dvh] items-end px-6 pb-28 sm:px-10 lg:items-center lg:pb-0">
+        {/* En estrecho el texto ocupa la mitad inferior, con hueco para la
+            navegacion; en ancho comparte fila con el personaje. */}
+        <div className="sticky top-0 flex h-[100dvh] items-end px-6 pb-24 sm:px-10 lg:items-center lg:pb-0">
           <div className="mx-auto w-full max-w-6xl">
             <div
-              className="pointer-events-auto max-w-[26rem] transition-opacity duration-200 lg:max-w-[24rem]"
+              className="pointer-events-auto max-w-[22rem] transition-opacity duration-200 sm:max-w-[26rem] lg:max-w-[24rem]"
               style={{ opacity: heroOpacity, pointerEvents: heroOpacity < 0.2 ? 'none' : 'auto' }}
             >
-              <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+              <h1 className="text-[clamp(1.9rem,7vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
                 Alex
                 <span className="block text-coco-light">desarrollo web</span>
               </h1>
 
-              <p className="mt-7 text-[17px] leading-[1.5]">
+              <p className="mt-5 text-[15px] leading-[1.45] sm:mt-7 sm:text-[17px] sm:leading-[1.5]">
                 Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue
                 una vez nuestra mayor{' '}
                 <em className="not-italic text-coco-light">debilidad</em>.
               </p>
 
-              <p className="mt-4 text-[15px] leading-relaxed text-coco-mid">
+              <p className="mt-3 text-[14px] leading-relaxed text-coco-mid sm:mt-4 sm:text-[15px]">
                 Construyo webs y aplicaciones, y las firmo como CocoBrain.
               </p>
 
-              <p className="mt-10 font-mono text-[11px] text-coco-mid">
+              <p className="mt-6 font-mono text-[11px] text-coco-mid sm:mt-10">
                 Baja para entrar <span aria-hidden="true">↓</span>
               </p>
             </div>
 
             {inside && !active && progress < INSIDE_END && (
-              <p className="pointer-events-none absolute bottom-24 max-w-sm font-mono text-[12px] leading-relaxed text-coco-mid">
-                Estás dentro. Cada nodo es una sección.
+              <p className="pointer-events-none absolute inset-x-0 bottom-20 max-w-sm font-mono text-[12px] leading-relaxed text-coco-mid">
+                Toca un nodo para ir a su sección.
               </p>
             )}
           </div>
