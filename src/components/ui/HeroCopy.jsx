@@ -19,11 +19,21 @@ export default function HeroCopy() {
 
   useEffect(() => {
     let frame
+    let last = -1
 
     const tick = () => {
-      if (ref.current) {
-        ref.current.style.opacity = layerOpacity('heroCopy', journey.progress)
+      const opacity = layerOpacity('heroCopy', journey.progress)
+
+      // Escribir en el estilo obliga al navegador a recalcular la composición.
+      // La opacidad vale 1 casi todo el tiempo, así que solo se escribe cuando
+      // de verdad cambia.
+      if (ref.current && Math.abs(opacity - last) > 0.002) {
+        last = opacity
+        ref.current.style.opacity = opacity
+        // Deja de recibir clics en cuanto es invisible, aunque siga montado.
+        ref.current.style.visibility = opacity < 0.01 ? 'hidden' : 'visible'
       }
+
       frame = requestAnimationFrame(tick)
     }
 

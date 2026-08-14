@@ -2,7 +2,7 @@ import { useLayoutEffect } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ScrollSmoother } from 'gsap/ScrollSmoother'
-import { setProgress } from './clock'
+import { setTarget } from './clock'
 import { stageAt } from './stages'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 
@@ -30,7 +30,10 @@ export default function JourneyScroll({ trackRef, pinRef }) {
         smoother = ScrollSmoother.create({
           wrapper: '#smooth-wrapper',
           content: '#smooth-content',
-          smooth: 1.1,
+          // Bajo a propósito: la suavidad de la cámara ya la pone la
+          // amortiguación del reloj, y sumar los dos retardos hacía que la
+          // escena siguiera moviéndose un segundo después de soltar la rueda.
+          smooth: 0.6,
           smoothTouch: false,
           effects: false,
           /**
@@ -56,7 +59,7 @@ export default function JourneyScroll({ trackRef, pinRef }) {
         // inercia ya la pone ScrollSmoother, y sumar las dos hace que la
         // cámara llegue tarde y parezca que patina.
         scrub: true,
-        onUpdate: (self) => setProgress(self.progress, stageAt(self.progress).id),
+        onUpdate: (self) => setTarget(self.progress, stageAt(self.progress).id),
       })
 
       return () => smoother?.kill()

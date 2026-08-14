@@ -2,7 +2,7 @@ import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, PerformanceMonitor, Stats } from '@react-three/drei'
 import { ACESFilmicToneMapping, Vector3 } from 'three'
-import { journey } from '../journey/clock'
+import { advance, journey } from '../journey/clock'
 import { cameraPath, sampleCamera } from '../journey/stages'
 import MascotStage from './MascotStage'
 import MindBlockout from './Blockout'
@@ -23,6 +23,19 @@ const IS_COARSE_POINTER =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
+
+/**
+ * Adelanta el reloj antes que nada.
+ *
+ * La prioridad negativa es lo importante: `useFrame` ejecuta primero los
+ * números más bajos, así que el progreso queda actualizado antes de que
+ * ninguna otra pieza lo lea. Sin ese orden, unas piezas leerían el valor de
+ * este frame y otras el del anterior, y esa mezcla se ve como vibración.
+ */
+function JourneyClock() {
+  useFrame((_, delta) => advance(delta), -100)
+  return null
+}
 
 /**
  * Mueve la cámara leyendo la tabla. No tiene lógica propia: si el recorrido
@@ -87,6 +100,7 @@ export default function World({
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(MAX_DPR)} />
 
+      <JourneyClock />
       <CameraDirector tokens={tokens} handBrain={handBrain} />
 
       {/* HDRI de estudio (Poly Haven, CC0). De aquí sale casi toda la luz: es

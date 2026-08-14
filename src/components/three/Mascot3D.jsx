@@ -6,7 +6,7 @@ import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { usePointer } from '../../hooks/usePointer'
 import { journey } from '../../journey/clock'
-import { layerOpacity } from '../../journey/stages'
+import { layerOpacity, ramp } from '../../journey/stages'
 
 /**
  * Ojo con los nombres: los que puso Meshy no corresponden con lo que
@@ -21,12 +21,36 @@ export const MASCOT_MODELS = {
 const DRACO_PATH = '/draco/'
 
 /**
- * Limites de la mirada. 65 grados es lo maximo que deja la cara legible:
- * mas alla se lee como "se ha dado la vuelta", no como "esta mirando".
+ * Limites de la mirada.
+ *
+ * Estaban en 65 y 26 grados, y era demasiado: el personaje se pasaba el rato
+ * girando de lado a lado y mareaba. Un gesto de atencion no necesita amplitud,
+ * necesita direccion. Con 24 grados se entiende perfectamente que te sigue, y
+ * ademas la cara se mantiene siempre de frente.
  */
-const MAX_YAW = MathUtils.degToRad(65)
-const MAX_PITCH = MathUtils.degToRad(26)
-const LOOK_EASING = 0.11
+const MAX_YAW = MathUtils.degToRad(24)
+const MAX_PITCH = MathUtils.degToRad(11)
+
+/** Bajo a proposito: el gesto llega despacio y se lee como calma, no como nervio. */
+const LOOK_EASING = 0.055
+
+/**
+ * Tramo en el que el personaje se queda quieto.
+ *
+ * En cuanto empiezas a bajar deja de seguir al cursor y se para. Son dos
+ * problemas de un tiro:
+ *
+ * 1. El cerebro de la mano cuelga del grupo que rota, asi que al girar el
+ *    personaje el cerebro se movia —y la camara volaba a la posicion medida en
+ *    reposo, no a donde estaba en ese momento. De ahi que "segun la posicion
+ *    del cursor, la camara no va al cerebro".
+ * 2. Un personaje que sigue moviendose mientras la camara se le echa encima
+ *    compite con el movimiento de camara y ensucia la entrada.
+ *
+ * Ademas tiene sentido narrativo: te saluda mientras miras, y se queda quieto
+ * cuando decides entrar.
+ */
+const SETTLE_RANGE = [0.02, 0.14]
 
 /**
  * Distancia en pantalla, en coordenadas normalizadas, a la que la mirada
@@ -38,12 +62,12 @@ const LOOK_EASING = 0.11
  * de la camara: practicamente encima. El angulo resultante variaba unos dos
  * grados y por eso el seguimiento no se notaba.
  */
-const LOOK_SATURATION = 0.55
+const LOOK_SATURATION = 0.85
 
 // Inclinacion del cuerpo acompanando a la mirada. Es lo que hace que el
 // gesto se note: girar solo sobre el eje vertical se lee como un maniqui
 // rotando; inclinarse un poco se lee como interes.
-const LEAN_AMOUNT = 0.1
+const LEAN_AMOUNT = 0.05
 
 /**
  * Vector reutilizado para medir la posicion en pantalla.
@@ -55,9 +79,9 @@ const LEAN_AMOUNT = 0.1
 const SCRATCH = new Vector3()
 
 const BREATH_SPEED = 1.5
-const BREATH_AMOUNT = 0.016
+const BREATH_AMOUNT = 0.01
 
-const FLOAT_AMPLITUDE = 0.045
+const FLOAT_AMPLITUDE = 0.02
 const FLOAT_SPEED = 0.6
 
 export default function Mascot3D({
@@ -224,6 +248,9 @@ export default function Mascot3D({
       if (!jump || !breath) return
       // No pisar un salto o un respingo en curso.
       if (gsap.isTweening(jump.position) || gsap.isTweening(breath.scale)) return
+      // Ni arrancar uno si ya se esta bajando: el personaje tiene que estar
+      // quieto cuando la camara se le acerca.
+      if (journey.progress > 0.03) return
 
       const timeline = gsap.timeline()
       const gesture = Math.floor(Math.random() * 3)
@@ -293,11 +320,32 @@ export default function Mascot3D({
     const breath = breathRef.current
     if (!motion || reducedMotion) return
 
+    /**
+     * Cuanto queda de "vida propia". Vale 1 en la portada y 0 en cuanto
+     * empiezas a bajar. Multiplica a todo lo que se mueve por su cuenta, asi
+     * que el personaje no se detiene de golpe: se va quedando quieto.
+     */
+    const alive = 1 - ramp(journey.progress, SETTLE_RANGE[0], SETTLE_RANGE[1])
+
+    /**
+     * Si empiezas a bajar con un gesto a medias, se corta y vuelve al reposo.
+     * Dejarlo terminar significaria que el cerebro sigue moviendose justo
+     * cuando la camara esta calculando hacia donde volar.
+     */
+    const jump = jumpRef.current
+    if (jump && alive < 0.98) {
+      if (gsap.isTweening(jump.position) || gsap.isTweening(jump.rotation)) {
+        gsap.killTweensOf([jump.position, jump.rotation])
+      }
+      jump.position.y = MathUtils.lerp(jump.position.y, 0, 0.12)
+      jump.rotation.z = MathUtils.lerp(jump.rotation.z, 0, 0.12)
+    }
+
     const t = state.clock.elapsedTime
-    motion.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE
+    motion.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE * alive
 
     if (breath && !gsap.isTweening(breath.scale)) {
-      const value = Math.sin(t * BREATH_SPEED) * BREATH_AMOUNT
+      const value = Math.sin(t * BREATH_SPEED) * BREATH_AMOUNT * alive
       breath.scale.set(1 - value, 1 + value, 1 - value)
     }
 
@@ -313,15 +361,15 @@ export default function Mascot3D({
     let yaw = 0
     let pitch = 0
 
-    if (lookEnabled) {
+    if (lookEnabled && alive > 0.01) {
       const screen = motion.getWorldPosition(SCRATCH).project(camera)
 
       // `pointer` viene con +1 abajo y la proyeccion con +1 arriba.
       const dx = pointer.current.x - screen.x
       const dy = pointer.current.y + screen.y
 
-      yaw = MathUtils.clamp((dx / LOOK_SATURATION) * MAX_YAW, -MAX_YAW, MAX_YAW)
-      pitch = MathUtils.clamp((dy / LOOK_SATURATION) * MAX_PITCH, -MAX_PITCH, MAX_PITCH)
+      yaw = MathUtils.clamp((dx / LOOK_SATURATION) * MAX_YAW, -MAX_YAW, MAX_YAW) * alive
+      pitch = MathUtils.clamp((dy / LOOK_SATURATION) * MAX_PITCH, -MAX_PITCH, MAX_PITCH) * alive
     }
 
     // `turnAway` va de 0 a 1 y suma media vuelta: es como se gira de espaldas

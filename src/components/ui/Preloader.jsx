@@ -32,8 +32,15 @@ const NOTHING_LOADING_MS = 1200
  */
 const MIN_VISIBLE_MS = 2600
 
-// Interruptor a la espera del recorte limpio de Olaz colgado.
-const HANGING_ASSET_READY = false
+/**
+ * Posición del puño dentro de la imagen de Olaz, en fracción de su propio
+ * recorte. Medida sobre los píxeles opacos de las primeras filas, no a ojo.
+ *
+ * Es el punto del que cuelga, así que es también el eje del balanceo: girar
+ * desde el centro de la imagen se lee como un objeto dando vueltas, girar
+ * desde la mano se lee como peso colgando.
+ */
+const FIST_ORIGIN = '35% 4%'
 
 export default function Preloader() {
   const { progress, total, active } = useProgress()
@@ -168,26 +175,22 @@ export default function Preloader() {
           className="h-auto w-full"
         />
 
-        {/* Pendiente del asset limpio: el recorte actual, sacado del poster,
-            arrastra el halo de su sombra y no se puede quitar sin comerse las
-            zapatillas, que son casi del mismo crema. La animacion ya esta
-            escrita; en cuanto llegue la imagen se pone esto a true. */}
-        {HANGING_ASSET_READY && (
+        {/* Colgado del arco inferior de la C. El recorte viene sobre blanco
+            puro, así que el fondo se va entero con relleno por difusión desde
+            los bordes y no queda cerco —el intento anterior salía de una
+            imagen sobre crema y arrastraba el halo de su sombra. */}
         <img
           ref={olazRef}
           src="/img/olaz-hanging.webp"
-          srcSet="/img/olaz-hanging-sm.webp 240w, /img/olaz-hanging.webp 420w"
-          sizes="120px"
+          srcSet="/img/olaz-hanging-sm.webp 280w, /img/olaz-hanging.webp 520w"
+          sizes="(max-width: 640px) 20vw, 120px"
           alt=""
           aria-hidden="true"
-          width="420"
-          height="525"
-          className="absolute left-[-2%] top-[34%] w-[26%] opacity-0"
-          // El origen de giro es su mano: el balanceo tiene que salir del
-          // punto por el que agarra, no del centro de la imagen.
-          style={{ transformOrigin: '34% 8%' }}
+          width="520"
+          height="693"
+          className="absolute left-[-1%] top-[72%] w-[26%] opacity-0"
+          style={{ transformOrigin: FIST_ORIGIN }}
         />
-        )}
       </div>
 
       <div className="mt-24 flex w-[78vw] max-w-[460px] items-end justify-between">
