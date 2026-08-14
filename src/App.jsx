@@ -1,9 +1,8 @@
 import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import Scene, { INSIDE_END, SWAP_POINT } from './components/three/Scene'
+import Scene from './components/three/Scene'
 import { MASCOT_MODELS } from './components/three/Mascot3D'
 import Preloader from './components/ui/Preloader'
 import Hud from './components/ui/Hud'
-import { useDocumentProgress, useScrollProgress } from './hooks/useScrollProgress'
 import { getCalmMode, subscribeCalmMode, toggleCalmMode } from './state/calmMode'
 import { sections } from './data/sections'
 
@@ -36,81 +35,48 @@ function useWideLayout() {
   return wide
 }
 
-// Alturas de pantalla que dura el viaje 3D. El contenido normal empieza
-// despues, y anadir mas no descoloca la animacion.
-const JOURNEY_SCREENS = 3
-
 /**
- * Franja en la que el fundido tapa el cambio de escena.
+ * Avisa de si un elemento esta a la vista.
  *
- * Estrecha a proposito. Ancha dejaba la pantalla en crema durante casi un
- * segundo de scroll y la transicion se sentia como un tropiezo en vez de
- * como un corte.
+ * Se usa para apagar el bucle de render de WebGL cuando la portada sale de
+ * pantalla. Sin esto la GPU sigue dibujando la escena entera debajo del
+ * contenido, y en movil eso se nota en el scroll enseguida.
  */
-const FADE_WIDTH = 0.035
+function useOnScreen(ref) {
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { rootMargin: '10% 0px' },
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref])
+
+  return visible
+}
 
 export default function App() {
   const model = useSelectedModel()
   const wide = useWideLayout()
-  const progress = useScrollProgress({ screens: JOURNEY_SCREENS })
-  const contentProgress = useDocumentProgress({ afterScreens: JOURNEY_SCREENS })
   const calm = useSyncExternalStore(subscribeCalmMode, getCalmMode, () => false)
-  const [activeSection, setActiveSection] = useState(null)
 
-  // Contadores, no booleanos: cada incremento dispara la animacion de nuevo
-  // aunque se repita el mismo gesto.
+  const heroRef = useRef(null)
+  const heroVisible = useOnScreen(heroRef)
+
+  // Contador, no booleano: cada incremento dispara el salto de nuevo aunque
+  // se pulse dos veces seguidas.
   const [reaction, setReaction] = useState(0)
-  const [startle, setStartle] = useState(0)
-  const startledRef = useRef(false)
-
-  const close = useCallback(() => setActiveSection(null), [])
-
-  /** Pulsar a Olaz le hace saltar. Es la accion de la primera pantalla. */
   const poke = useCallback(() => setReaction((value) => value + 1), [])
 
-  /** Respingo la primera vez que se empieza a bajar. */
-  useEffect(() => {
-    if (startledRef.current || progress <= 0.015) return
-    startledRef.current = true
-    setStartle((value) => value + 1)
-  }, [progress])
-
-  /**
-   * Elegir una seccion.
-   *
-   * Antes esto abria un panel flotante con el mismo contenido que ya estaba
-   * mas abajo en la pagina: la misma informacion dos veces y unos nodos que
-   * no llevaban a ninguna parte. Ahora el nodo **es** el enlace — la camara
-   * lo enfoca un momento y despues la pagina baja a esa seccion.
-   */
-  const selectSection = useCallback((id) => {
-    setActiveSection(id)
-    setReaction((value) => value + 1)
-
-    window.setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setActiveSection(null)
-    }, 700)
+  const goToSection = useCallback((id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') close()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [close])
-
-  const active = sections.find((section) => section.id === activeSection)
-  const inside = progress >= SWAP_POINT
-
-  const fade = Math.max(0, 1 - Math.abs(progress - SWAP_POINT) / FADE_WIDTH)
-  const heroOpacity = Math.max(0, 1 - progress / (SWAP_POINT * 0.6))
-  /**
-   * Pasado el cerebro la escena no se retira: baja a segundo plano y se
-   * queda de fondo del contenido, donde la red crece con el scroll.
-   */
-  const sceneOpacity = progress > INSIDE_END ? 0.55 : 1
 
   return (
     <>
@@ -120,104 +86,76 @@ export default function App() {
 
       <Preloader />
 
-      <div
-        className="fixed inset-0 -z-10 h-[100dvh] w-full transition-opacity duration-300"
-        style={{ opacity: sceneOpacity, pointerEvents: sceneOpacity < 0.1 ? 'none' : 'auto' }}
-      >
-        <Suspense fallback={null}>
-          <Scene
-            model={model}
-            xRatio={wide ? 0.24 : 0}
-            sections={sections}
-            activeSection={activeSection}
-            onSelect={selectSection}
-            progress={progress}
-            reaction={reaction}
-            startle={startle}
-            compact={!wide}
-            contentProgress={contentProgress}
-            onPoke={poke}
-          />
-        </Suspense>
-      </div>
-
-      {/* Fundido que tapa el cambio de escena. */}
-      <div
-        className="pointer-events-none fixed inset-0 z-30 bg-cream"
-        style={{ opacity: fade }}
-        aria-hidden="true"
-      />
-
       <Hud
         sections={sections}
-        activeSection={activeSection}
-        onSelect={selectSection}
-        onClose={close}
+        onSelect={goToSection}
+        onClose={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         calm={calm}
         onToggleCalm={toggleCalmMode}
       />
 
-      {/* Recorrido 3D. pointer-events-none es imprescindible: este contenedor
-          cubre el canvas entero y sin ello el raton no llega a la escena. */}
-      <div
-        className="pointer-events-none relative"
-        style={{ height: `${JOURNEY_SCREENS * 100}vh` }}
+      {/*
+        La escena vive DENTRO de la portada, no fija sobre toda la pagina.
+        Antes estaba fija y su opacidad, su camara y el contenido se movian
+        con el mismo valor de scroll: tres animaciones peleandose y ninguna
+        limpia. Asi la portada se va con el scroll, sin coreografia que
+        sincronizar y sin nada que se solape.
+      */}
+      <section
+        ref={heroRef}
+        className="relative flex h-[100dvh] flex-col justify-end overflow-hidden px-6 pb-24 sm:px-10 lg:justify-center lg:pb-0"
       >
-        {/* En estrecho el texto se va abajo, debajo del personaje. En ancho
-            comparte fila con el. */}
-        {/* En estrecho el texto ocupa la mitad inferior, con hueco para la
-            navegacion; en ancho comparte fila con el personaje. */}
-        <div className="sticky top-0 flex h-[100dvh] items-end px-6 pb-24 sm:px-10 lg:items-center lg:pb-0">
-          <div className="mx-auto w-full max-w-6xl">
-            <div
-              className="pointer-events-auto max-w-[22rem] transition-opacity duration-200 sm:max-w-[26rem] lg:max-w-[24rem]"
-              style={{ opacity: heroOpacity, pointerEvents: heroOpacity < 0.2 ? 'none' : 'auto' }}
+        <div className="absolute inset-0" aria-hidden="true">
+          <Suspense fallback={null}>
+            <Scene
+              model={model}
+              compact={!wide}
+              reaction={reaction}
+              onPoke={poke}
+              active={heroVisible}
+            />
+          </Suspense>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-6xl">
+          <div className="max-w-[20rem] sm:max-w-[26rem] lg:max-w-[24rem]">
+            <h1 className="text-[clamp(1.9rem,7vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+              Alex
+              <span className="block text-coco-light">desarrollo web</span>
+            </h1>
+
+            <p className="mt-5 text-[15px] leading-[1.45] sm:mt-7 sm:text-[17px] sm:leading-[1.5]">
+              Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue una
+              vez nuestra mayor <em className="not-italic text-coco-light">debilidad</em>.
+            </p>
+
+            <p className="mt-3 text-[14px] leading-relaxed text-coco-mid sm:mt-4 sm:text-[15px]">
+              Construyo webs y aplicaciones, y las firmo como CocoBrain.
+            </p>
+
+            <a
+              href="#contenido"
+              className="mt-7 inline-block border-b-2 border-coco-dark pb-1 text-[14px] font-medium transition-colors hover:border-brain-glow hover:text-brain-glow sm:text-[15px]"
             >
-              <h1 className="text-[clamp(1.9rem,7vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
-                Alex
-                <span className="block text-coco-light">desarrollo web</span>
-              </h1>
-
-              <p className="mt-5 text-[15px] leading-[1.45] sm:mt-7 sm:text-[17px] sm:leading-[1.5]">
-                Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue
-                una vez nuestra mayor{' '}
-                <em className="not-italic text-coco-light">debilidad</em>.
-              </p>
-
-              <p className="mt-3 text-[14px] leading-relaxed text-coco-mid sm:mt-4 sm:text-[15px]">
-                Construyo webs y aplicaciones, y las firmo como CocoBrain.
-              </p>
-
-              <p className="mt-6 font-mono text-[11px] text-coco-mid sm:mt-10">
-                Baja para entrar <span aria-hidden="true">↓</span>
-              </p>
-            </div>
-
-            {inside && !active && progress < INSIDE_END && (
-              <p className="pointer-events-none absolute inset-x-0 bottom-20 max-w-sm font-mono text-[12px] leading-relaxed text-coco-mid">
-                Toca un nodo para ir a su sección.
-              </p>
-            )}
+              Ver proyectos
+            </a>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* A partir de aquí, página normal. */}
-      {/* Sin fondo opaco: la red crece detras del contenido y tiene que
-          verse. La legibilidad la da el degradado del body. */}
       <main id="contenido" className="relative">
         {sections.map((section) => (
           <section
             key={section.id}
             id={section.id}
-            className="border-t border-coco-light/40 px-6 py-24 sm:px-10"
+            className="scroll-mt-20 border-t border-coco-light/40 px-6 py-20 sm:px-10 sm:py-24"
           >
-            <div className="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:gap-16">
+            <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:gap-16">
               <div className="md:w-56 md:shrink-0">
                 <span className="font-mono text-[11px] text-coco-mid">
                   {section.nodeName.replace('node_', 'N')}
                 </span>
-                <h2 className="mt-2 text-[clamp(1.8rem,3vw,2.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+                <h2 className="mt-2 text-[clamp(1.6rem,5vw,2.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
                   {section.label}
                 </h2>
               </div>
@@ -231,7 +169,6 @@ export default function App() {
           </section>
         ))}
       </main>
-
     </>
   )
 }

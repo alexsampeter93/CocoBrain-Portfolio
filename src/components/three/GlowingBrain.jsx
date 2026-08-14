@@ -72,7 +72,10 @@ export default function GlowingBrain({ position, scale = 1 }) {
           map={texture}
           blending={AdditiveBlending}
           depthWrite={false}
-          depthTest={false}
+          // `depthTest` activado. Desactivarlo hacia que el halo se dibujara
+          // por encima de todo: al acercarse la camara llenaba la pantalla de
+          // rosa y parecia que la web se quedaba colgada.
+          depthTest
           transparent
           toneMapped={false}
         />

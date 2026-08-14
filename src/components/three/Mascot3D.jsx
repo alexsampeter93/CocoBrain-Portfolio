@@ -66,7 +66,7 @@ export default function Mascot3D({
   startle = 0,
   turnAway = 0,
   lookEnabled = true,
-  idleEnabled = false,
+  idleEnabled = true,
   fillWidth = FILL_WIDTH,
   fillHeight = FILL_HEIGHT,
   onPoke,
