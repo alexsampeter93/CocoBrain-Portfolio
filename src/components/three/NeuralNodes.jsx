@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { Html, Line } from '@react-three/drei'
 import { CatmullRomCurve3, Color, Vector3 } from 'three'
 import { previewNodePositions, nodeConnections } from '../../data/nodeLayout'
+import { journey, ramp } from '../../state/journey'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 const GLOW = '#FF6B85'
@@ -82,7 +83,6 @@ function Node({
       */}
       <mesh
         visible={false}
-        raycast={interactive ? undefined : () => null}
         onPointerOver={(event) => {
           event.stopPropagation()
           setHovered(true)
@@ -114,14 +114,13 @@ function Node({
         <meshStandardMaterial
           color={section.accent}
           emissive={GLOW}
-          emissiveIntensity={(highlighted ? 1.1 : 0.35) * fade}
+          emissiveIntensity={highlighted ? 1.1 : 0.35}
           roughness={0.3}
           transparent
-          opacity={fade}
         />
       </mesh>
 
-      {highlighted && interactive && (
+      {highlighted && (
         <Html center distanceFactor={7} position={[0, NODE_RADIUS * 3.4, 0]}>
           <span className="flex items-center gap-2 whitespace-nowrap border-l-2 border-brain-glow bg-cream/90 py-1 pl-2 pr-3 font-mono text-[11px] leading-none text-coco-dark">
             <span className="tabular-nums text-[9px] text-coco-mid">
@@ -257,11 +256,41 @@ function NeuralField() {
   )
 }
 
-export default function NeuralNodes({ sections, activeSection, onSelect, fade = 1 }) {
-  // Por debajo de este umbral no se dibuja nada ni se puede pulsar: la
-  // constelacion existe desde el primer frame, pero no debe interceptar
-  // clics mientras el visitante sigue en la portada.
-  const interactive = fade > 0.5
+export default function NeuralNodes({ sections, activeSection, onSelect, fadeRange }) {
+  const rootRef = useRef(null)
+  const basesRef = useRef(new Map())
+
+  /**
+   * El desvanecido se aplica aqui dentro, leyendo el progreso del scroll en
+   * cada frame. Pasarlo como prop obligaria a re-renderizar todo el arbol en
+   * cada pixel de scroll, que es exactamente lo que hacia que el recorrido
+   * fuera a tirones.
+   *
+   * Con `visible = false` el grupo entero deja de dibujarse Y de recibir
+   * raycast, asi que los nodos tampoco interceptan clics desde la portada.
+   */
+  useFrame(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const fade = ramp(journey.progress, fadeRange[0], fadeRange[1])
+    root.visible = fade > 0.02
+    if (!root.visible) return
+
+    root.traverse((object) => {
+      const material = object.material
+      if (!material) return
+
+      let base = basesRef.current.get(material)
+      if (base === undefined) {
+        base = material.opacity
+        basesRef.current.set(material, base)
+      }
+
+      material.transparent = true
+      material.opacity = base * fade
+    })
+  })
   const { nodes, curves, edgesByNode } = useMemo(() => {
     const positions = previewNodePositions
 
@@ -394,10 +423,8 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fade = 
     })
   })
 
-  if (fade <= 0.01) return null
-
   return (
-    <group>
+    <group ref={rootRef}>
       <NeuralField />
 
       {curves.map((curve, index) => (
@@ -407,7 +434,7 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fade = 
           color={new Color(LINE)}
           lineWidth={0.9}
           transparent
-          opacity={0.28 * fade}
+          opacity={0.28}
         />
       ))}
 
@@ -447,8 +474,6 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fade = 
           active={activeSection === node.section.id}
           onSelect={onSelect}
           onAwaken={awaken}
-          interactive={interactive}
-          fade={fade}
         />
       ))}
     </group>

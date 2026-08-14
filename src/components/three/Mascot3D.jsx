@@ -5,6 +5,7 @@ import { Box3, MathUtils, Vector3 } from 'three'
 import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { usePointer } from '../../hooks/usePointer'
+import { journey, ramp } from '../../state/journey'
 
 /**
  * Ojo con los nombres: los que puso Meshy no corresponden con lo que
@@ -69,7 +70,7 @@ export default function Mascot3D({
   idleEnabled = true,
   fillWidth = FILL_WIDTH,
   fillHeight = FILL_HEIGHT,
-  fade = 1,
+  fadeRange = null,
   onPoke,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
@@ -82,6 +83,7 @@ export default function Mascot3D({
   const motionRef = useRef(null)
   const breathRef = useRef(null)
   const jumpRef = useRef(null)
+  const fadeRef = useRef(1)
 
   const tuned = useMemo(() => {
     scene.traverse((object) => {
@@ -229,6 +231,9 @@ export default function Mascot3D({
    * mitad de recorrido era la causa de los saltos.
    */
   useFrame(() => {
+    const fade = fadeRange ? 1 - ramp(journey.progress, fadeRange[0], fadeRange[1]) : 1
+    fadeRef.current = fade
+
     const visible = fade > 0.01
     tuned.visible = visible
     if (!visible) return

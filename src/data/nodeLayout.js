@@ -9,11 +9,11 @@
  * diagrama de organigrama, no una red.
  */
 export const previewNodePositions = {
-  node_01: [-1.75, 1.05, 0.6],
-  node_02: [-2.15, -0.55, -0.35],
-  node_03: [1.55, 1.4, -0.75],
-  node_04: [2.05, -0.15, 0.55],
-  node_05: [0.35, -1.6, -0.5],
+  node_01: [-1.9, 0.95, 0.7],
+  node_02: [-2.3, -0.75, -0.5],
+  node_03: [1.5, 1.5, -0.8],
+  node_04: [2.25, -0.25, 0.6],
+  node_05: [0.15, -1.75, -0.35],
 }
 
 /** Qué nodos se unen. No es un grafo completo: unir todo con todo da maraña. */
