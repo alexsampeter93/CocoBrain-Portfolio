@@ -5,7 +5,8 @@ import { Box3, MathUtils, Vector3 } from 'three'
 import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { usePointer } from '../../hooks/usePointer'
-import { journey, ramp } from '../../state/journey'
+import { journey } from '../../journey/clock'
+import { ramp } from '../../journey/stages'
 
 /**
  * Ojo con los nombres: los que puso Meshy no corresponden con lo que

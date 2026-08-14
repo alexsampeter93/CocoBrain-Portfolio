@@ -1,0 +1,77 @@
+import { useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Environment, PerformanceMonitor, Stats } from '@react-three/drei'
+import { ACESFilmicToneMapping, Vector3 } from 'three'
+import { journey } from '../journey/clock'
+import { cameraPath, sampleCamera } from '../journey/stages'
+import Blockout from './Blockout'
+
+/**
+ * El mundo. Un solo canvas, una sola escena, montada una vez.
+ *
+ * La regla que ordena todo esto: NADA se monta ni se desmonta mientras se hace
+ * scroll. Antes había dos escenas que se intercambiaban a mitad de recorrido y
+ * de ahí venían el parpadeo y los tirones —montar una malla obliga a compilar
+ * su shader, y eso son varios frames perdidos justo en el peor momento.
+ *
+ * Aquí todo está siempre presente y lo único que cambia son opacidades y
+ * posiciones, que es trabajo que la GPU ya estaba haciendo de todos modos.
+ */
+
+const IS_COARSE_POINTER =
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+const MAX_DPR = IS_COARSE_POINTER ? 1.5 : 2
+
+/**
+ * Mueve la cámara leyendo la tabla. No tiene lógica propia: si el recorrido
+ * está mal, se corrige en `stages.js`, no aquí.
+ */
+function CameraDirector({ tokens }) {
+  const camera = useThree((state) => state.camera)
+  const path = useMemo(() => cameraPath(tokens), [tokens])
+
+  const position = useRef(new Vector3())
+  const target = useRef(new Vector3())
+
+  useFrame(() => {
+    sampleCamera(path, journey.progress, position.current, target.current)
+    camera.position.copy(position.current)
+    camera.lookAt(target.current)
+  })
+
+  return null
+}
+
+export default function World({ tokens, sections, active = true }) {
+  const [dpr, setDpr] = useState(MAX_DPR)
+
+  return (
+    <Canvas
+      dpr={dpr}
+      // Se deja de dibujar cuando el recorrido sale de pantalla: seguir
+      // renderizando WebGL debajo del contenido es gasto puro.
+      frameloop={active ? 'always' : 'never'}
+      camera={{ position: [0, 0, 6], fov: 35, near: 0.1, far: 60 }}
+      gl={{
+        antialias: true,
+        powerPreference: 'high-performance',
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 1,
+      }}
+    >
+      <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(MAX_DPR)} />
+
+      <CameraDirector tokens={tokens} />
+
+      {/* HDRI de estudio (Poly Haven, CC0). De aquí sale casi toda la luz: es
+          la diferencia entre un visor de modelos y una escena dirigida. */}
+      <Environment files="/hdri/studio.hdr" environmentIntensity={1} />
+      <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF6EA" />
+
+      <Blockout tokens={tokens} sections={sections} />
+
+      {import.meta.env.DEV && <Stats />}
+    </Canvas>
+  )
+}

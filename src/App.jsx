@@ -1,43 +1,26 @@
-import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import Scene from './components/three/Scene'
-import { MASCOT_MODELS } from './components/three/Mascot3D'
-import Preloader from './components/ui/Preloader'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import World from './three/World'
+import JourneyScroll, { scrollToProgress } from './journey/JourneyScroll'
+import StageReadout from './components/ui/StageReadout'
 import Hud from './components/ui/Hud'
-import ScrollJourney from './components/ui/ScrollJourney'
+import { tokensFor } from './layout/tokens'
+import { useCompact } from './layout/useCompact'
 import { getCalmMode, subscribeCalmMode, toggleCalmMode } from './state/calmMode'
 import { sections, sectionContent } from './data/sections'
 
-// Alturas de pantalla que dura el recorrido hasta el interior del cerebro.
-const JOURNEY_SCREENS = 3
+/**
+ * Alturas de pantalla que dura el recorrido. Cuatro tramos, cuatro pantallas:
+ * menos y la entrada al cerebro pasa tan rápido que no se lee.
+ */
+const JOURNEY_SCREENS = 4
 
-function useSelectedModel() {
-  const [url] = useState(() => {
-    if (typeof window === 'undefined') return MASCOT_MODELS.brain
-    const key = new URLSearchParams(window.location.search).get('model')
-    return MASCOT_MODELS[key] ?? MASCOT_MODELS.brain
-  })
-  return url
-}
-
-function useWideLayout() {
-  const [wide, setWide] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
-  )
-
-  useEffect(() => {
-    const mql = window.matchMedia('(min-width: 1024px)')
-    const onChange = (event) => setWide(event.matches)
-    mql.addEventListener('change', onChange)
-    return () => mql.removeEventListener('change', onChange)
-  }, [])
-
-  return wide
-}
+/** Dónde deja la navegación al pulsar un enlace: dentro del universo neuronal. */
+const MIND_PROGRESS = 0.85
 
 /**
  * Apaga el bucle de WebGL cuando el recorrido sale de pantalla. Sin esto la
- * GPU sigue dibujando la escena entera debajo del contenido, y en movil eso
- * se nota en el scroll enseguida.
+ * GPU sigue dibujando la escena entera debajo del contenido, y en móvil eso se
+ * nota en el scroll enseguida.
  */
 function useOnScreen(ref) {
   const [visible, setVisible] = useState(true)
@@ -58,41 +41,24 @@ function useOnScreen(ref) {
 }
 
 export default function App() {
-  const model = useSelectedModel()
-  const wide = useWideLayout()
+  const compact = useCompact()
   const calm = useSyncExternalStore(subscribeCalmMode, getCalmMode, () => false)
 
-  const heroRef = useRef(null)
+  const trackRef = useRef(null)
   const pinRef = useRef(null)
-  const heroTextRef = useRef(null)
-  const insideTextRef = useRef(null)
-  const heroVisible = useOnScreen(heroRef)
+  const onScreen = useOnScreen(trackRef)
 
-  const [reaction, setReaction] = useState(0)
-  const poke = useCallback(() => setReaction((value) => value + 1), [])
+  const tokens = tokensFor(compact)
 
   /**
-   * La informacion vive en los nodos. Pulsar uno abre su contenido ahi
-   * mismo, sin sacarte del espacio 3D. Las secciones de mas abajo siguen
-   * existiendo en el DOM porque son el contenido accesible e indexable, no
-   * un duplicado que haya que mantener a mano: salen de los mismos datos.
+   * La navegación mueve la CÁMARA, no la página.
+   *
+   * Antes hacía `scrollIntoView` sobre el texto de abajo, así que pulsar
+   * "Sobre mí" te sacaba del espacio 3D de un salto. Los enlaces te llevan al
+   * universo neuronal; en la fase 3 cada uno enfocará además su nodo.
    */
-  const [openNode, setOpenNode] = useState(null)
-  const active = sections.find((section) => section.id === openNode)
-
-  const closeNode = useCallback(() => setOpenNode(null), [])
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setOpenNode(null)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
-
-  const goToSection = useCallback((id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+  const goToMind = useCallback(() => scrollToProgress(trackRef, MIND_PROGRESS), [])
+  const goToStart = useCallback(() => scrollToProgress(trackRef, 0), [])
 
   return (
     <>
@@ -100,125 +66,41 @@ export default function App() {
         Saltar al contenido
       </a>
 
-      <Preloader />
+      {/* El titular vive en la escena 3D, que no es texto indexable. Este h1
+          es el que leen los buscadores y los lectores de pantalla. */}
+      <h1 className="sr-only">
+        Alex — desarrollo web. CocoBrain: nuestra mayor inspiración fue una vez
+        nuestra mayor debilidad.
+      </h1>
 
       <Hud
         sections={sections}
-        onSelect={goToSection}
-        onClose={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onSelect={goToMind}
+        onClose={goToStart}
         calm={calm}
         onToggleCalm={toggleCalmMode}
       />
 
-      <ScrollJourney
-        heroRef={heroRef}
-        pinRef={pinRef}
-        heroTextRef={heroTextRef}
-        insideTextRef={insideTextRef}
-      />
+      <JourneyScroll trackRef={trackRef} pinRef={pinRef} />
 
       {/* ScrollSmoother necesita esta pareja de contenedores. */}
       <div id="smooth-wrapper">
         <div id="smooth-content">
+          {/* La pista: su altura es la duración del recorrido. */}
           <section
-            ref={heroRef}
+            ref={trackRef}
             className="relative"
             style={{ height: `${JOURNEY_SCREENS * 100}vh` }}
+            aria-hidden="true"
           >
             <div ref={pinRef} className="h-[100dvh] w-full overflow-hidden">
-              <div className="absolute inset-0" aria-hidden="true">
-                <Suspense fallback={null}>
-                  <Scene
-                    model={model}
-                    compact={!wide}
-                    reaction={reaction}
-                    onPoke={poke}
-                    active={heroVisible}
-                    sections={sections}
-                    activeSection={openNode}
-                    onSelectSection={setOpenNode}
-                  />
-                </Suspense>
-              </div>
-
-              {/* Las opacidades las escribe ScrollTrigger directamente sobre
-                  el estilo, sin pasar por React. */}
-              <div
-                ref={heroTextRef}
-                className="absolute inset-x-0 bottom-24 px-6 sm:px-10 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2"
-              >
-                <div className="mx-auto w-full max-w-6xl">
-                  <div className="max-w-[20rem] sm:max-w-[26rem] lg:max-w-[24rem]">
-                    <h1 className="text-[clamp(1.9rem,7vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
-                      Alex
-                      <span className="block text-coco-light">desarrollo web</span>
-                    </h1>
-
-                    <p className="mt-5 text-[15px] leading-[1.45] sm:mt-7 sm:text-[17px]">
-                      Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue
-                      una vez nuestra mayor{' '}
-                      <em className="not-italic text-coco-light">debilidad</em>.
-                    </p>
-
-                    <p className="mt-3 font-mono text-[11px] text-coco-mid sm:mt-6">
-                      Baja para entrar <span aria-hidden="true">↓</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                ref={insideTextRef}
-                className="pointer-events-none absolute inset-x-0 bottom-20 px-6 opacity-0 sm:px-10"
-              >
-                <p className="mx-auto max-w-6xl font-mono text-[12px] text-coco-mid">
-                  Toca un nodo para abrirlo.
-                </p>
-              </div>
-
-              {/* Contenido del nodo abierto. */}
-              {active && (
-                <div className="absolute inset-0 flex items-end bg-coco-dark/35 px-6 pb-16 backdrop-blur-[2px] sm:px-10">
-                  <div className="mx-auto w-full max-w-6xl">
-                    <div className="max-w-xl border-l-2 border-brain-glow bg-cream/95 p-6 sm:p-8">
-                      <span className="font-mono text-[11px] text-coco-mid">
-                        {active.nodeName.replace('node_', 'NODO N')}
-                      </span>
-                      <h2 className="mt-2 text-[clamp(1.6rem,4vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
-                        {active.label}
-                      </h2>
-
-                      <div className="mt-5 max-h-[38dvh] overflow-y-auto pr-2">
-                        {(sectionContent[active.id] ?? []).length > 0 ? (
-                          sectionContent[active.id].map((text) => (
-                            <p
-                              key={text.slice(0, 24)}
-                              className="mb-3 text-[15px] leading-relaxed last:mb-0"
-                            >
-                              {text}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-[15px] leading-relaxed text-coco-mid">
-                            Contenido pendiente.
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={closeNode}
-                        className="mt-6 font-mono text-[12px] text-coco-dark transition-colors hover:text-brain-glow"
-                      >
-                        ← Volver <span className="text-coco-mid">[ESC]</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <World tokens={tokens} sections={sections} active={onScreen} />
             </div>
           </section>
 
+          {/* El contenido accesible. Es DOM real, no un espejo generado por
+              JavaScript: es lo que leen los buscadores y los lectores de
+              pantalla, y lo que queda si el 3D no llega a cargar. */}
           <main id="contenido" className="relative">
             {sections.map((section) => {
               const paragraphs = sectionContent[section.id] ?? []
@@ -262,6 +144,8 @@ export default function App() {
           </main>
         </div>
       </div>
+
+      {import.meta.env.DEV && <StageReadout />}
     </>
   )
 }

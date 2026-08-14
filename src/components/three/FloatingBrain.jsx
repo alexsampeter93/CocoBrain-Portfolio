@@ -2,7 +2,8 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Sparkles, useGLTF } from '@react-three/drei'
 import { Box3, Color, Vector3 } from 'three'
-import { journey, ramp } from '../../state/journey'
+import { journey } from '../../journey/clock'
+import { ramp } from '../../journey/stages'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 /**

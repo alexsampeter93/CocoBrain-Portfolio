@@ -2,8 +2,9 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, Line } from '@react-three/drei'
 import { CatmullRomCurve3, Color, Vector3 } from 'three'
-import { previewNodePositions, nodeConnections } from '../../data/nodeLayout'
-import { journey, ramp } from '../../state/journey'
+import { nodePositions, nodeConnections } from '../../data/nodeLayout'
+import { journey } from '../../journey/clock'
+import { ramp } from '../../journey/stages'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 const GLOW = '#FF6B85'
@@ -256,7 +257,7 @@ function NeuralField() {
   )
 }
 
-export default function NeuralNodes({ sections, activeSection, onSelect, fadeRange }) {
+export default function NeuralNodes({ sections, activeSection, onSelect, fadeRange, radius = 3.4 }) {
   const rootRef = useRef(null)
   const basesRef = useRef(new Map())
 
@@ -292,13 +293,15 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
     })
   })
   const { nodes, curves, edgesByNode } = useMemo(() => {
-    const positions = previewNodePositions
+    // El radio viene de `tokens.mind.radius`, asi que la constelacion se
+    // adapta al tamano de pantalla conservando la forma.
+    const positions = nodePositions(radius)
 
     const nodes = sections
       .filter((section) => positions[section.nodeName])
       .map((section, index) => ({
         section,
-        position: new Vector3(...positions[section.nodeName]),
+        position: positions[section.nodeName].clone(),
         phase: index * 1.7,
       }))
 
@@ -308,8 +311,8 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
     nodeConnections
       .filter(([from, to]) => positions[from] && positions[to])
       .forEach(([from, to]) => {
-        const a = new Vector3(...positions[from])
-        const b = new Vector3(...positions[to])
+        const a = positions[from].clone()
+        const b = positions[to].clone()
         // Punto medio desplazado: una recta entre dos nodos parece un cable;
         // una curva suave parece una conexion.
         const mid = a.clone().lerp(b, 0.5)
@@ -329,7 +332,7 @@ export default function NeuralNodes({ sections, activeSection, onSelect, fadeRan
       })
 
     return { nodes, curves, edgesByNode }
-  }, [sections])
+  }, [sections, radius])
 
   const ambient = useMemo(
     () => curves.map((curve, index) => ({ curve, offset: index / curves.length })),
