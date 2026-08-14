@@ -125,12 +125,21 @@ export function cameraPath(t, measuredHandBrain = null) {
   const hand = measuredHandBrain ? measuredHandBrain.clone() : new Vector3(...t.handBrain.position)
   const mind = new Vector3(...t.mind.center)
 
-  // A la altura del pecho, no de los pies: encuadrar por el centro de masa
-  // deja al personaje demasiado bajo.
-  const chest = new Vector3(mascot.x, mascot.y + t.mascot.height * 0.2, mascot.z)
+  /**
+   * La cámara de la portada mira a la ALTURA del personaje, no a su pecho.
+   *
+   * Apuntar al pecho inclinaba la cámara hacia arriba unos tres grados, y esa
+   * inclinación sube el borde inferior del encuadre un tercio de unidad. Como
+   * los pies quedaban a solo 0,17 del borde, el resultado era que a Olaz se le
+   * cortaban las zapatillas por la mitad.
+   *
+   * La lección: inclinar la cámara no solo gira la imagen, mueve los cuatro
+   * bordes del encuadre. Si un elemento está justo al filo, se pierde.
+   */
+  const heroLook = new Vector3(mascot.x, mascot.y, mascot.z)
 
   const positions = [
-    new Vector3(mascot.x * 0.18, 0.15, t.heroDistance),
+    new Vector3(mascot.x * 0.18, mascot.y, t.heroDistance),
     // Encuadre cerrado sobre el cerebro de la mano.
     hand.clone().add(new Vector3(0.02, 0.06, 1.3)),
     // Justo delante: el momento de entrar.
@@ -142,7 +151,7 @@ export function cameraPath(t, measuredHandBrain = null) {
   ]
 
   const targets = [
-    chest,
+    heroLook,
     hand.clone(),
     // La mirada se abre hacia el fondo justo al cruzar, no antes: mirar al
     // interior desde el primer píxel era lo que hacía que la cámara pasara de

@@ -42,8 +42,14 @@ export const tokens = {
     /** El universo neuronal, detrás de la portada. */
     mind: { center: [0, 0, -11], radius: 3.4 },
 
-    /** Distancia de la cámara al sujeto en la portada. */
-    heroDistance: 6.4,
+    /**
+     * Distancia de la cámara en la portada.
+     *
+     * A 6,4 el personaje ocupaba el 77% del alto visible y le quedaban 0,17
+     * unidades hasta el borde inferior —o sea, nada—. A 7,0 respira y las
+     * zapatillas están dentro con margen por arriba y por abajo.
+     */
+    heroDistance: 7.0,
   },
 
   compact: {

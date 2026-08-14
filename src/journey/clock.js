@@ -34,7 +34,7 @@ export const journey = {
  *
  * Más bajo y vuelve el temblor; más alto y la cámara se despega del dedo.
  */
-const TAU = 0.075
+const TAU = 0.05
 
 /**
  * Un paso de amortiguación, independiente de los fps.

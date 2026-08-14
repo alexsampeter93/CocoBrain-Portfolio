@@ -91,9 +91,6 @@ export default function App() {
 
       <JourneyScroll trackRef={trackRef} pinRef={pinRef} />
 
-      {/* ScrollSmoother necesita esta pareja de contenedores. */}
-      <div id="smooth-wrapper">
-        <div id="smooth-content">
           {/* La pista: su altura es la duración del recorrido. */}
           <section
             ref={trackRef}
@@ -162,8 +159,6 @@ export default function App() {
               )
             })}
           </main>
-        </div>
-      </div>
 
       {import.meta.env.DEV && <StageReadout />}
     </>

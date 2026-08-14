@@ -98,7 +98,23 @@ export default function World({
         toneMappingExposure: 1,
       }}
     >
-      <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(MAX_DPR)} />
+      {/*
+        La bajada de resolución es de ida y sin vuelta, a propósito.
+
+        Con `onIncline` devolviendo el valor alto, en cuanto los fps rondaban
+        el umbral el monitor rebotaba: subía, bajaba, subía. Y cada cambio de
+        `dpr` obliga a redimensionar el búfer de dibujo del canvas, que es una
+        operación cara. El propio mecanismo que debía proteger el rendimiento
+        se convertía en una fuente de parones periódicos.
+
+        `flipflops` es la red de seguridad de la librería: tras tres dudas se
+        queda abajo y deja de medir.
+      */}
+      <PerformanceMonitor
+        flipflops={3}
+        onDecline={() => setDpr(1)}
+        onFallback={() => setDpr(1)}
+      />
 
       <JourneyClock />
       <CameraDirector tokens={tokens} handBrain={handBrain} />

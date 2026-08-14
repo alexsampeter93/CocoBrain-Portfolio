@@ -1,72 +1,54 @@
 import { useLayoutEffect } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ScrollSmoother } from 'gsap/ScrollSmoother'
 import { setTarget } from './clock'
 import { stageAt } from './stages'
-import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 
-gsap.registerPlugin(ScrollTrigger, ScrollSmoother)
+gsap.registerPlugin(ScrollTrigger)
 
 /**
  * Traduce el scroll de la página al número que mueve el mundo.
  *
  * Un solo ScrollTrigger, fijando la portada. Ni uno por sección ni uno por
  * efecto: dos disparadores compitiendo por la misma cámara es exactamente lo
- * que hacía que las transiciones parecieran "sucias".
+ * que hacía que las transiciones parecieran sucias.
  *
- * ScrollSmoother da la inercia en escritorio. En táctil se queda apagado a
- * propósito —el scroll nativo del móvil siempre va más fino que cualquier
- * suavizado por JavaScript, y forzarlo es de donde salían los enganchones.
+ * ## Sin ScrollSmoother, y por qué
+ *
+ * Estuvo puesto y ha salido. ScrollSmoother no hace scroll: bloquea la página
+ * y desplaza el contenido con una transformación de CSS, animándola hacia el
+ * valor real. Eso obliga al navegador a recomponer la página entera en cada
+ * frame, y con un canvas de WebGL a pantalla completa y un elemento fijado
+ * encima, en Windows sale caro.
+ *
+ * Peor todavía: su retardo se sumaba al de la cámara. Dos amortiguaciones
+ * encadenadas no se ven como el doble de suave, se ven como que la web va
+ * lenta y no obedece.
+ *
+ * El scroll nativo llega directo y sin recomposición. La suavidad la pone la
+ * amortiguación del reloj, que actúa donde importa —la cámara— en vez de sobre
+ * el documento entero.
  */
 export default function JourneyScroll({ trackRef, pinRef }) {
-  const reducedMotion = usePrefersReducedMotion()
-
   useLayoutEffect(() => {
     const context = gsap.context(() => {
-      let smoother
-
-      if (!reducedMotion && ScrollSmoother.get() === undefined) {
-        smoother = ScrollSmoother.create({
-          wrapper: '#smooth-wrapper',
-          content: '#smooth-content',
-          // Bajo a propósito: la suavidad de la cámara ya la pone la
-          // amortiguación del reloj, y sumar los dos retardos hacía que la
-          // escena siguiera moviéndose un segundo después de soltar la rueda.
-          smooth: 0.6,
-          smoothTouch: false,
-          effects: false,
-          /**
-           * `normalizeScroll` desactivado.
-           *
-           * Intercepta la rueda del ratón y la reenvía en el siguiente frame.
-           * Con una escena ligera no se nota; con esta, cada evento llegaba un
-           * frame tarde y el movimiento se sentía a trompicones. Como el
-           * suavizado táctil ya está apagado, lo único que aportaba era ese
-           * retardo.
-           */
-          normalizeScroll: false,
-        })
-      }
-
       ScrollTrigger.create({
         trigger: trackRef.current,
         start: 'top top',
         end: 'bottom bottom',
         pin: pinRef.current,
+        // La pista ya mide lo que dura el recorrido; que GSAP añadiera su
+        // propio hueco duplicaría la altura.
         pinSpacing: false,
-        // `scrub: true` sin número: sigue al scroll sin retardo propio. La
-        // inercia ya la pone ScrollSmoother, y sumar las dos hace que la
-        // cámara llegue tarde y parezca que patina.
+        // Enlace directo con el scroll, sin retardo propio. El suavizado ya lo
+        // pone el reloj.
         scrub: true,
         onUpdate: (self) => setTarget(self.progress, stageAt(self.progress).id),
       })
-
-      return () => smoother?.kill()
     })
 
     return () => context.revert()
-  }, [trackRef, pinRef, reducedMotion])
+  }, [trackRef, pinRef])
 
   return null
 }
@@ -79,11 +61,8 @@ export function scrollToProgress(trackRef, progress) {
   const track = trackRef.current
   if (!track) return
 
-  const start = track.offsetTop
   const distance = track.offsetHeight - window.innerHeight
-  const target = start + distance * Math.min(1, Math.max(0, progress))
+  const target = track.offsetTop + distance * Math.min(1, Math.max(0, progress))
 
-  const smoother = ScrollSmoother.get()
-  if (smoother) smoother.scrollTo(target, true)
-  else window.scrollTo({ top: target, behavior: 'smooth' })
+  window.scrollTo({ top: target, behavior: 'smooth' })
 }
