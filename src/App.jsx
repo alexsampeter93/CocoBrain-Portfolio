@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import World from './three/World'
 import JourneyScroll, { scrollToProgress } from './journey/JourneyScroll'
+import { progressForNode } from './journey/stages'
 import StageReadout from './components/ui/StageReadout'
 import HeroCopy from './components/ui/HeroCopy'
 import Preloader from './components/ui/Preloader'
@@ -75,13 +76,21 @@ export default function App() {
   }, [])
 
   /**
-   * La navegación mueve la CÁMARA, no la página.
+   * La navegación mueve la CÁMARA hasta el nodo, no la página hasta el texto.
    *
-   * Antes hacía `scrollIntoView` sobre el texto de abajo, así que pulsar
-   * "Sobre mí" te sacaba del espacio 3D de un salto. Los enlaces te llevan al
-   * universo neuronal; en la fase 3 cada uno enfocará además su nodo.
+   * Pulsar "Proyectos" deja el scroll justo en el tramo de ese nodo, así que
+   * la cámara vuela hasta él y su contenido aparece al llegar. Es el mismo
+   * recorrido que si hubieras bajado a mano: no hay dos formas de llegar al
+   * mismo sitio, que es de donde salen las incoherencias.
    */
-  const goToMind = useCallback(() => scrollToProgress(trackRef, MIND_PROGRESS), [])
+  const goToNode = useCallback(
+    (id) => {
+      const index = sections.findIndex((section) => section.id === id)
+      if (index >= 0) scrollToProgress(trackRef, progressForNode(index))
+    },
+    [],
+  )
+
   const goToStart = useCallback(() => scrollToProgress(trackRef, 0), [])
 
   return (
@@ -101,7 +110,7 @@ export default function App() {
 
       <Hud
         sections={sections}
-        onSelect={goToMind}
+        onSelect={goToNode}
         onClose={goToStart}
         calm={calm}
         onToggleCalm={toggleCalmMode}
@@ -133,46 +142,8 @@ export default function App() {
 
               <HeroCopy />
 
-              {activeSection && (
-                <div className="absolute inset-0 flex items-end px-6 pb-16 sm:px-10">
-                  <div className="mx-auto w-full max-w-6xl">
-                    <div className="max-w-xl border-l border-brain-glow bg-coco-dark/80 p-6 backdrop-blur-sm sm:p-8">
-                      <span className="font-mono text-[11px] text-coco-light">
-                        {activeSection.nodeName.replace('node_', 'nodo ')}
-                      </span>
-
-                      <h2 className="mt-2 text-[clamp(1.6rem,4vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-cream">
-                        {activeSection.label}
-                      </h2>
-
-                      <div className="mt-5 max-h-[34dvh] overflow-y-auto pr-2">
-                        {(sectionContent[activeSection.id] ?? []).length > 0 ? (
-                          sectionContent[activeSection.id].map((text) => (
-                            <p
-                              key={text.slice(0, 24)}
-                              className="mb-3 text-[15px] leading-relaxed text-cream/85 last:mb-0"
-                            >
-                              {text}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-[15px] leading-relaxed text-cream/60">
-                            Contenido pendiente.
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={closeNode}
-                        className="mt-6 font-mono text-[12px] text-cream transition-colors hover:text-brain-glow"
-                      >
-                        ← Volver <span className="text-coco-light">[esc]</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* El contenido de cada nodo ya no vive aquí: flota junto a su
+                  nodo dentro de la escena, en `three/NodePanel.jsx`. */}
             </div>
           </section>
 

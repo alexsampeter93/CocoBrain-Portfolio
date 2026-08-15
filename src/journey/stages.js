@@ -1,5 +1,6 @@
 import { CatmullRomCurve3, Vector3 } from 'three'
 import { fitDistance } from './framing'
+import { nodePositions } from '../data/nodeLayout'
 
 /**
  * LA TABLA. Toda la coreografía del recorrido vive en este archivo.
@@ -22,11 +23,36 @@ import { fitDistance } from './framing'
  * saber a qué altura del scroll saltar.
  */
 export const STAGES = [
-  { id: 'hero', label: 'Portada', from: 0.0, to: 0.28 },
-  { id: 'approach', label: 'Acercamiento', from: 0.28, to: 0.48 },
-  { id: 'entry', label: 'Entrada', from: 0.48, to: 0.7 },
-  { id: 'mind', label: 'La mente', from: 0.7, to: 1.0 },
+  { id: 'hero', label: 'Portada', from: 0.0, to: 0.2 },
+  { id: 'approach', label: 'Acercamiento', from: 0.2, to: 0.36 },
+  { id: 'entry', label: 'Entrada', from: 0.36, to: 0.46 },
+  { id: 'mind', label: 'La mente', from: 0.46, to: 0.52 },
+  { id: 'tour', label: 'Recorrido', from: 0.52, to: 1.0 },
 ]
+
+/**
+ * En que nodo estamos y cuanto de "dentro" de el.
+ *
+ * Devuelve `null` fuera del recorrido. `focus` va de 0 a 1 y solo llega a 1
+ * en la parte central del tramo: es lo que hace que el contenido aparezca al
+ * llegar y se vaya al salir, sin que haya dos paneles a la vez.
+ */
+export function nodeFocusAt(progress, count) {
+  if (progress < TOUR_START || count === 0) return null
+
+  const index = Math.min(count - 1, Math.floor((progress - TOUR_START) / NODE_SPAN))
+  const start = TOUR_START + index * NODE_SPAN
+
+  const appearing = ramp(progress, start + NODE_SPAN * 0.12, start + NODE_SPAN * 0.42)
+  const leaving = ramp(progress, start + NODE_HOLD, start + NODE_SPAN)
+
+  return { index, focus: appearing * (1 - leaving) }
+}
+
+/** Donde hay que dejar el scroll para ver un nodo concreto. */
+export function progressForNode(index) {
+  return TOUR_START + index * NODE_SPAN + NODE_SPAN * 0.3
+}
 
 export function stageAt(progress) {
   for (let i = STAGES.length - 1; i >= 0; i -= 1) {
@@ -46,14 +72,14 @@ export function stageAt(progress) {
 export const LAYERS = {
   // El titular se va mucho antes que el personaje: si aguanta hasta que la
   // cámara ya está encima del cerebro, se lee encima del modelo y ensucia.
-  heroCopy: { in: null, out: [0.04, 0.2] },
+  heroCopy: { in: null, out: [0.03, 0.15] },
   // Se va justo cuando la cámara le pasa por delante. Antes seguía visible
   // después de cruzar y se veía el modelo por dentro.
-  mascot: { in: null, out: [0.34, 0.48] },
+  mascot: { in: null, out: [0.24, 0.36] },
   // El halo aguanta un poco más: es lo último que se ve al atravesarlo.
-  handBrain: { in: null, out: [0.44, 0.52] },
-  mind: { in: [0.4, 0.62], out: null },
-  nodes: { in: [0.58, 0.76], out: null },
+  handBrain: { in: null, out: [0.32, 0.4] },
+  mind: { in: [0.28, 0.46], out: null },
+  nodes: { in: [0.4, 0.52], out: null },
 }
 
 /** Interpolación suave (smoothstep) entre dos límites. */
@@ -97,7 +123,24 @@ export function layerOpacity(name, progress) {
  * (0.32 a 0.48) es el más lento de todos, porque es el plano en el que hay que
  * mirar el cerebro antes de entrar.
  */
-const TIMING = [0.0, 0.32, 0.48, 0.8, 1.0]
+/**
+ * El recorrido por los nodos.
+ *
+ * Entrar en un nodo, leerlo, seguir bajando y entrar en el siguiente. Esto
+ * sustituye al panel fijo de abajo, y de paso arregla el problema de encuadre
+ * en movil: si se viaja de nodo en nodo, los cinco no tienen que caber a la
+ * vez y la camara puede acercarse de verdad a cada uno.
+ *
+ * Cada nodo tiene dos claves y no una: una de LLEGADA y otra de SALIDA casi en
+ * el mismo sitio. El hueco entre las dos es el tiempo de lectura. Con una sola
+ * clave la camara pasaria de largo sin detenerse, porque una curva no se para
+ * nunca por si sola.
+ */
+export const TOUR_START = 0.52
+/** Lo que ocupa cada nodo del recorrido total. */
+const NODE_SPAN = 0.096
+/** De ese hueco, cuanto se pasa quieto delante del nodo. */
+const NODE_HOLD = 0.062
 
 /**
  * El vuelo de la cámara, como dos curvas suaves: por dónde pasa y hacia dónde
@@ -119,7 +162,10 @@ const TIMING = [0.0, 0.32, 0.48, 0.8, 1.0]
  * acercamiento lo están— y la cámara haría un bucle alrededor del cerebro en
  * vez de acercarse a él.
  */
-export function cameraPath(t, { handBrain = null, mascotWidth = null, fov = 35, aspect = 1.6 } = {}) {
+export function cameraPath(
+  t,
+  { handBrain = null, mascotWidth = null, fov = 35, aspect = 1.6, nodeOrder = [] } = {},
+) {
   const mascot = new Vector3(...t.mascot.position)
   // La posición medida sobre el modelo manda sobre la del token: el token es
   // solo el valor con el que se trabaja hasta que el GLB carga.
@@ -171,18 +217,64 @@ export function cameraPath(t, { handBrain = null, mascotWidth = null, fov = 35, 
    */
   const heroLook = new Vector3(mascot.x, mascot.y, mascot.z)
 
+  /**
+   * Una parada por nodo, con su llegada y su salida.
+   *
+   * La cámara se coloca por delante y algo hacia fuera del nodo, y mira a un
+   * punto entre el nodo y el cerebro. Ese sesgo hacia el centro es lo que
+   * mantiene el cerebro asomando en el encuadre: sin él te quedas mirando un
+   * punto luminoso en mitad de la nada y se pierde la referencia de dónde
+   * estás.
+   */
+  const nodeViewDistance = fitDistance({
+    halfWidth: t.mind.radius * 0.92,
+    halfHeight: t.mind.radius * 0.6,
+    fov,
+    aspect,
+    fill: 0.9,
+  })
+
+  const tourPositions = []
+  const tourTargets = []
+  const tourTiming = []
+
+  const layout = nodePositions(t.mind.radius)
+
+  nodeOrder.forEach((nodeName, index) => {
+    const node = layout[nodeName]
+    if (!node) return
+
+    // Hacia fuera del cerebro, pero sobre todo hacia el espectador: así nunca
+    // se acaba mirando la constelación desde detrás.
+    const direction = node
+      .clone()
+      .normalize()
+      .multiplyScalar(0.5)
+      .add(new Vector3(0, 0.12, 1))
+      .normalize()
+
+    const arrive = mind.clone().add(node).add(direction.clone().multiplyScalar(nodeViewDistance))
+    // Deriva mínima durante la lectura: quieta del todo parece congelada.
+    const leave = arrive.clone().add(direction.clone().multiplyScalar(-t.mind.radius * 0.12))
+
+    const look = mind.clone().add(node.clone().multiplyScalar(0.78))
+
+    tourPositions.push(arrive, leave)
+    tourTargets.push(look, look.clone())
+
+    const start = TOUR_START + index * NODE_SPAN
+    tourTiming.push(start, start + NODE_HOLD)
+  })
+
   const positions = [
     new Vector3(mascot.x * 0.18, mascot.y, heroDistance),
     // Encuadre cerrado sobre el cerebro de la mano.
     hand.clone().add(new Vector3(0.02, 0.06, 1.3)),
     // Justo delante: el momento de entrar.
     hand.clone().add(new Vector3(0, 0, 0.1)),
+    // Vista general de la constelación, antes de entrar en el primer nodo.
     mind.clone().add(new Vector3(0, t.mind.radius * 0.1, mindDistance)),
-    // Deriva lenta al final. Sin esto el tramo de exploración se queda
-    // congelado y parece que la web se ha colgado.
-    mind
-      .clone()
-      .add(new Vector3(mindDistance * 0.16, 0, mindDistance * 0.97)),
+    ...tourPositions,
   ]
 
   const targets = [
@@ -193,10 +285,27 @@ export function cameraPath(t, { handBrain = null, mascotWidth = null, fov = 35, 
     // largo sin llegar a apuntar nunca al cerebro.
     hand.clone().lerp(mind, 0.35),
     mind.clone(),
-    mind.clone().add(new Vector3(t.mind.radius * 0.15, 0, 0)),
+    ...tourTargets,
   ]
 
+  /**
+   * Los tiempos de las cuatro claves fijas, y luego los del recorrido.
+   *
+   * Van juntos con las posiciones en el mismo objeto porque su longitud
+   * depende de cuántos nodos haya: si mañana hay seis secciones, la tabla se
+   * ajusta sola en vez de haber que recontar a mano.
+   */
+  const timing = [0.0, 0.2, 0.36, 0.46, ...tourTiming]
+
+  // Cierre: la cámara se retira despacio del último nodo. Sin esta clave el
+  // recorrido se queda congelado en el tramo final.
+  const last = positions[positions.length - 1]
+  positions.push(last.clone().add(new Vector3(0, t.mind.radius * 0.1, t.mind.radius * 0.5)))
+  targets.push(targets[targets.length - 1].clone())
+  timing.push(1)
+
   return {
+    timing,
     position: new CatmullRomCurve3(positions, false, 'centripetal'),
     target: new CatmullRomCurve3(targets, false, 'centripetal'),
   }
@@ -212,16 +321,17 @@ export function cameraPath(t, { handBrain = null, mascotWidth = null, fov = 35, 
  */
 export function sampleCamera(path, progress, outPosition, outTarget) {
   const p = Math.min(1, Math.max(0, progress))
+  const timing = path.timing
 
   let i = 0
-  while (i < TIMING.length - 2 && p >= TIMING[i + 1]) i += 1
+  while (i < timing.length - 2 && p >= timing[i + 1]) i += 1
 
-  const span = TIMING[i + 1] - TIMING[i]
-  const local = span <= 0 ? 1 : Math.min(1, Math.max(0, (p - TIMING[i]) / span))
+  const span = timing[i + 1] - timing[i]
+  const local = span <= 0 ? 1 : Math.min(1, Math.max(0, (p - timing[i]) / span))
 
   // `getPoint` reparte su parámetro por índice de punto, así que la posición
   // dentro del tramo se traduce directamente.
-  const u = (i + local) / (TIMING.length - 1)
+  const u = (i + local) / (timing.length - 1)
 
   path.position.getPoint(u, outPosition)
   path.target.getPoint(u, outTarget)

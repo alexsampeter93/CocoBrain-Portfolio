@@ -67,7 +67,7 @@ function JourneyClock() {
  * Mueve la cámara leyendo la tabla. No tiene lógica propia: si el recorrido
  * está mal, se corrige en `stages.js`, no aquí.
  */
-function CameraDirector({ tokens, measure }) {
+function CameraDirector({ tokens, measure, nodeOrder }) {
   const camera = useThree((state) => state.camera)
   const aspect = useViewportAspect()
 
@@ -78,8 +78,9 @@ function CameraDirector({ tokens, measure }) {
         mascotWidth: measure?.width ?? null,
         fov: camera.fov,
         aspect,
+        nodeOrder,
       }),
-    [tokens, measure, camera.fov, aspect],
+    [tokens, measure, camera.fov, aspect, nodeOrder],
   )
 
   const position = useRef(new Vector3())
@@ -106,6 +107,10 @@ export default function World({
   active = true,
 }) {
   const [dpr, setDpr] = useState(pickDpr)
+
+  // El orden de las paradas del recorrido sale de los datos, no de una lista
+  // aparte que hubiera que mantener en paralelo.
+  const nodeOrder = useMemo(() => sections.map((section) => section.nodeName), [sections])
 
   /**
    * Lo que la mascota mide de sí misma al cargar: su ancho ya escalado y dónde
@@ -162,7 +167,7 @@ export default function World({
       />
 
       <JourneyClock />
-      <CameraDirector tokens={tokens} measure={measure} />
+      <CameraDirector tokens={tokens} measure={measure} nodeOrder={nodeOrder} />
 
       {/* HDRI de estudio (Poly Haven, CC0). De aquí sale casi toda la luz: es
           la diferencia entre un visor de modelos y una escena dirigida. */}
@@ -185,6 +190,7 @@ export default function World({
         sections={sections}
         activeSection={activeSection}
         onSelectSection={onSelectSection}
+        compact={compact}
       />
 
       {import.meta.env.DEV && <Stats />}

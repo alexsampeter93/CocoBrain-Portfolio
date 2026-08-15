@@ -2,6 +2,8 @@ import { Suspense } from 'react'
 import FloatingBrain from '../components/three/FloatingBrain'
 import NeuralNodes from '../components/three/NeuralNodes'
 import MindBackdrop from './MindBackdrop'
+import NodePanel from './NodePanel'
+import { sectionContent } from '../data/sections'
 
 /**
  * El universo neuronal: lo que hay al otro lado del cerebro de la mano.
@@ -18,7 +20,7 @@ import MindBackdrop from './MindBackdrop'
  * Todo se dimensiona a partir de `tokens.mind.radius`, así que en móvil la
  * constelación se encoge conservando la forma en vez de salirse de pantalla.
  */
-export default function MindStage({ tokens, sections, activeSection, onSelectSection }) {
+export default function MindStage({ tokens, sections, activeSection, onSelectSection, compact }) {
   const { center, radius } = tokens.mind
 
   return (
@@ -40,6 +42,14 @@ export default function MindStage({ tokens, sections, activeSection, onSelectSec
           onSelect={onSelectSection}
           radius={radius}
           layer="nodes"
+        />
+
+        {/* El contenido, anclado al nodo que toque según el scroll. */}
+        <NodePanel
+          sections={sections}
+          content={sectionContent}
+          radius={radius}
+          compact={compact}
         />
 
         {/* Relleno tenue para que las caras del cerebro no queden en negro

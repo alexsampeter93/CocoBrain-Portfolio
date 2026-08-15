@@ -18,6 +18,8 @@ const OUT = '.shots'
 
 /** Dónde parar. Coinciden con los tramos de `journey/stages.js`. */
 const STOPS = [
+  { name: "nodo1", progress: 0.55 },
+  { name: "nodo3", progress: 0.74 },
   { name: 'portada', progress: 0 },
   { name: 'acercamiento', progress: 0.34 },
   { name: 'entrada', progress: 0.56 },
