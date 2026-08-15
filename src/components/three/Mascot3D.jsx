@@ -94,13 +94,11 @@ export default function Mascot3D({
   idleEnabled = true,
   /** Altura del personaje en unidades de mundo. Sale de `tokens.mascot.height`. */
   height = 3,
-  /** Tope de anchura, tambien en unidades de mundo. */
-  maxWidth = Infinity,
   /** Capa de `LAYERS` que decide cuando se desvanece. */
   layer = 'mascot',
   /** Punto del modelo cuya posicion en el mundo hay que medir y reportar. */
   anchorLocal = null,
-  onAnchor,
+  onMeasure,
   onPoke,
 }) {
   const { scene } = useGLTF(url, DRACO_PATH)
@@ -148,16 +146,16 @@ export default function Mascot3D({
   }, [scene])
 
   /**
-   * Encuadre en unidades de mundo, no en fraccion de pantalla.
+   * El personaje mide SIEMPRE lo mismo en el mundo.
    *
-   * Antes el tamano salia del `viewport` de R3F, que se mide a la distancia a
-   * la que esta la camara. Como la camara se mueve durante el recorrido, el
-   * personaje se reescalaba mientras te acercabas: de ahi salia parte de la
-   * sensacion de que "todo bailaba".
+   * Antes el tamano dependia tambien del ancho de la pantalla, asi que al
+   * cambiar de tamano la ventana —o al minimizarla y restaurarla— el modelo se
+   * reescalaba y daba un salto. Ese era el "Olaz se sigue moviendo".
    *
-   * Ahora Olaz mide lo que dice `tokens.mascot.height` y no cambia nunca. Solo
-   * se comprueba que no se salga de ancho, porque en una pantalla alta y
-   * estrecha el hueco horizontal es mucho menor que el vertical.
+   * Ahora la unica variable es `height`, y lo que se adapta a la pantalla es
+   * la DISTANCIA DE LA CAMARA, que se calcula en `journey/framing.js`. Es
+   * ademas como funciona una camara de verdad: no se encoge el actor, se echa
+   * uno para atras.
    */
   useLayoutEffect(() => {
     const group = fitRef.current
@@ -171,20 +169,28 @@ export default function Mascot3D({
     const center = box.getCenter(new Vector3())
     if (size.y === 0) return
 
-    const fit = Math.min(height / size.y, maxWidth / size.x)
+    const fit = height / size.y
     group.scale.setScalar(fit)
     group.position.set(-center.x * fit, -center.y * fit, -center.z * fit)
 
+    if (!onMeasure) return
+
     /**
-     * El cerebro de la mano es la puerta por la que entra la camara, asi que
-     * su posicion tiene que ser la de verdad y no una estimacion. Se mide una
-     * vez, al terminar el encuadre, y se reporta hacia arriba.
+     * Dos medidas suben hacia el recorrido, y las dos son de las que "si
+     * dependen de la geometria, se miden":
+     *
+     * - el ancho real ya escalado, para que la camara sepa cuanto tiene que
+     *   abarcar sin suponer la proporcion del modelo;
+     * - donde ha quedado el cerebro de la mano, que es la puerta por la que
+     *   entra la camara.
      */
-    if (anchorLocal && onAnchor) {
-      group.updateWorldMatrix(true, false)
-      onAnchor(group.localToWorld(anchorLocal.clone()))
-    }
-  }, [tuned, height, maxWidth, anchorLocal, onAnchor])
+    group.updateWorldMatrix(true, false)
+
+    onMeasure({
+      width: size.x * fit,
+      anchor: anchorLocal ? group.localToWorld(anchorLocal.clone()) : null,
+    })
+  }, [tuned, height, anchorLocal, onMeasure])
 
   /** Salto con aplastado: la unica deformacion que aguanta una malla fusionada. */
   useEffect(() => {

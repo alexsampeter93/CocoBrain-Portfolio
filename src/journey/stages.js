@@ -1,4 +1,5 @@
 import { CatmullRomCurve3, Vector3 } from 'three'
+import { fitDistance } from './framing'
 
 /**
  * LA TABLA. Toda la coreografía del recorrido vive en este archivo.
@@ -118,12 +119,44 @@ const TIMING = [0.0, 0.32, 0.48, 0.8, 1.0]
  * acercamiento lo están— y la cámara haría un bucle alrededor del cerebro en
  * vez de acercarse a él.
  */
-export function cameraPath(t, measuredHandBrain = null) {
+export function cameraPath(t, { handBrain = null, mascotWidth = null, fov = 35, aspect = 1.6 } = {}) {
   const mascot = new Vector3(...t.mascot.position)
   // La posición medida sobre el modelo manda sobre la del token: el token es
   // solo el valor con el que se trabaja hasta que el GLB carga.
-  const hand = measuredHandBrain ? measuredHandBrain.clone() : new Vector3(...t.handBrain.position)
+  const hand = handBrain ? handBrain.clone() : new Vector3(...t.handBrain.position)
   const mind = new Vector3(...t.mind.center)
+
+  /**
+   * Las dos distancias de cámara salen de la geometría, no de probar valores.
+   *
+   * En la portada hay que abarcar al personaje MÁS el hueco que ocupa a un
+   * lado del centro: si está desplazado a la derecha para dejar sitio al
+   * texto, la cámara tiene que retroceder lo suficiente para que quepan los
+   * dos.
+   */
+  const halfHeight = t.mascot.height / 2
+  const halfWidth = (mascotWidth ?? t.mascot.height * 0.95) / 2
+
+  const heroDistance = fitDistance({
+    halfWidth: halfWidth + Math.abs(mascot.x),
+    halfHeight,
+    fov,
+    aspect,
+    fill: t.mascot.fill,
+  })
+
+  /**
+   * En el interior hay que abarcar la constelación entera. El nodo más lejano
+   * está a 1,26 radios, y se añade margen para su etiqueta.
+   */
+  const mindReach = t.mind.radius * 1.45
+  const mindDistance = fitDistance({
+    halfWidth: mindReach,
+    halfHeight: mindReach,
+    fov,
+    aspect,
+    fill: t.mind.fill,
+  })
 
   /**
    * La cámara de la portada mira a la ALTURA del personaje, no a su pecho.
@@ -139,15 +172,17 @@ export function cameraPath(t, measuredHandBrain = null) {
   const heroLook = new Vector3(mascot.x, mascot.y, mascot.z)
 
   const positions = [
-    new Vector3(mascot.x * 0.18, mascot.y, t.heroDistance),
+    new Vector3(mascot.x * 0.18, mascot.y, heroDistance),
     // Encuadre cerrado sobre el cerebro de la mano.
     hand.clone().add(new Vector3(0.02, 0.06, 1.3)),
     // Justo delante: el momento de entrar.
     hand.clone().add(new Vector3(0, 0, 0.1)),
-    mind.clone().add(new Vector3(0, 0.35, t.mind.radius * 2.25)),
+    mind.clone().add(new Vector3(0, t.mind.radius * 0.1, mindDistance)),
     // Deriva lenta al final. Sin esto el tramo de exploración se queda
     // congelado y parece que la web se ha colgado.
-    mind.clone().add(new Vector3(t.mind.radius * 0.5, 0.12, t.mind.radius * 2.0)),
+    mind
+      .clone()
+      .add(new Vector3(mindDistance * 0.16, 0, mindDistance * 0.97)),
   ]
 
   const targets = [

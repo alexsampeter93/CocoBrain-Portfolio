@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, PerformanceMonitor, Stats } from '@react-three/drei'
 import { ACESFilmicToneMapping, Vector3 } from 'three'
 import { advance, journey } from '../journey/clock'
+import { useViewportAspect } from '../layout/useViewportAspect'
 import { cameraPath, sampleCamera } from '../journey/stages'
 import MascotStage from './MascotStage'
 import MindStage from './MindStage'
@@ -66,9 +67,20 @@ function JourneyClock() {
  * Mueve la cámara leyendo la tabla. No tiene lógica propia: si el recorrido
  * está mal, se corrige en `stages.js`, no aquí.
  */
-function CameraDirector({ tokens, handBrain }) {
+function CameraDirector({ tokens, measure }) {
   const camera = useThree((state) => state.camera)
-  const path = useMemo(() => cameraPath(tokens, handBrain), [tokens, handBrain])
+  const aspect = useViewportAspect()
+
+  const path = useMemo(
+    () =>
+      cameraPath(tokens, {
+        handBrain: measure?.anchor ?? null,
+        mascotWidth: measure?.width ?? null,
+        fov: camera.fov,
+        aspect,
+      }),
+    [tokens, measure, camera.fov, aspect],
+  )
 
   const position = useRef(new Vector3())
   const target = useRef(new Vector3())
@@ -96,19 +108,23 @@ export default function World({
   const [dpr, setDpr] = useState(pickDpr)
 
   /**
-   * Dónde ha quedado el cerebro de la mano una vez encuadrado el modelo. Es
-   * el único dato del mundo que no se puede escribir a mano: depende de la
-   * malla. Se mide al cargar y se reconstruye el recorrido con él.
+   * Lo que la mascota mide de sí misma al cargar: su ancho ya escalado y dónde
+   * ha quedado el cerebro de la mano. Son los dos datos del mundo que no se
+   * pueden escribir a mano porque dependen de la malla.
    */
-  const [handBrain, setHandBrain] = useState(null)
+  const [measure, setMeasure] = useState(null)
 
-  const onAnchor = useCallback((point) => {
-    // Solo se acepta si de verdad se ha movido. Sin esta guarda, cualquier
+  const onMeasure = useCallback((next) => {
+    // Solo se acepta si de verdad ha cambiado. Sin esta guarda, cualquier
     // remedida devolvía un objeto nuevo, React lo veía como un cambio y
     // reconstruía el recorrido de la cámara sin motivo.
-    setHandBrain((current) =>
-      current && current.distanceToSquared(point) < 1e-6 ? current : point,
-    )
+    setMeasure((current) => {
+      if (!current) return next
+      const sameWidth = Math.abs(current.width - next.width) < 1e-4
+      const sameAnchor =
+        !current.anchor || !next.anchor || current.anchor.distanceToSquared(next.anchor) < 1e-6
+      return sameWidth && sameAnchor ? current : next
+    })
   }, [])
 
   return (
@@ -146,7 +162,7 @@ export default function World({
       />
 
       <JourneyClock />
-      <CameraDirector tokens={tokens} handBrain={handBrain} />
+      <CameraDirector tokens={tokens} measure={measure} />
 
       {/* HDRI de estudio (Poly Haven, CC0). De aquí sale casi toda la luz: es
           la diferencia entre un visor de modelos y una escena dirigida. */}
@@ -158,7 +174,7 @@ export default function World({
           tokens={tokens}
           model={model}
           compact={compact}
-          onAnchor={onAnchor}
+          onMeasure={onMeasure}
           reaction={reaction}
           onPoke={onPoke}
         />

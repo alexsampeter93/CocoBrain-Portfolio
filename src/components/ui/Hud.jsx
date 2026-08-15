@@ -97,7 +97,15 @@ export default function Hud({
         aria-label="Secciones"
         className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center sm:inset-x-auto sm:bottom-10 sm:right-10 sm:block"
       >
-        <ul className="flex flex-row flex-wrap justify-center gap-x-5 gap-y-2 px-8 sm:flex-col sm:items-end sm:gap-3 sm:px-0 sm:pb-9 sm:pr-9">
+        {/*
+          En móvil, UNA línea y sin envolver.
+
+          Con `flex-wrap` las cinco secciones se partían en dos filas
+          descolgadas y el bloque entero se leía como un error de maquetación.
+          Si no caben, se desplaza en horizontal —que es un gesto que en un
+          teléfono se entiende— en vez de romper la fila.
+        */}
+        <ul className="flex max-w-full flex-row justify-start gap-x-5 overflow-x-auto px-6 [scrollbar-width:none] sm:flex-col sm:items-end sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-9 sm:pr-9">
           {sections.map((section) => {
             const isActive = activeSection === section.id
             return (
@@ -106,7 +114,7 @@ export default function Hud({
                   type="button"
                   onClick={() => onSelect(section.id)}
                   aria-current={isActive ? 'true' : undefined}
-                  className="pointer-events-auto group flex items-center gap-2 py-1 font-mono text-[12px] leading-none sm:gap-3 sm:py-0"
+                  className="pointer-events-auto group flex items-center gap-2 whitespace-nowrap py-1 font-mono text-[12px] leading-none sm:gap-3 sm:py-0"
                 >
                   <span
                     aria-hidden="true"

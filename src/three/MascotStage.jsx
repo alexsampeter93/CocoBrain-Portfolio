@@ -1,10 +1,7 @@
-import { useMemo } from 'react'
-import { useThree } from '@react-three/fiber'
 import { ContactShadows } from '@react-three/drei'
-import { MathUtils, Vector3 } from 'three'
+import { Vector3 } from 'three'
 import Mascot3D, { MASCOT_MODELS } from '../components/three/Mascot3D'
 import GlowingBrain from '../components/three/GlowingBrain'
-import { useViewportAspect } from '../layout/useViewportAspect'
 
 /**
  * La portada: Olaz en el hueco que la fase 0 dejó validado.
@@ -23,50 +20,24 @@ import { useViewportAspect } from '../layout/useViewportAspect'
 const HAND_BRAIN = { x: -0.53, y: 0.23, z: 0.66, scale: 0.17 }
 const HAND_BRAIN_LOCAL = new Vector3(HAND_BRAIN.x, HAND_BRAIN.y, HAND_BRAIN.z)
 
-/**
- * Ancho visible en unidades de mundo a la distancia de la portada.
- *
- * Dos cosas que NO se usan aquí, y por qué:
- *
- * - El `viewport` de R3F se mide donde está la cámara AHORA, y la cámara se
- *   mueve durante todo el recorrido: usarlo reescalaba al personaje mientras
- *   te acercabas.
- * - El `size` del canvas cambia cada vez que ScrollTrigger fija y suelta el
- *   contenedor, así que al volver hacia arriba el encuadre se recalculaba con
- *   otro número y el personaje se descolocaba.
- *
- * La proporción de la ventana no sufre ninguno de los dos problemas.
- */
-function useHeroWidth(tokens) {
-  const aspect = useViewportAspect()
-  const fov = useThree((state) => state.camera.fov)
-
-  return useMemo(() => {
-    const visibleHeight = 2 * Math.tan(MathUtils.degToRad(fov) / 2) * tokens.heroDistance
-    return visibleHeight * aspect
-  }, [fov, aspect, tokens])
-}
-
 export default function MascotStage({
   tokens,
   model = MASCOT_MODELS.brain,
   compact = false,
-  onAnchor,
+  onMeasure,
   reaction,
   onPoke,
 }) {
-  const heroWidth = useHeroWidth(tokens)
-  const { position, height, widthFill } = tokens.mascot
+  const { position, height } = tokens.mascot
 
   return (
     <group position={position}>
       <Mascot3D
         url={model}
         height={height}
-        maxWidth={heroWidth * widthFill}
         layer="mascot"
         anchorLocal={HAND_BRAIN_LOCAL}
-        onAnchor={onAnchor}
+        onMeasure={onMeasure}
         reaction={reaction}
         onPoke={onPoke}
       >

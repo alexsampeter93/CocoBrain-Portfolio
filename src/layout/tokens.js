@@ -26,7 +26,12 @@ export const tokens = {
      * visible puede ocupar como mucho. En una pantalla apaisada manda la
      * altura; en una estrecha, el ancho.
      */
-    mascot: { position: [1.75, -0.15, 0], height: 3.1, widthFill: 0.5 },
+    /**
+     * `fill` es la fracción del encuadre que puede ocupar. Es la única
+     * decisión de composición que queda a mano; la distancia de cámara sale de
+     * ella por geometría, en `journey/framing.js`.
+     */
+    mascot: { position: [1.75, -0.15, 0], height: 3.1, fill: 0.78 },
 
     /**
      * El cerebro que sostiene en la mano. Es la puerta por la que entra la
@@ -40,28 +45,25 @@ export const tokens = {
     handBrain: { position: [0.95, 0.4, 0.85], size: 0.44 },
 
     /** El universo neuronal, detrás de la portada. */
-    mind: { center: [0, 0, -11], radius: 3.4 },
-
-    /**
-     * Distancia de la cámara en la portada.
-     *
-     * A 6,4 el personaje ocupaba el 77% del alto visible y le quedaban 0,17
-     * unidades hasta el borde inferior —o sea, nada—. A 7,0 respira y las
-     * zapatillas están dentro con margen por arriba y por abajo.
-     */
-    heroDistance: 7.0,
+    mind: { center: [0, 0, -11], radius: 3.4, fill: 0.86 },
   },
 
   compact: {
     /**
-     * Más arriba y algo más pequeño que en escritorio: en vertical el texto
-     * ocupa el tercio inferior, y con el personaje centrado los dos se
-     * solapaban. En móvil no compiten por el espacio, se reparten la pantalla.
+     * Centrado en horizontal y subido: en vertical el texto ocupa el tercio
+     * inferior, y con el personaje en el medio los dos se solapaban.
+     *
+     * `fill` es menor que en escritorio porque en vertical el ancho es el
+     * límite, y llenarlo del todo deja al personaje tocando los bordes.
      */
-    mascot: { position: [0, 0.92, 0], height: 1.85, widthFill: 0.86 },
+    mascot: { position: [0, 0.92, 0], height: 1.85, fill: 0.62 },
     handBrain: { position: [-0.52, 0.95, 0.6], size: 0.36 },
-    mind: { center: [0, 0, -11], radius: 2.5 },
-    heroDistance: 6.6,
+    /**
+     * Radio menor y `fill` menor que en escritorio. La constelación es
+     * esférica y una pantalla vertical es estrecha: aquí manda el ancho, y sin
+     * bajar los dos números los nodos de los lados se quedaban fuera de cuadro.
+     */
+    mind: { center: [0, 0, -11], radius: 1.9, fill: 0.72 },
   },
 }
 
