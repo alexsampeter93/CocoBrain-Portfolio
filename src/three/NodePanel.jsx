@@ -121,7 +121,17 @@ export default function NodePanel({ sections, content, radius, compact }) {
         transform
         // Cuanto mayor, más pequeño se dibuja el HTML respecto al mundo. Es lo
         // que fija el tamaño aparente del texto sin tocar la tipografía.
-        distanceFactor={compact ? 3.4 : 4.2}
+        /**
+         * Cuánto ocupa el bloque en pantalla.
+         *
+         * Estaba en 4,2 y el panel se comía media pantalla: se leía como un
+         * cartel encima de la escena, no como una etiqueta dentro de ella.
+         * Este es el único número del proyecto que sigue calibrándose a ojo,
+         * y es porque no hay fórmula: el tamaño depende de la tipografía, del
+         * ancho del bloque y de la distancia a la que para la cámara. Se ajusta
+         * mirando las capturas de `scripts/shoot.mjs`.
+         */
+        distanceFactor={compact ? 4.8 : 2.4}
         center={compact}
         // Sin esto el panel atrapa los clics de toda la escena.
         pointerEvents="none"
@@ -130,13 +140,18 @@ export default function NodePanel({ sections, content, radius, compact }) {
         <div
           ref={innerRef}
           style={{ opacity: 0 }}
-          className="w-[300px] border-l border-brain-glow bg-coco-dark/85 p-5 backdrop-blur-sm"
+          // Columna estrecha y fondo casi opaco. Translúcido sobre la
+          // constelación, las líneas se veían por debajo del texto y costaba
+          // leer: el fondo de un bloque de lectura no es sitio para efectos.
+          className={`border-l border-brain-glow bg-[#140E0B]/95 px-6 py-5 ${
+            compact ? 'w-[250px]' : 'w-[290px]'
+          }`}
         >
-          <span className="font-mono text-[10px] text-coco-light">
-            {section.nodeName.replace('node_', 'nodo ')}
+          <span className="font-mono text-[9px] tracking-[0.14em] text-coco-light">
+            {section.nodeName.replace('node_', 'NODO ')}
           </span>
 
-          <h2 className="mt-1 text-[22px] font-semibold leading-[1.1] tracking-[-0.02em] text-cream">
+          <h2 className="mt-2 text-[17px] font-semibold leading-[1.15] tracking-[-0.01em] text-cream">
             {section.label}
           </h2>
 
@@ -144,13 +159,13 @@ export default function NodePanel({ sections, content, radius, compact }) {
             paragraphs.map((text) => (
               <p
                 key={text.slice(0, 24)}
-                className="mt-3 text-[12px] leading-[1.5] text-cream/80"
+                className="mt-3 text-[10.5px] leading-[1.65] text-cream/75"
               >
                 {text}
               </p>
             ))
           ) : (
-            <p className="mt-3 text-[12px] leading-[1.5] text-cream/55">Contenido pendiente.</p>
+            <p className="mt-3 text-[10.5px] leading-[1.65] text-cream/50">Contenido pendiente.</p>
           )}
         </div>
       </Html>

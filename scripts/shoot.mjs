@@ -18,12 +18,12 @@ const OUT = '.shots'
 
 /** Dónde parar. Coinciden con los tramos de `journey/stages.js`. */
 const STOPS = [
-  { name: "nodo1", progress: 0.55 },
-  { name: "nodo3", progress: 0.74 },
+  { name: "nodo1", progress: 0.50 },
+  { name: "nodo3", progress: 0.72 },
   { name: 'portada', progress: 0 },
-  { name: 'acercamiento', progress: 0.34 },
-  { name: 'entrada', progress: 0.56 },
-  { name: 'mente', progress: 0.78 },
+  { name: "acercamiento", progress: 0.22 },
+  { name: "entrada", progress: 0.33 },
+  { name: "mente", progress: 0.41 },
   { name: 'exploracion', progress: 1 },
 ]
 
@@ -32,8 +32,21 @@ const VIEWPORTS = [
   { name: 'movil', width: 390, height: 844, isMobile: true },
 ]
 
-/** Altura de la pista del recorrido, en pantallas. Debe seguir a `JOURNEY_SCREENS`. */
-const JOURNEY_SCREENS = 4
+/**
+ * La distancia del recorrido se MIDE de la página, no se copia.
+ *
+ * Estuvo escrita a mano y se quedó desfasada en cuanto se alargó el recorrido:
+ * las capturas decían "nodo 1" y en realidad estaban sacadas a un sexto de
+ * donde tocaba. Una herramienta de diagnóstico que miente es peor que no
+ * tenerla.
+ */
+const SCROLL_TO_PROGRESS = (progress) => {
+  // La pista es la sección que va justo antes del contenido accesible.
+  const track = document.querySelector('main')?.previousElementSibling
+  const height = track?.offsetHeight ?? document.body.scrollHeight
+  const top = (track?.offsetTop ?? 0) + progress * (height - window.innerHeight)
+  window.scrollTo({ top, behavior: 'instant' })
+}
 
 async function shoot(browser, viewport) {
   const context = await browser.newContext({
@@ -62,8 +75,7 @@ async function shoot(browser, viewport) {
   await page.waitForTimeout(1200)
 
   for (const stop of STOPS) {
-    const distance = (JOURNEY_SCREENS - 1) * viewport.height
-    await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), stop.progress * distance)
+    await page.evaluate(SCROLL_TO_PROGRESS, stop.progress)
     // La cámara persigue al scroll con amortiguación: hay que dejarla llegar.
     await page.waitForTimeout(900)
     await page.screenshot({ path: `${OUT}/${viewport.name}-${stop.name}.png` })

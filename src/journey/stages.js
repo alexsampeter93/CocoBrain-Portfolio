@@ -23,11 +23,11 @@ import { nodePositions } from '../data/nodeLayout'
  * saber a qué altura del scroll saltar.
  */
 export const STAGES = [
-  { id: 'hero', label: 'Portada', from: 0.0, to: 0.2 },
-  { id: 'approach', label: 'Acercamiento', from: 0.2, to: 0.36 },
-  { id: 'entry', label: 'Entrada', from: 0.36, to: 0.46 },
-  { id: 'mind', label: 'La mente', from: 0.46, to: 0.52 },
-  { id: 'tour', label: 'Recorrido', from: 0.52, to: 1.0 },
+  { id: 'hero', label: 'Portada', from: 0.0, to: 0.15 },
+  { id: 'approach', label: 'Acercamiento', from: 0.15, to: 0.29 },
+  { id: 'entry', label: 'Entrada', from: 0.29, to: 0.37 },
+  { id: 'mind', label: 'La mente', from: 0.37, to: 0.45 },
+  { id: 'tour', label: 'Recorrido', from: 0.45, to: 1.0 },
 ]
 
 /**
@@ -72,14 +72,14 @@ export function stageAt(progress) {
 export const LAYERS = {
   // El titular se va mucho antes que el personaje: si aguanta hasta que la
   // cámara ya está encima del cerebro, se lee encima del modelo y ensucia.
-  heroCopy: { in: null, out: [0.03, 0.15] },
+  heroCopy: { in: null, out: [0.02, 0.11] },
   // Se va justo cuando la cámara le pasa por delante. Antes seguía visible
   // después de cruzar y se veía el modelo por dentro.
-  mascot: { in: null, out: [0.24, 0.36] },
+  mascot: { in: null, out: [0.19, 0.29] },
   // El halo aguanta un poco más: es lo último que se ve al atravesarlo.
-  handBrain: { in: null, out: [0.32, 0.4] },
-  mind: { in: [0.28, 0.46], out: null },
-  nodes: { in: [0.4, 0.52], out: null },
+  handBrain: { in: null, out: [0.25, 0.32] },
+  mind: { in: [0.23, 0.37], out: null },
+  nodes: { in: [0.33, 0.45], out: null },
 }
 
 /** Interpolación suave (smoothstep) entre dos límites. */
@@ -136,11 +136,15 @@ export function layerOpacity(name, progress) {
  * clave la camara pasaria de largo sin detenerse, porque una curva no se para
  * nunca por si sola.
  */
-export const TOUR_START = 0.52
-/** Lo que ocupa cada nodo del recorrido total. */
-const NODE_SPAN = 0.096
-/** De ese hueco, cuanto se pasa quieto delante del nodo. */
-const NODE_HOLD = 0.062
+export const TOUR_START = 0.45
+/** Lo que ocupa cada nodo del recorrido total. Cinco nodos llenan hasta el 1. */
+const NODE_SPAN = 0.11
+/**
+ * De ese hueco, cuanto se pasa QUIETO delante del nodo. Dos tercios largos:
+ * el viaje entre nodos tiene que ser lo corto y la lectura lo largo, no al
+ * reves.
+ */
+const NODE_HOLD = 0.078
 
 /**
  * El vuelo de la cámara, como dos curvas suaves: por dónde pasa y hacia dónde
@@ -295,7 +299,7 @@ export function cameraPath(
    * depende de cuántos nodos haya: si mañana hay seis secciones, la tabla se
    * ajusta sola en vez de haber que recontar a mano.
    */
-  const timing = [0.0, 0.2, 0.36, 0.46, ...tourTiming]
+  const timing = [0.0, 0.15, 0.3, 0.4, ...tourTiming]
 
   // Cierre: la cámara se retira despacio del último nodo. Sin esta clave el
   // recorrido se queda congelado en el tramo final.

@@ -12,13 +12,18 @@ import { getCalmMode, subscribeCalmMode, toggleCalmMode } from './state/calmMode
 import { sections, sectionContent } from './data/sections'
 
 /**
- * Alturas de pantalla que dura el recorrido. Cuatro tramos, cuatro pantallas:
- * menos y la entrada al cerebro pasa tan rápido que no se lee.
+ * Alturas de pantalla que dura el recorrido.
+ *
+ * Once, y el número sale de una cuenta, no de una sensación: la portada pide
+ * una pantalla y media, el acercamiento otra tanta, la entrada una, la vista
+ * general otra, y **cada nodo algo más de una pantalla entera** para que dé
+ * tiempo a leerlo sin correr.
+ *
+ * Con cuatro pantallas los cinco nodos se repartían apenas pantalla y media
+ * entre todos: pasaban tan rápido que no eran un sitio al que llegabas, eran
+ * un destello.
  */
-const JOURNEY_SCREENS = 4
-
-/** Dónde deja la navegación al pulsar un enlace: dentro del universo neuronal. */
-const MIND_PROGRESS = 0.85
+const JOURNEY_SCREENS = 11
 
 /**
  * Apaga el bucle de WebGL cuando el recorrido sale de pantalla. Sin esto la
