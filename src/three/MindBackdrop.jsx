@@ -41,6 +41,7 @@ const FRAGMENT = /* glsl */ `
   uniform vec3 uMid;
   uniform vec3 uGlow;
   uniform vec3 uCenter;
+  uniform vec3 uPage;
   uniform float uOpacity;
 
   varying vec3 vWorld;
@@ -65,12 +66,27 @@ const FRAGMENT = /* glsl */ `
     float height = clamp(ray.y * 0.5 + 0.5, 0.0, 1.0);
     color *= mix(0.82, 1.06, height);
 
-    gl_FragColor = vec4(color, uOpacity);
+    /**
+     * El telón es OPACO siempre, y la transición se hace por COLOR: de crema
+     * —el mismo de la página— al interior oscuro.
+     *
+     * Antes se desvanecía por alfa, y eso rompía el cerebro de cristal. Un
+     * material transmisivo dibuja lo que hay detrás, y three lo saca de un
+     * búfer en el que solo entran los objetos OPACOS. Con el telón, los nodos
+     * y las líneas todos transparentes, en cuanto la mascota terminaba de
+     * irse no quedaba nada opaco en la escena: el cerebro se quedaba
+     * refractando un búfer vacío y desaparecía.
+     *
+     * Siendo opaco entra en ese búfer, así que el cristal tiene algo que
+     * refractar. Y visualmente no cambia nada: partir del crema de la página
+     * es indistinguible de no tener telón.
+     */
+    gl_FragColor = vec4(mix(uPage, color, uOpacity), 1.0);
   }
 `
 
 export default function MindBackdrop({ center, radius }) {
-  const materialRef = useRef(null)
+  const meshRef = useRef(null)
 
   const material = useMemo(
     () =>
@@ -83,27 +99,44 @@ export default function MindBackdrop({ center, radius }) {
           uMid: { value: new Color('#1C0F1D') },
           uGlow: { value: new Color('#4A2130') },
           uCenter: { value: new Vector3(...center) },
+          // El crema de la página, para arrancar sin que se note el telón.
+          uPage: { value: new Color('#F5E6D3') },
           uOpacity: { value: 0 },
         },
         // Dibujado por dentro: la cámara está dentro de la esfera.
         side: BackSide,
-        transparent: true,
-        // No escribe profundidad ni la comprueba: es el telón, siempre detrás.
+        // OPACO a propósito. Ver el comentario del sombreador: es lo que
+        // permite que el cerebro de cristal tenga algo que refractar.
+        transparent: false,
+        // Sin escribir ni comprobar profundidad: es el telón, y todo lo demás
+        // se dibuja encima.
         depthWrite: false,
         depthTest: false,
       }),
     [center],
   )
 
+  /**
+   * Se enciende en el instante en que nace el cerebro, ni antes ni después.
+   *
+   * Dejarlo encendido siempre tapaba la portada: al ser opaco, su crema plano
+   * se comía el degradado radial del fondo de la página, y un plano detrás de
+   * un modelo 3D lo convierte en un recorte pegado.
+   *
+   * Encenderlo con el mismo umbral que el cerebro resuelve las dos cosas: en
+   * la portada no existe, y en cuanto el cristal aparece ya tiene delante un
+   * objeto opaco que refractar. Y como arranca en el crema de la página, el
+   * momento de encenderse no se ve.
+   */
   useFrame(() => {
     const value = layerOpacity('mind', journey.progress)
     material.uniforms.uOpacity.value = value
-    if (materialRef.current) materialRef.current.visible = value > 0.01
+    if (meshRef.current) meshRef.current.visible = value > 0.0005
   })
 
   return (
     // `renderOrder` muy bajo para que se pinte antes que todo lo demás.
-    <mesh ref={materialRef} position={center} renderOrder={-10} raycast={() => null}>
+    <mesh ref={meshRef} position={center} renderOrder={-10} raycast={() => null}>
       {/* Pocos segmentos: es un degradado, no hace falta una esfera fina. */}
       <sphereGeometry args={[radius * 9, 24, 16]} />
       <primitive object={material} attach="material" />
