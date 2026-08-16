@@ -5,7 +5,7 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, Vector3 } from 'three'
 import { advance, journey } from '../journey/clock'
 import { useViewportAspect } from '../layout/useViewportAspect'
-import { cameraPath, sampleCamera } from '../journey/stages'
+import { cameraPath, layerOpacity, sampleCamera } from '../journey/stages'
 import MascotStage from './MascotStage'
 import MindStage from './MindStage'
 
@@ -92,13 +92,34 @@ function readBloom() {
  * y ahi el efecto deja de dirigir la mirada y solo ensucia.
  */
 function Glow({ compact }) {
-  const intensity = compact ? 0 : readBloom()
-  if (intensity <= 0) return null
+  const bloomRef = useRef(null)
+  const max = compact ? 0 : readBloom()
+
+  /**
+   * El bloom solo existe DENTRO del cerebro.
+   *
+   * Aplicado a toda la web se comia la portada: las zapatillas y los guantes
+   * de Olaz son casi blancos, pasaban el umbral y el personaje entero salia
+   * resplandeciendo como si estuviera en una discoteca. Ese no es el efecto,
+   * y ademas contradice la portada, que es calida y luminosa por si sola.
+   *
+   * Ligandolo al mismo valor que hace aparecer la mente, la portada se ve
+   * limpia y el resplandor entra justo cuando hay algo que deba brillar. De
+   * paso deja de costar en el tramo en el que no aporta nada.
+   */
+  useFrame(() => {
+    if (bloomRef.current) {
+      bloomRef.current.intensity = max * layerOpacity('mind', journey.progress)
+    }
+  })
+
+  if (max <= 0) return null
 
   return (
     <EffectComposer disableNormalPass multisampling={0}>
       <Bloom
-        intensity={intensity}
+        ref={bloomRef}
+        intensity={0}
         luminanceThreshold={0.18}
         luminanceSmoothing={0.3}
         mipmapBlur
