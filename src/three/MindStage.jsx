@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import FloatingBrain from '../components/three/FloatingBrain'
 import NeuralNodes from '../components/three/NeuralNodes'
 import MindBackdrop from './MindBackdrop'
+import BrainCore from './BrainCore'
 import NodePanel from './NodePanel'
 import { sectionContent } from '../data/sections'
 
@@ -33,7 +34,11 @@ export default function MindStage({ tokens, sections, activeSection, onSelectSec
             constelación: si fuese mayor, los nodos quedarían encima de él en
             lugar de orbitándolo. */}
         <Suspense fallback={null}>
-          <FloatingBrain size={radius * 0.62} layer="mind" compact={compact} />
+          <FloatingBrain size={radius * 0.62} layer="mind" compact={compact}>
+            {/* Va dentro para compartir el giro del cerebro. Si no, los nodos
+                interiores se verían deslizarse por dentro. */}
+            <BrainCore size={radius * 0.62} />
+          </FloatingBrain>
         </Suspense>
 
         <NeuralNodes

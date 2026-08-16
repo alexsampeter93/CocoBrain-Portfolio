@@ -63,7 +63,7 @@ function readTransmission() {
 const GLOW = '#E98FA0'
 const BODY = '#1C0F1D'
 
-export default function FloatingBrain({ size = 2.1, layer = 'mind', compact = false }) {
+export default function FloatingBrain({ size = 2.1, layer = 'mind', compact = false, children }) {
   const { scene } = useGLTF(MODEL_URL, DRACO_PATH)
   const rootRef = useRef(null)
   const spinRef = useRef(null)
@@ -100,7 +100,7 @@ export default function FloatingBrain({ size = 2.1, layer = 'mind', compact = fa
          */
         emissive: new Color(GLOW),
         emissiveMap: source.map ?? null,
-        emissiveIntensity: 2.1,
+        emissiveIntensity: 1.6,
         // Los reflejos de la superficie los pone el HDRI. Sin ellos el vidrio
         // no se lee como vidrio: se lee como gelatina.
         envMapIntensity: 1.4,
@@ -158,8 +158,20 @@ export default function FloatingBrain({ size = 2.1, layer = 'mind', compact = fa
 
   return (
     <group ref={rootRef} visible={false}>
-      <group ref={spinRef} scale={scale}>
-        <primitive object={model} />
+      {/*
+        La escala vive DENTRO, no en el grupo que gira.
+
+        Asi lo que se meta como hijo comparte el giro y el balanceo del cerebro
+        —imprescindible: unos nodos interiores que no giraran con el se verian
+        deslizarse por dentro— pero trabaja en unidades de la escena, donde el
+        cerebro mide `size`. Colgarlos del grupo escalado obligaria a expresar
+        cada posicion en las unidades crudas del glb, que no significan nada.
+      */}
+      <group ref={spinRef}>
+        <group scale={scale}>
+          <primitive object={model} />
+        </group>
+        {children}
       </group>
 
       {/* La luz nace del cerebro y alcanza a los nodos que lo rodean. Su
