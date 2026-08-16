@@ -191,47 +191,59 @@ export default function BrainCore({ size }) {
       normal: new MeshStandardMaterial({
         color: new Color(NODE),
         emissive: new Color(NODE),
-        emissiveIntensity: 1.0,
+        emissiveIntensity: 0.45,
         roughness: 0.3,
         metalness: 0,
         /**
-         * OPACOS, y es lo que hace que se vean.
+         * Se dibujan ENCIMA del cerebro, sin comprobar profundidad y sumando
+         * luz. Y esa es la solucion al problema entero.
          *
-         * Con `transparent: true` entraban en la misma cola de dibujado que el
-         * cerebro, que tambien es transparente. Los transparentes se ordenan
-         * por distancia a la camara, y como el cerebro esta centrado en el
-         * mismo punto que ellos el orden salia inestable: el cascaron acababa
-         * dibujandose encima y los tapaba.
+         * El error era pedirle a la transmision que los revelara. Un material
+         * transmisivo muestrea un buffer de la escena para saber que hay al
+         * otro lado, y lo que esta DENTRO de su propio volumen no aparece de
+         * forma fiable en ese muestreo. Por ahi no se llega, se intente lo que
+         * se intente.
          *
-         * Siendo opacos se dibujan ANTES, entran en el buffer del que el
-         * cristal saca lo que hay al otro lado, y por eso aparecen a traves de
-         * el. El desvanecido se hace por intensidad emisiva, que no necesita
-         * transparencia.
+         * Pero es que fisicamente tampoco hace falta: un punto de luz visto a
+         * traves de vidrio no se percibe como un objeto tapado, se percibe como
+         * un brillo SUMADO sobre el cristal. Dibujarlos despues, en aditivo y
+         * sin test de profundidad, es exactamente eso. Deja de ser un truco
+         * para esquivar una limitacion y pasa a ser la forma correcta de
+         * representarlo.
          */
-        transparent: false,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: AdditiveBlending,
         toneMapped: false,
       }),
       active: new MeshStandardMaterial({
         color: new Color(NODE_ACTIVE),
         emissive: new Color(NODE_ACTIVE),
-        emissiveIntensity: 2.2,
+        emissiveIntensity: 1.0,
         roughness: 0.25,
         metalness: 0,
         /**
-         * OPACOS, y es lo que hace que se vean.
+         * Se dibujan ENCIMA del cerebro, sin comprobar profundidad y sumando
+         * luz. Y esa es la solucion al problema entero.
          *
-         * Con `transparent: true` entraban en la misma cola de dibujado que el
-         * cerebro, que tambien es transparente. Los transparentes se ordenan
-         * por distancia a la camara, y como el cerebro esta centrado en el
-         * mismo punto que ellos el orden salia inestable: el cascaron acababa
-         * dibujandose encima y los tapaba.
+         * El error era pedirle a la transmision que los revelara. Un material
+         * transmisivo muestrea un buffer de la escena para saber que hay al
+         * otro lado, y lo que esta DENTRO de su propio volumen no aparece de
+         * forma fiable en ese muestreo. Por ahi no se llega, se intente lo que
+         * se intente.
          *
-         * Siendo opacos se dibujan ANTES, entran en el buffer del que el
-         * cristal saca lo que hay al otro lado, y por eso aparecen a traves de
-         * el. El desvanecido se hace por intensidad emisiva, que no necesita
-         * transparencia.
+         * Pero es que fisicamente tampoco hace falta: un punto de luz visto a
+         * traves de vidrio no se percibe como un objeto tapado, se percibe como
+         * un brillo SUMADO sobre el cristal. Dibujarlos despues, en aditivo y
+         * sin test de profundidad, es exactamente eso. Deja de ser un truco
+         * para esquivar una limitacion y pasa a ser la forma correcta de
+         * representarlo.
          */
-        transparent: false,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: AdditiveBlending,
         toneMapped: false,
       }),
     }),
@@ -246,9 +258,11 @@ export default function BrainCore({ size }) {
     if (Math.abs(fade - fadeRef.current) > 0.002) {
       fadeRef.current = fade
       root.visible = fade > 0.02
-      // Por intensidad, no por opacidad: los materiales son opacos a proposito.
-      materials.normal.emissiveIntensity = 1.0 * fade
-      materials.active.emissiveIntensity = 2.2 * fade
+      // En aditivo mandan las dos: la opacidad y cuanta luz suma.
+      materials.normal.opacity = 0.72 * fade
+      materials.active.opacity = 0.9 * fade
+      materials.normal.emissiveIntensity = 0.45 * fade
+      materials.active.emissiveIntensity = 1.0 * fade
     }
 
     if (!root.visible) return
@@ -279,28 +293,42 @@ export default function BrainCore({ size }) {
   if (!geometry) return null
 
   return (
-    <group ref={rootRef} visible={false}>
+    // `renderOrder` alto: todo esto va después del cerebro, siempre.
+    <group ref={rootRef} visible={false} renderOrder={10}>
       {/* Una sola llamada de dibujado por grupo, no una por nodo. */}
       <instancedMesh
         ref={normalRef}
         args={[geometry, materials.normal, normal.length]}
+        renderOrder={11}
         raycast={() => null}
       />
       <instancedMesh
         ref={activeRef}
         args={[geometry, materials.active, active.length]}
+        renderOrder={12}
         raycast={() => null}
       />
 
-      <lineSegments geometry={lines} raycast={() => null}>
-        <lineBasicMaterial color={LINE} transparent opacity={0.3} depthWrite={false} />
+      {/* Las conexiones, con el mismo tratamiento: si los nodos se ven a
+          través del cristal y los cables no, la red se lee rota. */}
+      <lineSegments geometry={lines} renderOrder={11} raycast={() => null}>
+        <lineBasicMaterial
+          color={LINE}
+          transparent
+          opacity={0.32}
+          depthTest={false}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
       </lineSegments>
 
-      <lineSegments geometry={activeLines} raycast={() => null}>
+      <lineSegments geometry={activeLines} renderOrder={12} raycast={() => null}>
         <lineBasicMaterial
           color={LINE_ACTIVE}
           transparent
-          opacity={0.7}
+          opacity={0.75}
+          depthTest={false}
           depthWrite={false}
           blending={AdditiveBlending}
           toneMapped={false}
