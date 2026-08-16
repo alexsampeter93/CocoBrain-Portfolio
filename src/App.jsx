@@ -5,6 +5,7 @@ import { progressForNode } from './journey/stages'
 import StageReadout from './components/ui/StageReadout'
 import HeroCopy from './components/ui/HeroCopy'
 import Preloader from './components/ui/Preloader'
+import Backdrops from './components/ui/Backdrops'
 import Hud from './components/ui/Hud'
 import { tokensFor } from './layout/tokens'
 import { useCompact } from './layout/useCompact'
@@ -110,6 +111,8 @@ export default function App() {
         Alex — desarrollo web. CocoBrain: nuestra mayor inspiración fue una vez
         nuestra mayor debilidad.
       </h1>
+
+      <Backdrops />
 
       <Preloader />
 

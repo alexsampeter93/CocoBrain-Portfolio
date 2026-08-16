@@ -49,15 +49,13 @@
     visual —el fondo no se mueve al bajar— pero el navegador lo trata como una
     capa aparte que compone una vez y reutiliza. Coste de scroll: cero.
   */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(120% 90% at 50% 8%, #fff6ea 0%, #f5e6d3 45%, #e8d2b8 100%),
-      var(--cream-bg);
-  }
+  /*
+    El degradado dibujado a mano ha salido: ahora el fondo son las dos
+    ilustraciones de `Backdrops`, que se cruzan con el scroll.
+
+    Se queda el crema plano del `body` como suelo por debajo de ellas, para el
+    instante antes de que carguen y por si alguna fallara. Nunca se ve negro.
+  */
 
   /* Foco visible: los nodos y la nav se recorren con teclado */
   :focus-visible {

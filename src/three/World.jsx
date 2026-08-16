@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, PerformanceMonitor, Stats } from '@react-three/drei'
+import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, Vector3 } from 'three'
 import { advance, journey } from '../journey/clock'
 import { useViewportAspect } from '../layout/useViewportAspect'
@@ -61,6 +62,50 @@ function pickDpr() {
 function JourneyClock() {
   useFrame((_, delta) => advance(delta), -100)
   return null
+}
+
+/**
+ * Cuanto bloom, ajustable con `?bloom=0`.
+ *
+ * Mismo motivo que el del cristal: es el efecto mas caro que se puede meter y
+ * hay que poder compararlo con y sin el, en una maquina de verdad, sin tocar
+ * codigo. El peor frame ya iba en 41 ms antes de esto.
+ */
+function readBloom() {
+  if (typeof window === 'undefined') return 1
+  const raw = new URLSearchParams(window.location.search).get('bloom')
+  if (raw === null) return 1
+  const value = Number(raw)
+  return Number.isFinite(value) ? Math.min(2, Math.max(0, value)) : 1
+}
+
+/**
+ * El resplandor.
+ *
+ * `mipmapBlur` en vez del desenfoque clasico: consigue el mismo radio ancho
+ * reduciendo la imagen por pasos en lugar de recorrer un kernel grande, y
+ * cuesta bastante menos. Con un presupuesto ya justo, es la diferencia entre
+ * poder ponerlo y no.
+ *
+ * El umbral alto es a proposito: solo florece lo que ya es luz —los nodos
+ * emisivos y los surcos del cerebro—. Bajarlo hace que empiece a brillar todo,
+ * y ahi el efecto deja de dirigir la mirada y solo ensucia.
+ */
+function Glow({ compact }) {
+  const intensity = compact ? 0 : readBloom()
+  if (intensity <= 0) return null
+
+  return (
+    <EffectComposer disableNormalPass multisampling={0}>
+      <Bloom
+        intensity={intensity}
+        luminanceThreshold={0.18}
+        luminanceSmoothing={0.3}
+        mipmapBlur
+        radius={0.4}
+      />
+    </EffectComposer>
+  )
 }
 
 /**
@@ -192,6 +237,9 @@ export default function World({
         onSelectSection={onSelectSection}
         compact={compact}
       />
+
+      {/* Va al final: el postproceso se aplica sobre todo lo anterior. */}
+      <Glow compact={compact} />
 
       {import.meta.env.DEV && <Stats />}
     </Canvas>
