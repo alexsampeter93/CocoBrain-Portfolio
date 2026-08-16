@@ -31,7 +31,7 @@ const NODE_ACTIVE = '#FFB6C1'
 const LINE = '#B85C76'
 const LINE_ACTIVE = '#F08FA5'
 
-const COUNT = 19
+const COUNT = 23
 /** Cuantos de ellos van encendidos. Uno de cada cinco. */
 const ACTIVE_EVERY = 5
 /**
@@ -83,8 +83,20 @@ function seedPositions(size) {
   const random = mulberry32(20260816)
   const points = []
 
-  // Proporciones del cerebro: mas largo que alto, mas alto que ancho.
-  const radii = new Vector3(size * 0.3, size * 0.2, size * 0.25)
+  /**
+   * Los semiejes del elipsoide, en fraccion del diametro del cerebro.
+   *
+   * Estaban en 0,30 / 0,20 / 0,25 y los nodos salian apinados en el centro:
+   * ocupaban poco mas de la mitad del ancho de la malla, asi que en pantalla
+   * se leian como un grumo y no como una red repartida por el volumen.
+   *
+   * El error de razonamiento fue elegirlos "por lo bajo para que no asomen".
+   * Pero un elipsoide inscrito ya garantiza que no asomen: lo que hay que
+   * hacer es acercarlo al limite, no quedarse a medio camino. Estos llegan al
+   * 85% de la malla en horizontal y al 55% en vertical, que es donde el
+   * cerebro tiene su cupula y el margen debe ser mayor.
+   */
+  const radii = new Vector3(size * 0.36, size * 0.26, size * 0.32)
 
   while (points.length < COUNT) {
     const direction = new Vector3(

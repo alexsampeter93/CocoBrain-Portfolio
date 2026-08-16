@@ -44,8 +44,13 @@ export const tokens = {
      */
     handBrain: { position: [0.95, 0.4, 0.85], size: 0.44 },
 
-    /** El universo neuronal, detrás de la portada. */
-    mind: { center: [0, 0, -11], radius: 3.4, fill: 0.86 },
+    /**
+     * El universo neuronal, detrás de la portada.
+     *
+     * `reach` es cuánto tiene que abarcar la vista general, en radios. En
+     * apaisado cabe la constelación entera (el nodo más lejano está a 1,26).
+     */
+    mind: { center: [0, 0, -11], radius: 3.4, fill: 0.86, reach: 1.45 },
   },
 
   compact: {
@@ -63,7 +68,16 @@ export const tokens = {
      * esférica y una pantalla vertical es estrecha: aquí manda el ancho, y sin
      * bajar los dos números los nodos de los lados se quedaban fuera de cuadro.
      */
-    mind: { center: [0, 0, -11], radius: 1.9, fill: 0.72 },
+    /**
+     * En vertical la vista general NO intenta abarcar la constelación entera.
+     *
+     * Hacerlo obligaba a la cámara a retroceder tanto que el cerebro quedaba
+     * en unos setenta píxeles, perdido en una pantalla medio vacía. Y no hace
+     * falta: el recorrido visita los nodos uno a uno de todas formas, así que
+     * la vista general puede encuadrar el cerebro y dejar que los nodos se
+     * intuyan por los bordes.
+     */
+    mind: { center: [0, 0, -11], radius: 1.9, fill: 0.72, reach: 0.8 },
   },
 }
 

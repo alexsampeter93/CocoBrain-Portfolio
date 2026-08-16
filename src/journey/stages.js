@@ -199,7 +199,7 @@ export function cameraPath(
    * En el interior hay que abarcar la constelación entera. El nodo más lejano
    * está a 1,26 radios, y se añade margen para su etiqueta.
    */
-  const mindReach = t.mind.radius * 1.45
+  const mindReach = t.mind.radius * t.mind.reach
   const mindDistance = fitDistance({
     halfWidth: mindReach,
     halfHeight: mindReach,
