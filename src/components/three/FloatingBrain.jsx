@@ -73,7 +73,13 @@ export default function FloatingBrain({ size = 2.1, layer = 'mind', compact = fa
   // En movil se cae a un material normal: la transmision obliga a dibujar la
   // escena dos veces y no compensa.
   const baseTransmission = compact ? 0 : readTransmission()
-  const baseOpacity = baseTransmission > 0 ? 1 : 0.88
+  /**
+   * Sin transmision, OPACO. El primer intento bajaba el alfa a 0,88 para
+   * simular el cristal y el resultado era peor que no intentarlo: el cerebro
+   * se veia lavado y sin contraste, como un fantasma. La textura horneada
+   * aguanta sola; falsear la transparencia solo la ensucia.
+   */
+  const baseOpacity = 1
 
   const { model, scale, materials } = useMemo(() => {
     const clone = scene.clone(true)
