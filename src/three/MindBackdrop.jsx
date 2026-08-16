@@ -78,9 +78,10 @@ export default function MindBackdrop({ center, radius }) {
         vertexShader: VERTEX,
         fragmentShader: FRAGMENT,
         uniforms: {
-          uDeep: { value: new Color('#160F0C') },
-          uMid: { value: new Color('#3A281F') },
-          uGlow: { value: new Color('#6E3239') },
+          // Paleta dictada por Alex para el interior.
+          uDeep: { value: new Color('#120B16') },
+          uMid: { value: new Color('#1C0F1D') },
+          uGlow: { value: new Color('#4A2130') },
           uCenter: { value: new Vector3(...center) },
           uOpacity: { value: 0 },
         },

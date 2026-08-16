@@ -33,7 +33,7 @@ export default function MindStage({ tokens, sections, activeSection, onSelectSec
             constelación: si fuese mayor, los nodos quedarían encima de él en
             lugar de orbitándolo. */}
         <Suspense fallback={null}>
-          <FloatingBrain size={radius * 0.62} layer="mind" />
+          <FloatingBrain size={radius * 0.62} layer="mind" compact={compact} />
         </Suspense>
 
         <NeuralNodes
