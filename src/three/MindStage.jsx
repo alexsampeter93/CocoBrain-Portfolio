@@ -37,7 +37,7 @@ export default function MindStage({ tokens, sections, activeSection, onSelectSec
           <FloatingBrain size={radius * 0.62} layer="mind" compact={compact}>
             {/* Va dentro para compartir el giro del cerebro. Si no, los nodos
                 interiores se verían deslizarse por dentro. */}
-            <BrainCore size={radius * 0.62} />
+            <BrainCore size={radius * 0.62} sections={sections} activeSection={activeSection} />
           </FloatingBrain>
         </Suspense>
 
