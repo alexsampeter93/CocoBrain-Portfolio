@@ -3,11 +3,41 @@ import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { Vector3 } from 'three'
 import { journey } from '../journey/clock'
-import { nodeFocusAt } from '../journey/stages'
+import { hubFocus, layerOpacity, orbitBasis, overlayRetreat, ramp } from '../journey/stages'
 import { nodePositions } from '../data/nodeLayout'
+import { knowledgeById, relatedTo } from '../data/network'
 
 /**
- * El contenido de cada nodo, flotando en el espacio junto a él.
+ * Cuántos conocimientos se nombran como mucho. Pasado ese número deja de ser
+ * una pista de por dónde va el área y se convierte en un listado.
+ */
+const MAX_TAGS = 6
+
+/**
+ * La ficha de cada nodo, flotando en el espacio junto a él.
+ *
+ * ## Qué contesta el 3D y qué contesta el HTML
+ *
+ * **Esta es una decisión de arquitectura de contenido, no de estilo, y ordena
+ * todo lo que venga después.** La escena y la página cuentan la misma historia
+ * en dos niveles, y no se duplican en ninguno.
+ *
+ * | La escena contesta | La página de abajo contesta |
+ * |---|---|
+ * | ¿qué es esto? | ¿qué hizo? |
+ * | ¿con qué está relacionado? | ¿cómo lo hizo? |
+ * | ¿dónde estoy? | ¿qué experiencia tiene? |
+ * | ¿qué puedo explorar? | ¿quién es? |
+ *
+ * Por eso este panel llevaba párrafos y ya no. Un área del portfolio se
+ * presenta con su nombre, con de qué está hecha —preguntándoselo a la red, no
+ * repitiéndolo a mano— y con la indicación de que la respuesta larga está más
+ * abajo. Todo lo editorial —proyectos, capturas, qué problema resolvió cada
+ * uno— vive en el DOM de la página, que es donde se puede leer despacio,
+ * seleccionar, indexar y ampliar sin que la cámara estorbe.
+ *
+ * Meter el texto completo aquí era duplicarlo: los mismos párrafos estaban ya
+ * en `App.jsx`, y encima en una columna de 250 píxeles flotando en el espacio.
  *
  * ## Por qué es DOM y no texto dibujado en 3D
  *
@@ -28,39 +58,92 @@ import { nodePositions } from '../data/nodeLayout'
  * el recorrido garantiza que solo hay uno enfocado a la vez, con uno basta.
  */
 
-/** Por debajo de esto no hay nada que enseñar y el panel ni se monta. */
-const VISIBLE_THRESHOLD = 0.02
-
 // Ejes de la cámara, reutilizados. Crearlos por frame generaría basura.
 const RIGHT = new Vector3()
 const UP = new Vector3()
 const FORWARD = new Vector3()
 
-export default function NodePanel({ sections, content, radius, compact }) {
+/**
+ * ── LA FICHA SE MIDE EN CEREBROS ──────────────────────────────────────────
+ *
+ * Los desplazamientos eran fracciones de `tokens.mind.radius`: 0,42 a un lado
+ * y 0,35 hacia la cámara, o sea 1,43 y 1,19 unidades de mundo. Tenía sentido
+ * con las áreas flotando fuera, en un espacio abierto de siete unidades de
+ * ancho. Dentro de una cavidad que mide dos, ese mismo desplazamiento saca la
+ * ficha por la pared: el panel se quedaba detrás de la corteza y no se veía.
+ *
+ * Ahora salen del tamaño del cerebro y son bastante menores. La ficha se
+ * queda en el hueco, delante del área y de cara a la cámara.
+ */
+export default function NodePanel({ sections, brain, compact, activeSection, onOpen, onClose }) {
   const groupRef = useRef(null)
   const innerRef = useRef(null)
   const activeRef = useRef(-1)
   const anchorRef = useRef(new Vector3())
 
-  // El ÚNICO estado de React aquí: qué nodo está enfocado. Cambia cinco veces
-  // en todo el recorrido, no sesenta veces por segundo.
+  /**
+   * El ÚNICO estado de React aquí: qué área está enfocada.
+   *
+   * ## Y NO VUELVE A −1 ENTRE ÁREAS
+   *
+   * Esto valía −1 en los huecos entre una parada y la siguiente, así que el
+   * bloque de HTML se DESMONTABA y se volvía a montar en cada transición: cinco
+   * desmontajes y cinco montajes de un subárbol de `Html transform`, cada uno
+   * con su medición de maquetación y su capa de compositor nueva.
+   *
+   * Medido en el build con `node scripts/journey.mjs`: frames de 133 ms en
+   * p=0,711 y de 250 ms en p=0,83, o sea justo en los cambios de área, y ambos
+   * muy por encima de los 33 ms donde ya se ve un salto.
+   *
+   * Ahora el índice solo cambia cuando hay OTRA área que enseñar. En los huecos
+   * se queda la anterior con la opacidad a cero, que no cuesta nada —una capa
+   * transparente que el compositor ya tiene— y no obliga a reconstruir nada.
+   */
   const [index, setIndex] = useState(-1)
 
   useFrame(({ camera }) => {
-    const state = nodeFocusAt(journey.progress, sections.length)
-    const next = state && state.focus > VISIBLE_THRESHOLD ? state.index : -1
+    /**
+     * ── LA FICHA YA NO LA ABRE EL SCROLL: LA ABRE EL VISITANTE ────────────
+     *
+     * Colgaba de `nodeFocusAt`, o sea de una gira en la que la camara paraba
+     * delante de cada area. Esa gira no existe: el recorrido termina con la
+     * composicion montada y a partir de ahi manda el visitante.
+     *
+     * Ahora cuelga de `activeSection` —el mismo estado que enciende el nodo en
+     * la escena y que marca la navegacion del HUD— asi que hay UNA sola fuente
+     * de verdad para "que area esta abierta". Y del desvanecido de la capa
+     * `nodes`: si la constelacion no esta en pantalla, su ficha tampoco.
+     */
+    const hub = layerOpacity('nodes', journey.progress)
+    const chosen = activeSection ? sections.findIndex((s) => s.id === activeSection) : -1
+    const open = chosen >= 0 && hub > 0.5
 
-    if (next !== activeRef.current) {
-      activeRef.current = next
-      setIndex(next)
+    /* El indice solo cambia cuando hay OTRA area que ensenar: en los huecos se
+       queda la anterior con la opacidad a cero, que no cuesta nada y no obliga
+       a reconstruir el subarbol. */
+    if (chosen >= 0 && chosen !== activeRef.current) {
+      activeRef.current = chosen
+      setIndex(chosen)
     }
 
-    // La opacidad sí se escribe cada frame, directamente en el estilo, para
-    // que la aparición siga al scroll sin pasar por React.
+    /*
+      ── Y LA FICHA ES LA PREVIEW DE LA FASE DE ENFOQUE ──────────────────
+
+      No aparece de golpe al seleccionar: aparece MIENTRAS la camara se
+      acerca. Seleccionar lleva el scroll a la fase B del hub, asi que
+      `hubFocus` sube solo y la ficha entra con el, encadenada al mismo
+      movimiento que la trae.
+
+      Y al reves: subiendo con la rueda, el enfoque se deshace y la ficha se
+      va. Es lo que hace que la seleccion no sea un estado pegado encima de
+      la escena sino un punto del recorrido — el mismo criterio que gobierna
+      todo lo demas.
+    */
     if (innerRef.current) {
-      const value = state ? state.focus : 0
+      const value = open ? ramp(hubFocus(journey.progress), 0.1, 0.75) * overlayRetreat(journey.reading) : 0
       innerRef.current.style.opacity = value
-      innerRef.current.style.transform = `translateY(${(1 - value) * 14}px)`
+      innerRef.current.style.transform = `translateY(${(1 - value) * 12}px)`
+      innerRef.current.style.pointerEvents = value > 0.4 ? 'auto' : 'none'
     }
 
     const group = groupRef.current
@@ -77,14 +160,45 @@ export default function NodePanel({ sections, content, radius, compact }) {
      */
     camera.matrixWorld.extractBasis(RIGHT, UP, FORWARD)
 
+    /**
+     * ── Y SE APARTA HACIA EL LADO QUE TIENE SITIO ─────────────────────────
+     *
+     * El desplazamiento era fijo —siempre a la izquierda, o siempre abajo— y
+     * eso funcionaba cuando la camara paraba delante de cada area, una a una.
+     * En el hub los cinco nodos estan repartidos alrededor del cerebro: para el
+     * de arriba, un panel que sube se sale del cuadro; para el de abajo, uno
+     * que baja hace lo mismo.
+     *
+     * Se resuelve preguntandole a la propia posicion de que lado esta. Un nodo
+     * en la mitad alta cuelga su ficha hacia abajo y uno de la mitad baja la
+     * levanta, asi que la ficha siempre cae hacia el centro del cuadro, que es
+     * donde esta el cerebro y donde hay aire.
+     */
+    const above = anchorRef.current.dot(UP) >= 0
     group.position.copy(anchorRef.current)
+    group.position.addScaledVector(UP, (above ? -1 : 1) * brain * (compact ? 0.5 : 0.34))
+
+    /*
+      Y en vertical se centra tambien en horizontal. Con 390 pixeles de ancho no
+      hay sitio para una ficha colgando al lado de un nodo lateral: se salia por
+      el borde derecho. Anulando su componente lateral, la ficha cae siempre
+      sobre el eje del cerebro —que es el unico sitio del cuadro donde cabe— y
+      lo unico que dice de que nodo es, es de cual sale.
+    */
     if (compact) {
-      group.position.addScaledVector(UP, -radius * 0.5)
-    } else {
-      group.position.addScaledVector(RIGHT, -radius * 0.42)
+      group.position.addScaledVector(RIGHT, -anchorRef.current.dot(RIGHT))
     }
-    // Un paso hacia la cámara para que nunca lo tape el propio cerebro.
-    group.position.addScaledVector(FORWARD, radius * 0.35)
+    /**
+     * Un paso hacia la cámara, y AHORA ES UN PASO PEQUEÑO.
+     *
+     * Era `brain · 0,16`, o sea 0,34 unidades de mundo. Con la cámara a 0,40
+     * del área, eso dejaba la ficha a seis centímetros del objetivo: el HTML se
+     * escala con la inversa de la distancia, así que medía 8.500 píxeles de
+     * ancho y su esquina superior izquierda caía en x = −10.572. Medido con la
+     * sonda, no deducido: la ficha estaba montada, con su opacidad correcta, y
+     * a diez mil píxeles fuera de la pantalla.
+     */
+    group.position.addScaledVector(FORWARD, brain * 0.03)
 
     /**
      * De frente a la cámara, siempre.
@@ -100,20 +214,37 @@ export default function NodePanel({ sections, content, radius, compact }) {
   if (index < 0) return null
 
   const section = sections[index]
-  const paragraphs = content[section.id] ?? []
-  const node = nodePositions(radius)[section.nodeName]
+  /**
+   * Qué conocimientos componen esta área, preguntándoselo a la red.
+   *
+   * Es una lista corta y se recalcula solo cuando cambia el nodo enfocado
+   * —cinco veces en todo el recorrido—, así que no hace falta memorizarla.
+   */
+  const related = relatedTo(section.id)
+    .map((id) => knowledgeById.get(id)?.label)
+    .filter(Boolean)
+    .slice(0, MAX_TAGS)
+
+
+  const node = nodePositions(brain, orbitBasis())[section.nodeName]
   if (!node) return null
 
   /**
    * Se ancla al punto que la cámara mantiene CENTRADO, no al nodo suelto.
    *
-   * El recorrido apunta a `nodo · 0,78`, así que el nodo aparece desplazado
-   * del centro de la pantalla. Colgando el panel del nodo, para los que están
-   * arriba acababa en la esquina superior y se salía del encuadre. Colgándolo
-   * del punto centrado, el desplazamiento lateral parte siempre del mismo
-   * sitio en pantalla.
+   * El recorrido apunta a `área · 0,86` —ver `AIM` en `stages.js`—, así que
+   * el área aparece desplazada del centro de la pantalla. Colgando el panel
+   * del área, para las que están arriba acababa en la esquina superior y se
+   * salía del encuadre. Colgándolo del punto centrado, el desplazamiento
+   * lateral parte siempre del mismo sitio en pantalla.
    */
-  anchorRef.current.copy(node).multiplyScalar(0.78)
+  /*
+    Se ancla AL NODO, no a un punto intermedio. Aquel 0,86 existia porque la
+    camara paraba apuntando entre el area y el centro y habia que compensar el
+    desvio; en el hub la camara mira al cerebro y el nodo esta donde esta, asi
+    que la ficha cuelga de el y se lee como suya.
+  */
+  anchorRef.current.copy(node)
 
   return (
     <group ref={groupRef}>
@@ -131,10 +262,25 @@ export default function NodePanel({ sections, content, radius, compact }) {
          * ancho del bloque y de la distancia a la que para la cámara. Se ajusta
          * mirando las capturas de `scripts/shoot.mjs`.
          */
-        distanceFactor={compact ? 4.8 : 2.4}
-        center={compact}
-        // Sin esto el panel atrapa los clics de toda la escena.
-        pointerEvents="none"
+        /**
+         * Y baja a la escala de dentro, pero MENOS de lo que parecía.
+         *
+         * En drei el tamaño en pantalla es `distanceFactor / distancia`, así
+         * que al acercarse la cámara hay que BAJAR el número, no subirlo —y
+         * bajarlo en la misma proporción en que se acortó la distancia—. La
+         * cámara paraba a unas tres unidades del nodo y ahora para a 0,4. Medido
+         * con la sonda hasta que el bloque volvió a medir sus 300 píxeles: con
+         * 0,34 seguía saliendo de 974 y cortado por el borde izquierdo.
+         */
+        /*
+          Y vuelve a subir, porque la camara ha vuelto a alejarse. En drei el
+          tamano en pantalla es `distanceFactor / distancia`: en el hub la
+          camara para a unas nueve unidades del centro, contra las 0,4 de la
+          gira interior que ya no existe.
+        */
+        distanceFactor={compact ? 1.15 : 2.3}
+        /* Siempre centrada: es ella la que se aparta, no su punto de anclaje. */
+        center
         zIndexRange={[20, 0]}
       >
         <div
@@ -144,7 +290,7 @@ export default function NodePanel({ sections, content, radius, compact }) {
           // constelación, las líneas se veían por debajo del texto y costaba
           // leer: el fondo de un bloque de lectura no es sitio para efectos.
           className={`border-l border-brain-glow bg-[#140E0B]/95 px-6 py-5 ${
-            compact ? 'w-[250px]' : 'w-[290px]'
+            compact ? 'w-[236px]' : 'w-[272px]'
           }`}
         >
           <span className="font-mono text-[9px] tracking-[0.14em] text-coco-light">
@@ -155,18 +301,60 @@ export default function NodePanel({ sections, content, radius, compact }) {
             {section.label}
           </h2>
 
-          {paragraphs.length > 0 ? (
-            paragraphs.map((text) => (
-              <p
-                key={text.slice(0, 24)}
-                className="mt-3 text-[10.5px] leading-[1.65] text-cream/75"
-              >
-                {text}
-              </p>
-            ))
-          ) : (
-            <p className="mt-3 text-[10.5px] leading-[1.65] text-cream/50">Contenido pendiente.</p>
+          {/*
+            De qué está hecha esta área, según la red. No es una lista escrita a
+            mano: sale de `sections` en `knowledge.js`, la misma declaración que
+            enciende los nodos de dentro del cerebro. Añadir una tecnología al
+            área la añade aquí sola.
+          */}
+          {related.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-x-2 gap-y-1">
+              {related.map((label) => (
+                <li key={label} className="font-mono text-[9.5px] leading-none text-cream/55">
+                  {label}
+                </li>
+              ))}
+            </ul>
           )}
+
+          {/*
+            ── LAS DOS ACCIONES ────────────────────────────────────────────
+
+            Aqui habia un "sigue abajo", que era correcto cuando la ficha
+            aparecia sola al pasar la camara: informaba de que el texto estaba
+            mas abajo y no habia nada que pulsar.
+
+            En el hub la ficha se abre porque alguien ha elegido un area, asi
+            que tiene que ofrecer lo que ese alguien queria: entrar. El boton
+            llama a `onOpen`, que es `goToNode` —el MISMO que usa el HUD— asi
+            que no hay una segunda navegacion: hay un solo camino con dos
+            puertas.
+
+            Y se puede cerrar sin salir del hub, que es lo que permite mirar
+            las cinco antes de decidir.
+          */}
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button
+              type="button"
+              onClick={() => onOpen?.(section.id)}
+              className="group flex shrink-0 items-center gap-2 whitespace-nowrap font-mono text-[11px] leading-none text-cream transition-colors hover:text-brain-glow focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-brain-glow"
+            >
+              <span
+                aria-hidden="true"
+                className="h-px w-5 bg-brain-glow transition-all duration-300 group-hover:w-8"
+              />
+              Explorar {section.label.toLowerCase()}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              aria-label="Volver a la vista de la red"
+              className="shrink-0 whitespace-nowrap font-mono text-[11px] leading-none text-cream/45 transition-colors hover:text-cream focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-brain-glow"
+            >
+              volver a la red
+            </button>
+          </div>
         </div>
       </Html>
     </group>

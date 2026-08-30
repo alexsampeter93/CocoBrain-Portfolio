@@ -1,6 +1,6 @@
 import { Vector3 } from 'three'
-import { knowledge } from '../data/knowledge'
-import { knowledgeLinks, neighboursOf } from '../data/network'
+import { knowledge } from '../data/knowledge.js'
+import { knowledgeLinks, neighboursOf } from '../data/network.js'
 
 /**
  * Convierte el GRAFO en posiciones dentro del cerebro.
@@ -30,7 +30,15 @@ import { knowledgeLinks, neighboursOf } from '../data/network'
 const PASSES = 90
 const ATTRACTION = 0.045
 const REPULSION = 0.02
-/** Semiejes del elipsoide inscrito, en fracción del diámetro del cerebro. */
+/**
+ * Semiejes del elipsoide inscrito, en fracción del diámetro del cerebro.
+ *
+ * El `spread` que los multiplica no es un ajuste fino, resuelve un problema
+ * concreto: desde que la cámara entra en el cerebro, la red tiene que caber en
+ * el encuadre VISTA DESDE DENTRO. Y el casco solo llega a 0,49, así que si la
+ * nube ocupa hasta 0,36 no queda sitio donde ponerse: la cámara acaba en mitad
+ * de la nube, con dos nodos en la cara y el resto a la espalda.
+ */
 const RADII = [0.36, 0.26, 0.32]
 
 function mulberry32(seed) {
@@ -45,7 +53,13 @@ function mulberry32(seed) {
 
 const DELTA = new Vector3()
 
-export function buildNetworkLayout(size) {
+/**
+ * @param size   el tamaño del cerebro, en unidades de mundo
+ * @param spread cuánto de ese cerebro ocupa la nube. Menor en vertical: hay que
+ *               dejarle sitio a la cámara para colocarse y ver la red entera
+ *               desde dentro.
+ */
+export function buildNetworkLayout(size, spread = 1) {
   const random = mulberry32(20260817)
 
   // Reparto inicial en una esfera. La relajación se encarga del resto.
@@ -83,7 +97,25 @@ export function buildNetworkLayout(size) {
   }
 
   /**
-   * Se comprime dentro del elipsoide. Cualquier cosa que la relajación haya
+   * Primero se centra en su propio centro de masas.
+   *
+   * La relajación no tiene por qué acabar centrada: las fuerzas se compensan
+   * entre pares, pero el conjunto puede quedar desplazado un diez por ciento
+   * hacia un lado. Daba igual mientras la red se veía desde lejos; desde que la
+   * cámara entra y se coloca a una distancia calculada del ORIGEN, ese
+   * desplazamiento se convierte en un encuadre torcido, con la red pegada a una
+   * esquina y un tercio de pantalla vacío.
+   *
+   * La regla de siempre: si un dato depende de la geometría, se mide. El centro
+   * de la nube es la media de sus nodos, no el punto donde se supone que está.
+   */
+  const centre = new Vector3()
+  points.forEach((p) => centre.add(p))
+  centre.divideScalar(points.length || 1)
+  points.forEach((p) => p.sub(centre))
+
+  /**
+   * Y se comprime dentro del elipsoide. Cualquier cosa que la relajación haya
    * empujado fuera vuelve dentro, así que la garantía de que ningún nodo asoma
    * del cerebro no depende de cómo haya salido la simulación.
    */
@@ -98,7 +130,11 @@ export function buildNetworkLayout(size) {
     const p = points[i].multiplyScalar(normalise)
     positions.set(
       node.id,
-      new Vector3(p.x * size * RADII[0], p.y * size * RADII[1], p.z * size * RADII[2]),
+      new Vector3(
+        p.x * size * RADII[0] * spread,
+        p.y * size * RADII[1] * spread,
+        p.z * size * RADII[2] * spread,
+      ),
     )
   })
 
@@ -107,4 +143,77 @@ export function buildNetworkLayout(size) {
     /** Grado de cada nodo: cuántas conexiones tiene. Se usa para el tamaño. */
     degree: new Map(knowledge.map((node) => [node.id, neighboursOf.get(node.id)?.length ?? 0])),
   }
+}
+
+/**
+ * ── LAS REGIONES DE LA RED, PARA QUE LA CÁMARA SEPA A QUÉ ACERCARSE ───────
+ *
+ * Devuelve las regiones COMPACTAS de la nube, con su centroide en fracciones
+ * del cerebro y ordenadas por peso en el grafo.
+ *
+ * Existe por un problema medido: la deriva de dentro orbitaba a distancia
+ * constante mirando siempre al centro de la nube, así que los nodos cambiaban
+ * de sitio pero ninguno llegaba a tener presencia. Para poder acercarse a algo
+ * hace falta que ese algo exista como cosa, y el único sitio donde eso está
+ * escrito es el grafo.
+ *
+ * ## Una región es un nodo MUY CONECTADO y su vecindad, no una familia
+ *
+ * El primer intento agrupó por `kind` —la familia visual, la que da el color—
+ * y la medición lo tumbó: el centroide de `graphics`, con seis miembros, cae a
+ * 0,021 del centro del cerebro, o sea prácticamente en el origen. No es un
+ * fallo del cálculo: la relajación de `buildNetworkLayout` coloca por
+ * CONEXIONES, así que dos conocimientos de la misma familia que no se usan
+ * juntos acaban en lados opuestos de la nube. **Una familia es una etiqueta,
+ * no un sitio.**
+ *
+ * Lo que sí es un sitio es el vecindario de un nodo con mucho grado: sus
+ * vecinos están junto a él porque la simulación los ha atraído. Medido, esos
+ * grupos abarcan 0,04–0,056 del cerebro contra los 0,115 de la nube entera —o
+ * sea media nube, una región de verdad—.
+ *
+ * **No hay ni un nombre de tecnología aquí.** Se ordena por grado y se toman
+ * los hubs de forma golosa, descartando el que caiga demasiado cerca de otro ya
+ * aceptado: dos regiones que se solapan son la misma región. Si mañana entra un
+ * conocimiento nuevo en `knowledge.js`, la región a la que se acerca la cámara
+ * cambia sola. Escribir "acércate a Three.js" sería meter un dato de contenido
+ * dentro de la coreografía, que es justo la inversión de capas que este
+ * proyecto no admite.
+ */
+
+/** Dos centroides más cerca que esto describen la misma región. */
+const CLUSTER_APART = 0.045
+
+export function knowledgeClusters(spread = 1) {
+  const { positions, degree } = buildNetworkLayout(1, spread)
+
+  const ranked = knowledge
+    .filter((node) => positions.has(node.id))
+    .map((node) => ({ node, links: degree.get(node.id) ?? 0 }))
+    .sort((a, b) => b.links - a.links || (b.node.weight ?? 1) - (a.node.weight ?? 1))
+
+  const clusters = []
+
+  for (const { node, links } of ranked) {
+    if (links < 2) continue
+
+    const ids = [node.id, ...(neighboursOf.get(node.id) ?? [])].filter((id) => positions.has(id))
+    if (ids.length < 3) continue
+
+    const center = new Vector3()
+    ids.forEach((id) => center.add(positions.get(id)))
+    center.divideScalar(ids.length)
+
+    /* Dos regiones que se pisan son la misma región. */
+    if (clusters.some((other) => other.center.distanceTo(center) < CLUSTER_APART)) continue
+
+    let span = 0
+    ids.forEach((id) => {
+      span = Math.max(span, center.distanceTo(positions.get(id)))
+    })
+
+    clusters.push({ hub: node.id, ids, center, span, links })
+  }
+
+  return clusters
 }

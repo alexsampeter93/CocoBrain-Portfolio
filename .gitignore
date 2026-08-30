@@ -6,6 +6,10 @@ dist-ssr
 # Source assets (raw Meshy exports, hundreds of MB — never in history)
 Assets/
 
+# Originales de las ilustraciones. Los derivados servibles viven en
+# public/img/art/ y esos si entran.
+fotos web/
+
 # Working notes
 _docs/
 CLAUDE_1.md

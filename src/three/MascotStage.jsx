@@ -1,4 +1,3 @@
-import { ContactShadows } from '@react-three/drei'
 import { Vector3 } from 'three'
 import Mascot3D, { MASCOT_MODELS } from '../components/three/Mascot3D'
 import GlowingBrain from '../components/three/GlowingBrain'
@@ -51,25 +50,39 @@ export default function MascotStage({
       </Mascot3D>
 
       {/*
-        Sombra de contacto: es lo que ancla al personaje al suelo. Sin ella
-        flota, por muy bien iluminado que esté.
+        ── AQUÍ NO HAY SOMBRA, Y ES UNA DECISIÓN ─────────────────────────────
 
-        En móvil se quita ENTERA, no se atenúa. Vuelve a dibujar la profundidad
-        de la escena en cada frame, y en una GPU integrada eso se veía como un
-        parpadeo de luz en la parte baja de la pantalla, además de costar
-        frames. Media sombra barata sigue siendo cara: se corta del todo.
+        Estuvieron las dos —`ContactShadows` para el contacto y `GroundContact`
+        para el cuerpo y la difusión— y las dos han salido. No por rendimiento:
+        medido, apagarlas no cambia nada (0,86 ms por frame contra 0,94, dentro
+        del ruido). Han salido porque no funcionaban, y porque la causa de que
+        no funcionaran no se arregla con una sombra mejor.
+
+        ## Por qué nunca iba a funcionar
+
+        El suelo de la fotografía está visto DESDE ARRIBA; Olaz está visto casi
+        a la altura de sus pies. Son dos cámaras distintas, y ninguna mancha en
+        el suelo reconcilia dos perspectivas. Comparando los recortes de los
+        pies con y sin, la sombra salía desprendida del zapato y se leía como
+        una mancha del pavimento, no como su sombra.
+
+        Se probaron: `ContactShadows` sola, un charco radial, dos huellas, la
+        sombra respirando con el personaje, cinco escalas, tres posiciones y dos
+        `renderOrder`. Ninguna combinación pasó de "borrón".
+
+        **Una ausencia de sombra es preferible a una sombra falsa.** Sin ella la
+        imagen queda limpia; con ella queda limpia menos una mancha.
+
+        ## Y de paso
+
+        `ContactShadows` volvía a dibujar la escena entera desde abajo en cada
+        frame: 242.000 triángulos por frame en la portada contra los 121.000 que
+        tiene el personaje. Ese pase sobra durante todo el recorrido.
+
+        Si alguna vez hace falta anclarlo, el sitio donde se arregla es el
+        ENCUADRE —que la línea del suelo de la sala pase por sus pies—, no un
+        plano más.
       */}
-      {!compact && (
-        <ContactShadows
-          position={[0, -height * 0.52, 0]}
-          scale={height * 2.4}
-          opacity={0.3}
-          blur={2.2}
-          far={height}
-          resolution={256}
-          color="#4A2F1C"
-        />
-      )}
     </group>
   )
 }

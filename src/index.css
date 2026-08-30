@@ -2,14 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * La tipografía, servida desde el propio dominio.
+ *
+ * Un solo archivo variable en vez de cinco pesos sueltos: 110 KB por los
+ * cuatro grosores que usa la web, y ningún salto de peso durante la carga.
+ *
+ * `swap` y no `block`: el titular de la portada aparece con la tipografía del
+ * sistema durante unos milisegundos y luego cambia. Es preferible a que el
+ * hueco esté en blanco, porque la portada es lo primero que se ve.
+ */
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Variable.ttf') format('truetype-variations');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
+    /* ── Acto 1 · la portada ─────────────────────────────────────────── */
     --cream-bg: #f5e6d3;
     --coco-dark: #2b211c;
     --coco-mid: #6b4530;
     --coco-light: #c99b6e;
     --brain-pink: #f2939e;
-    --brain-glow: #ff6b85;
+    --brain-glow: #e98fa0;
+
+    /**
+     * ── La atmósfera del tramo editorial ───────────────────────────────
+     *
+     * Estas tres son las únicas que cambian con el scroll, y las escribe
+     * `Backdrops` interpolando entre los actos. Todo lo demás las lee.
+     *
+     * Que sean variables y no clases por sección es lo que permite que el
+     * cambio de acto sea un DEGRADADO y no un corte: entre "Proyectos" y
+     * "Experiencia" no hay una línea donde el color salta, hay un tramo de
+     * scroll donde el rosa se va volviendo añil.
+     */
+    --ink: #f8edef; /* el texto principal sobre fondo oscuro */
+    --ink-soft: #c7b4aa; /* secundario: descripciones, pies */
+    --ink-faint: #857166; /* metadatos, numeración, lo que no se lee seguido */
+    --accent: #e98fa0; /* el acento del acto en curso */
+    --surface: #1a1210; /* la única superficie elevada que existe */
+    --rule: rgba(248, 237, 239, 0.11); /* filetes y separadores */
+
+    /**
+     * ── El añil ────────────────────────────────────────────────────────
+     *
+     * El tercer color de la marca, y el único que no estaba antes. Es el 10%
+     * de la proporción: aparece en los nodos de las ilustraciones, en el foco
+     * del teclado y en algún filete, y en ningún sitio más.
+     *
+     * Un azul en una paleta de marfil y coco es lo que la salva de ser
+     * agradable y anodina —el contraste de temperatura es lo que hace que el
+     * rosa se lea como calor y no como color de fondo—. Pero manda un píxel de
+     * más y se convierte en una web azul con detalles crema, que es otra cosa.
+     */
+    --indigo: #2c4a73;
+  }
+
+  /**
+   * ── La escala tipográfica ────────────────────────────────────────────
+   *
+   * Tres voces y ni una más. Cada una tiene un trabajo y no se solapan:
+   *
+   * | voz      | quién es          | para qué |
+   * |----------|-------------------|----------|
+   * | display  | Outfit 600        | el nombre del área, los titulares |
+   * | body     | pila del sistema  | todo lo que se lee seguido |
+   * | meta     | monoespaciada     | números de nodo, años, tecnologías |
+   *
+   * **El cuerpo sigue sin decidirse**, y por eso es la pila del sistema: es la
+   * única opción que no compromete nada. `font-body` en `tailwind.config.js`
+   * es la línea que hay que tocar el día que se elija, y no hay ninguna otra.
+   *
+   * La monoespaciada era IBM Plex Mono servida desde Google. Ahora es la del
+   * sistema, que en cada plataforma es la que mejor se ve ahí: SF Mono en Mac,
+   * Cascadia en Windows. Para etiquetas de diez caracteres, traer 40 KB de un
+   * tercero no se sostiene.
+   *
+   * Los tamaños van en `clamp` para que la escala sea continua entre móvil y
+   * escritorio, en vez de saltar en un punto de ruptura.
+   */
+  :root {
+    --step-display: clamp(2.6rem, 7vw, 5.5rem);
+    --step-title: clamp(1.9rem, 4.2vw, 3.2rem);
+    --step-lead: clamp(1.15rem, 1.9vw, 1.6rem);
+    --step-body: clamp(0.98rem, 1.05vw, 1.08rem);
+    --step-meta: 0.72rem;
+
+    /**
+     * El espaciado sale de una sola unidad, para que los huecos entre cosas
+     * guarden relación en vez de ser números sueltos. El espacio negativo es
+     * el material principal de esta interfaz: si algo duda entre dos valores,
+     * gana el grande.
+     */
+    --gap-area: clamp(7rem, 14vh, 12rem); /* entre áreas del portfolio */
+    --gap-block: clamp(3rem, 6vh, 5rem); /* entre bloques de un área */
+    --gutter: clamp(1.5rem, 5vw, 5rem); /* margen lateral de la página */
   }
 
   /*
@@ -29,39 +121,83 @@
     imponerlo a todo el documento.
   */
   body {
-    @apply text-coco-dark font-sans antialiased;
+    @apply font-body text-coco-dark antialiased;
     margin: 0;
     overscroll-behavior-y: none;
     background: var(--cream-bg);
   }
 
   /*
-    El degradado del fondo, en su propia capa fija.
-
-    Antes estaba en `body` con `background-attachment: fixed`, y esa
-    combinación es de las peores que hay para el scroll: obliga al navegador a
-    REPINTAR el fondo de toda la ventana en cada frame de desplazamiento, y le
-    impide usar el camino rápido en el que el scroll lo resuelve la tarjeta
-    gráfica sola. Con un canvas de WebGL a pantalla completa encima, se paga
-    dos veces.
-
-    Un elemento con `position: fixed` consigue exactamente el mismo efecto
-    visual —el fondo no se mueve al bajar— pero el navegador lo trata como una
-    capa aparte que compone una vez y reutiliza. Coste de scroll: cero.
-  */
-  /*
     El degradado dibujado a mano ha salido: ahora el fondo son las dos
-    ilustraciones de `Backdrops`, que se cruzan con el scroll.
+    ilustraciones de `Backdrops`, que se cruzan con el scroll, más el clima del
+    tramo editorial. Se queda el crema plano del `body` como suelo por debajo,
+    para el instante antes de que carguen. Nunca se ve negro.
 
-    Se queda el crema plano del `body` como suelo por debajo de ellas, para el
-    instante antes de que carguen y por si alguna fallara. Nunca se ve negro.
+    Nunca `background-attachment: fixed`: obliga a repintar la ventana entera
+    en cada frame de scroll. Un elemento `position: fixed` da lo mismo a coste
+    cero.
   */
 
   /* Foco visible: los nodos y la nav se recorren con teclado */
   :focus-visible {
-    outline: 3px solid var(--brain-glow);
-    outline-offset: 3px;
-    border-radius: 4px;
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #14100e;
+  }
+
+  /**
+   * ── Los actos ────────────────────────────────────────────────────────
+   *
+   * Cada área declara `data-act` y hereda su acento. El FONDO no está aquí:
+   * lo pinta `Backdrops` interpolando entre estos mismos colores, para que el
+   * paso de un acto a otro sea un degradado largo y no una línea donde algo
+   * cambia de golpe.
+   *
+   * ## El editorial ya no es negro, y esto es lo que más ha cambiado
+   *
+   * Lo era, con acentos magenta y violeta. Los dos colores están fuera de la
+   * dirección artística, y el fondo oscuro contradecía la proporción que la
+   * ordena: 70% marfil y coco, 20% rosa, 10% añil.
+   *
+   * El cambio no es solo cromático, es narrativo y sale gratis: se entra por
+   * una portada crema, se atraviesa la oscuridad de la mente, y se SALE A LA
+   * LUZ para enseñar el trabajo. La parte oscura pasa a ser el paréntesis que
+   * era —el interior de una cabeza— en vez de el tono de media web.
+   *
+   *   3 · rosa      Sobre mí, Proyectos — la voz y el trabajo
+   *   4 · añil      Experiencia, Habilidades — lo verificable
+   *   5 · coco      CV y cierre — el marrón de la marca cierra el círculo
+   *
+   * El añil se reserva para el acto 4 a propósito. Es el color más frío de la
+   * paleta y las dos áreas que lo llevan son las más objetivas: fechas,
+   * empresas y tecnologías. Que el rosa vuelva en el cierre y el coco firme el
+   * final es lo que hace que el recorrido cromático signifique algo.
+   */
+  [data-act='3'],
+  [data-act='4'],
+  [data-act='5'] {
+    --ink: #2b211c;
+    --ink-soft: #5f4c40;
+    --ink-faint: #9a8878;
+    --surface: #fbf7f1;
+    --rule: rgba(43, 33, 28, 0.14);
+  }
+
+  [data-act='3'] {
+    --accent: #c4707f;
+  }
+
+  [data-act='4'] {
+    --accent: var(--indigo);
+  }
+
+  [data-act='5'] {
+    --accent: #8a5a3c;
   }
 }
 
@@ -71,7 +207,84 @@
     @apply sr-only;
   }
   .skip-link:focus {
-    @apply not-sr-only fixed left-4 top-4 z-50 rounded-full bg-coco-dark px-5 py-3 text-cream;
+    @apply not-sr-only fixed left-4 top-4 z-50 bg-coco-dark px-5 py-3 text-cream;
+  }
+
+  /**
+   * El enlace del tramo editorial.
+   *
+   * Sin caja, sin relleno y sin forma de píldora: solo la palabra y un filete
+   * que se completa al pasar por encima. Un botón con borde de dos píxeles y
+   * esquinas redondeadas es exactamente la estética de maqueta que el
+   * documento prohíbe, y además compite con los nodos, que son los únicos
+   * elementos que deberían pedir que los pulses.
+   */
+  .link-quiet {
+    @apply relative inline-flex items-center gap-2 font-meta text-meta uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    padding-block: 0.35rem;
+    transition: color 220ms ease;
+  }
+  .link-quiet::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0.18);
+    transform-origin: left;
+    transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .link-quiet:hover,
+  .link-quiet:focus-visible {
+    color: var(--accent);
+  }
+  .link-quiet:hover::after,
+  .link-quiet:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  /**
+   * La ilustración de un área editorial.
+   *
+   * La opacidad la decide `visualAssets` y llega como variable; aquí solo se
+   * aplica el factor de pantalla estrecha.
+   *
+   * Y hace falta ese factor. La misma ilustración que en escritorio ocupa una
+   * franja de un panorámico, en un móvil se recorta a un vertical de 844 px de
+   * alto: la misma opacidad da el doble de mancha, y el titular acaba sobre la
+   * parte con más contraste de la imagen. Se ve especialmente en el añil de
+   * Experiencia, que es el único asset con una masa de color oscuro.
+   *
+   * Va como media query y no con el `useCompact` de React porque esto es una
+   * decisión de presentación pura: no tiene por qué provocar un renderizado, ni
+   * esperar a que el hook mida la ventana, ni volver a pasar por el árbol en
+   * cada cambio de tamaño.
+   */
+  .area-art {
+    opacity: calc(var(--art-opacity, 0.2) * var(--art-narrow, 1));
+    /**
+     * En vertical, la ilustración se empuja a la derecha. Estas imágenes
+     * tienen la masa a un lado y el aire al otro; recortadas por el centro en
+     * una pantalla estrecha parten la forma por la mitad y dejan el titular
+     * encima de lo que más contrasta. Empujándolas, el texto cae sobre el aire.
+     */
+    object-position: right center;
+  }
+}
+
+@media (max-width: 639px) {
+  .area-art {
+    --art-narrow: 0.55;
+  }
+}
+
+@media (min-width: 640px) {
+  /* Ya cabe entera: manda el encuadre que pida el asset en `visualAssets`. */
+  .area-art {
+    object-position: var(--art-position, center center);
   }
 }
 

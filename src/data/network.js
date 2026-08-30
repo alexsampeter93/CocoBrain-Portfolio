@@ -1,4 +1,4 @@
-import { knowledge } from './knowledge'
+import { knowledge } from './knowledge.js'
 
 /**
  * Las relaciones de la red. Capa 2: quién se conecta con quién y por qué.

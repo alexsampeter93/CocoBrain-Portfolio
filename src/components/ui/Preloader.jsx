@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import gsap from 'gsap'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import { getVisualAsset } from '../../data/visualAssets'
 
 /**
  * Pantalla de carga.
@@ -43,6 +44,10 @@ const MIN_VISIBLE_MS = 2600
 const FIST_ORIGIN = '35% 4%'
 
 export default function Preloader() {
+  // El logotipo y Olaz colgado, pedidos por nombre. Ni una ruta en este archivo.
+  const wordmark = getVisualAsset('brand.wordmark')
+  const hanging = getVisualAsset('brand.mascotHanging')
+
   const { progress, total, active } = useProgress()
   const [hidden, setHidden] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -176,12 +181,12 @@ export default function Preloader() {
         */}
         <img
           ref={logoRef}
-          src="/img/wordmark.webp"
-          srcSet="/img/wordmark-sm.webp 640w, /img/wordmark.webp 1200w"
+          src={wordmark.src}
+          srcSet={wordmark.srcSet}
           sizes="(max-width: 640px) 78vw, 460px"
           alt="CocoBrain"
-          width="1200"
-          height="214"
+          width={wordmark.width}
+          height={wordmark.height}
           className="relative z-10 h-auto w-full"
         />
 
@@ -191,13 +196,13 @@ export default function Preloader() {
             imagen sobre crema y arrastraba el halo de su sombra. */}
         <img
           ref={olazRef}
-          src="/img/olaz-hanging.webp"
-          srcSet="/img/olaz-hanging-sm.webp 280w, /img/olaz-hanging.webp 520w"
+          src={hanging.src}
+          srcSet={hanging.srcSet}
           sizes="(max-width: 640px) 19vw, 110px"
           alt=""
           aria-hidden="true"
-          width="520"
-          height="693"
+          width={hanging.width}
+          height={hanging.height}
           // Colocado para que el puño caiga sobre el arco inferior de la C, no
           // al lado. Las cifras salen de la posición medida del puño dentro de
           // su propio recorte, no de probar valores hasta que cuadra.

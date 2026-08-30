@@ -26,11 +26,24 @@
 
     <link rel="icon" type="image/png" href="/img/favicon.png" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      La tipografía se sirve desde aquí, nunca desde un CDN.
+
+      Estaba en fonts.googleapis.com: dos conexiones a un tercero bloqueando el
+      primer render, y una dependencia externa en un proyecto cuya regla es
+      justo la contraria —el HDRI no usa los presets de drei por este mismo
+      motivo—. El archivo ya estaba en el repositorio sin usarse.
+
+      Se precarga porque el titular de la portada es lo primero que se ve: sin
+      esto, el texto salta de la tipografía del sistema a Outfit a mitad de la
+      animación de entrada.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/Outfit-Variable.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
     />
   </head>
   <body>

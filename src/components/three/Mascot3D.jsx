@@ -78,6 +78,25 @@ const LEAN_AMOUNT = 0.05
  */
 const SCRATCH = new Vector3()
 
+/**
+ * La respiración y el flotado, EXPORTADOS.
+ *
+ * No son constantes privadas porque la sombra de contacto los necesita: el
+ * personaje sube y baja 0,02 unidades y encoge 0,01 al respirar, así que sus
+ * pies se separan del suelo hasta 0,035. Una sombra que no lo sigue convierte
+ * ese gesto en flotación —que es literalmente lo que estaba pasando—.
+ *
+ * Se comparten en vez de duplicarse: los dos `useFrame` corren en el mismo
+ * bucle con el mismo reloj, así que calculando la misma expresión coinciden
+ * exactamente. Copiar los números en el otro archivo habría durado hasta el
+ * primer ajuste.
+ */
+/*
+  Se exportaban también `feetLift`, `BREATH_*` y `FLOAT_*` para que la sombra
+  del suelo siguiera la altura real de los pies. La sombra ya no existe —ver §7
+  de CLAUDE.md— y con ella se ha ido lo que solo servía para alimentarla:
+  ninguno de esos valores tiene ya un segundo lector.
+*/
 const BREATH_SPEED = 1.5
 const BREATH_AMOUNT = 0.01
 
@@ -91,7 +110,6 @@ export default function Mascot3D({
   startle = 0,
   turnAway = 0,
   lookEnabled = true,
-  idleEnabled = true,
   /** Altura del personaje en unidades de mundo. Sale de `tokens.mascot.height`. */
   height = 3,
   /** Capa de `LAYERS` que decide cuando se desvanece. */
@@ -130,7 +148,21 @@ export default function Mascot3D({
       // Meshy exporta metallic-roughness que bajo un HDRI deja el coco con
       // brillo de plastico. Se anula y se sube la respuesta al entorno.
       object.material.metalness = 0
-      object.material.envMapIntensity = 1.25
+      /**
+       * 0,95 y no 1,25, y lo decide el cerebro de la mano.
+       *
+       * Un HDRI de estudio ilumina desde todas las direcciones a la vez: sube
+       * el nivel general y APLANA el relieve, porque casi no deja lado en
+       * sombra. En el coco no se notaba —tiene una textura de fibra que ya trae
+       * su propio detalle— pero el cerebro es una superficie lisa de pliegues,
+       * y en el plano corto de 0,10 llenaba el cuadro como una masa rosa sin
+       * volumen.
+       *
+       * Bajándolo, la luz direccional y la de la mano vuelven a mandar sobre el
+       * relieve y los surcos se leen. Lo que se pierde es medio punto de nivel
+       * en la portada, que es justo lo que sobraba.
+       */
+      object.material.envMapIntensity = 0.95
       /**
        * El exportador marca el material como de doble cara. En una malla
        * cerrada como esta no aporta nada y sale caro: desactiva el descarte de
@@ -238,68 +270,23 @@ export default function Mascot3D({
     return () => timeline.kill()
   }, [startle, reducedMotion])
 
-  /**
-   * Gestos de reposo.
-   *
-   * Ahora que los nodos viven dentro del cerebro, la primera pantalla se
-   * queda sin nada que hacer aparte de seguir el cursor. Cada pocos segundos
-   * el personaje hace algo por su cuenta: un brinco, un suspiro o un
-   * bamboleo. Sin esto se lee como un modelo expuesto, no como alguien
-   * esperando.
-   *
-   * Los intervalos son irregulares a proposito: a intervalo fijo el ojo
-   * detecta el patron enseguida y deja de leerse como espontaneo.
-   */
-  useEffect(() => {
-    if (reducedMotion || !idleEnabled) return
+  /*
+    ── AQUÍ HABÍA "GESTOS DE REPOSO", Y ERAN UN CICLO AUTÓNOMO ──────────────
 
-    let timer
+    Un `setTimeout` cada 5,5–11 segundos elegía con `Math.random()` entre un
+    brinco, un suspiro y un bamboleo. Dos motivos para que salga, y el segundo
+    es el que manda:
 
-    const play = () => {
-      const jump = jumpRef.current
-      const breath = breathRef.current
-      if (!jump || !breath) return
-      // No pisar un salto o un respingo en curso.
-      if (gsap.isTweening(jump.position) || gsap.isTweening(breath.scale)) return
-      // Ni arrancar uno si ya se esta bajando: el personaje tiene que estar
-      // quieto cuando la camara se le acerca.
-      if (journey.progress > 0.03) return
+    - **no era determinista**: volver al mismo punto del scroll no devolvía el
+      mismo cuadro, porque dependía del reloj del sistema y de un dado;
+    - **movía la imagen con el usuario quieto**, que es exactamente lo que esta
+      fase venía a quitar.
 
-      const timeline = gsap.timeline()
-      const gesture = Math.floor(Math.random() * 3)
+    Lo que hace que la portada no se lea como un modelo expuesto no es que el
+    personaje se menee solo: es que sigue al cursor —eso sí se queda, porque
+    responde a una acción— y que en cuanto empiezas a bajar, flota y respira.
+  */
 
-      if (gesture === 0) {
-        // Brinco corto.
-        timeline
-          .to(breath.scale, { x: 1.06, y: 0.92, duration: 0.1 })
-          .to(jump.position, { y: 0.12, duration: 0.2, ease: 'power2.out' }, '<')
-          .to(jump.position, { y: 0, duration: 0.24, ease: 'power2.in' })
-          .to(breath.scale, { x: 1, y: 1, duration: 0.45, ease: 'elastic.out(1, 0.5)' }, '<')
-      } else if (gesture === 1) {
-        // Suspiro: se hincha despacio y se desinfla.
-        timeline
-          .to(breath.scale, { x: 0.97, y: 1.05, duration: 0.8, ease: 'sine.inOut' })
-          .to(breath.scale, { x: 1.03, y: 0.97, duration: 0.5, ease: 'sine.inOut' })
-          .to(breath.scale, { x: 1, y: 1, duration: 0.5, ease: 'sine.out' })
-      } else {
-        // Bamboleo lateral.
-        timeline
-          .to(jump.rotation, { z: 0.09, duration: 0.35, ease: 'sine.inOut' })
-          .to(jump.rotation, { z: -0.07, duration: 0.5, ease: 'sine.inOut' })
-          .to(jump.rotation, { z: 0, duration: 0.6, ease: 'elastic.out(1, 0.5)' })
-      }
-    }
-
-    const schedule = () => {
-      timer = setTimeout(() => {
-        play()
-        schedule()
-      }, 5500 + Math.random() * 5500)
-    }
-
-    schedule()
-    return () => clearTimeout(timer)
-  }, [reducedMotion, idleEnabled])
 
   /**
    * Desvanecido por opacidad en vez de desmontar el modelo.
@@ -321,8 +308,34 @@ export default function Mascot3D({
     tuned.visible = visible
     if (!visible) return
 
+    /**
+     * ── Y CAMBIAR `transparent` OBLIGA A RECOMPILAR ───────────────────────
+     *
+     * Esto escribía `material.transparent = fade < 0.999` sin más, y ahí estaba
+     * la única parte del recorrido que NO era reversible.
+     *
+     * `transparent` no es un número que se lea por frame: decide un `#define`
+     * del sombreador —con `OPAQUE` puesto, el fragmento fuerza su alfa a uno—
+     * y ese define se resuelve al COMPILAR. Cambiando el flag sin
+     * `needsUpdate`, el material dice una cosa y el programa hace otra, y cuál
+     * de las dos gana depende de con qué estado se compiló la primera vez.
+     *
+     * Medido bajando y subiendo por los mismos veintiún puntos: en p=0,09 el
+     * cerebro de la mano salía OPACO en la primera pasada y al 65% —que es su
+     * valor correcto— en todas las demás. Diferencia media de 12,9 sobre 255 y
+     * picos de 107 en un solo píxel; el resto del viaje, de 0,16 a 1,00, no
+     * pasaba de 0,66.
+     *
+     * Con la guarda, el programa se recompila las dos únicas veces que el
+     * material cambia de modo en todo el recorrido, y el cuadro es el mismo se
+     * llegue desde donde se llegue.
+     */
     for (const material of materials) {
-      material.transparent = fade < 0.999
+      const blend = fade < 0.999
+      if (material.transparent !== blend) {
+        material.transparent = blend
+        material.needsUpdate = true
+      }
       material.opacity = fade
       material.depthWrite = fade > 0.5
     }
@@ -354,7 +367,9 @@ export default function Mascot3D({
       jump.rotation.z = MathUtils.lerp(jump.rotation.z, 0, 0.12)
     }
 
-    const t = state.clock.elapsedTime
+    // El COMPÁS, no el tiempo. Flota y respira MIENTRAS SE BAJA; con el
+    // scroll quieto se queda quieto, que es la regla de la fase 5E.
+    const t = journey.beat
     motion.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE * alive
 
     if (breath && !gsap.isTweening(breath.scale)) {
@@ -407,6 +422,9 @@ export default function Mascot3D({
           <group ref={breathRef}>
             <group
               ref={fitRef}
+              /* Nombre para que la sonda de diagnóstico pueda proyectar su
+                 caja envolvente sin tener que importar nada de aquí. */
+              name="mascot"
               onClick={
                 onPoke &&
                 ((event) => {

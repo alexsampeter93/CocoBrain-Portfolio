@@ -42,23 +42,73 @@ export default function HeroCopy() {
   }, [])
 
   return (
+    /**
+     * ── DÓNDE VA EL TEXTO, Y POR QUÉ AHÍ ──────────────────────────────────
+     *
+     * Estaba dentro de un contenedor centrado de `max-w-6xl` (1152 px). En una
+     * pantalla de 1920 eso empuja la columna hasta x=384 mientras Olaz empieza
+     * en x=675, así que el texto se metía 93 píxeles DENTRO de su caja. Medido
+     * con `node scripts/hero.mjs`, que proyecta la caja del modelo a píxeles:
+     *
+     *     1920   texto 384→768   Olaz desde 675   solapa  93 px
+     *     1440   texto 144→528   Olaz desde 507   solapa  21 px
+     *     1366   texto 107→491   Olaz desde 480   solapa  11 px
+     *
+     * El dato que resuelve el problema es que **Olaz empieza siempre en el 35%
+     * del ancho**, en las tres. No es casualidad: su distancia sale de `fill`
+     * por geometría, así que su posición en pantalla es proporcional.
+     *
+     * Así que la columna deja de ir centrada y se ancla al borde izquierdo con
+     * un ancho de `28vw`: se queda siempre en el tercio izquierdo, crece con la
+     * pantalla y nunca alcanza el 35%. No hay `z-index` de por medio —poner el
+     * texto por delante habría dejado los párrafos escritos sobre el pecho del
+     * personaje, que es tapar el problema, no resolverlo—.
+     *
+     * De paso deja de ser una columna centrada, que es de lo que el manual
+     * huye: esto es una composición editorial, texto a la izquierda y sujeto a
+     * la derecha.
+     *
+     * ## Y EN VERTICAL EL TEXTO PASA ARRIBA
+     *
+     * Estaba en `bottom-20`, debajo del personaje, de cuando Olaz flotaba en
+     * mitad del cuadro. Ahora se planta en el pedestal del bodegón, que en la
+     * lámina cae en el 87% del alto, así que ocupa el tercio de abajo entero y
+     * ahí no cabe nada más. Arriba, en cambio, la lámina es la pared lisa —lo
+     * más limpio que tiene— y las dos cosas dejan de disputarse el mismo sitio.
+     *
+     * En apaisado no cambia nada: `lg:top-1/2` con su centrado sigue mandando.
+     */
     <div
       ref={ref}
-      className="pointer-events-none absolute inset-x-0 bottom-24 px-6 sm:px-10 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2"
+      className="pointer-events-none absolute inset-x-0 top-[13dvh] px-6 sm:px-10 lg:top-1/2 lg:-translate-y-1/2 lg:px-[4vw]"
     >
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="max-w-[20rem] sm:max-w-[26rem] lg:max-w-[24rem]">
-          <p className="text-[clamp(1.9rem,7vw,3.6rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
-            Alex
-            <span className="block text-coco-light">desarrollo web</span>
+      <div className="w-full">
+        <div className="max-w-[20rem] sm:max-w-[26rem] lg:max-w-[min(34rem,28vw)]">
+          {/*
+            El cuerpo crece con la pantalla, pero atado al ancho de la columna:
+            `7vw` daba 134 px en 1920 y se recortaba a 3,6 rem, o sea que en la
+            pantalla más grande el titular era el más pequeño en proporción. Con
+            `3,4vw` la línea larga —"desarrollo web"— sigue cabiendo en la
+            columna en las cuatro medidas comprobadas.
+          */}
+          <p className="text-[clamp(2rem,3.4vw,4rem)] font-semibold leading-[1.05] tracking-[-0.03em]">
+            <span className="block" data-hero-line="nombre">
+              Alex
+            </span>
+            <span className="block text-coco-light" data-hero-line="oficio">
+              desarrollo web
+            </span>
           </p>
 
-          <p className="mt-5 text-[15px] leading-[1.45] sm:mt-7 sm:text-[17px]">
+          <p data-hero-line="claim" className="mt-5 text-[15px] leading-[1.45] sm:mt-7 sm:text-[17px]">
             Nuestra mayor <em className="not-italic text-coco-light">inspiración</em> fue una vez
             nuestra mayor <em className="not-italic text-coco-light">debilidad</em>.
           </p>
 
-          <p className="mt-3 font-mono text-[11px] text-coco-mid sm:mt-6">
+          {/* Estos dos renglones caen sobre las piedras del bodegón, que tienen
+              mucho más contraste que la pared lisa de la sala anterior. Van con
+              la tinta principal entera: en la captura, al 70% desaparecían. */}
+          <p className="mt-3 font-mono text-[11px] text-coco-dark sm:mt-6">
             Baja para entrar <span aria-hidden="true">↓</span>
           </p>
         </div>

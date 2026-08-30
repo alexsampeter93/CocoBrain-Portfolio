@@ -21,11 +21,80 @@
  * en pantalla; es el sitio equivocado para un número que cambia sesenta veces
  * por segundo.
  */
+import { spinEase } from './stages.js'
+
 export const journey = {
   /** Lo que escribe el scroll. Salta. */
   target: 0,
   /** Lo que lee el mundo. Persigue a `target` y siempre es continuo. */
   progress: 0,
+
+  /**
+   * EL COMPÁS. Es el reloj de las animaciones de la escena, y NO avanza con el
+   * tiempo: avanza con el scroll.
+   *
+   * ## Por qué existe
+   *
+   * Todo lo que se movía en la escena leía `state.clock.elapsedTime`: el giro
+   * del cerebro, el latido de los nodos, los pulsos que recorren las
+   * conexiones, la respiración de Olaz. Eso significa que **la misma posición
+   * de scroll daba imágenes distintas** según cuánto rato llevaras ahí, y que
+   * con el usuario quieto la escena seguía encendiéndose y apagándose sola.
+   *
+   * Con el bloom de por medio eso no se ve como "vida", se ve como un
+   * destello: un nodo emisivo que crece un 26% cruza el umbral de floración y
+   * PARPADEA.
+   *
+   * ## Qué cambia
+   *
+   * Sustituyendo `elapsedTime` por esto, la escena es una FUNCIÓN del
+   * recorrido: el mismo `progress` da siempre el mismo cuadro, y parado no se
+   * mueve nada. El movimiento no desaparece —el cerebro sigue girando, los
+   * pulsos siguen recorriendo la red— pero lo mueve el dedo del visitante.
+   *
+   * El factor convierte el recorrido entero en cuarenta "segundos" de
+   * animación, que es lo que hacía que los mismos números de velocidad
+   * siguieran leyéndose bien sin tocarlos uno a uno.
+   */
+  beat: 0,
+
+  /**
+   * EL COMPÁS DE LA ARQUITECTURA, que es el mismo pero se PARA al entrar.
+   *
+   * El cerebro gira despacio mientras se ve como objeto: es lo que le da la
+   * lectura de joya suspendida. Dentro no puede seguir girando —las cinco
+   * áreas están ancladas a la cavidad, y una pared que rota mientras ellas
+   * están quietas acabaría empujándolas fuera del casco— y además una
+   * habitación que gira sola no se lee como una habitación.
+   *
+   * No se puede apagar multiplicando por `1 - insideness`: el ángulo es
+   * `beat · 0,14`, así que bajar el resultado haría girar el cerebro HACIA
+   * ATRÁS durante el cruce. Lo que hay que frenar es el compás, no el ángulo,
+   * y de eso se encarga `spinEase` en `stages.js`.
+   *
+   * Sigue siendo una función del scroll: parado no se mueve, y volviendo al
+   * mismo punto sale el mismo cuadro.
+   */
+  spin: 0,
+
+  /**
+   * El SEGUNDO tramo: la lectura.
+   *
+   * Va de 0 a 1 a lo largo del contenido editorial, igual que `progress` va de
+   * 0 a 1 a lo largo del recorrido 3D. Son dos canales del mismo reloj y no
+   * dos relojes: se amortiguan en la misma función, en el mismo frame y con la
+   * misma constante.
+   *
+   * Hace falta separarlos porque miden cosas distintas —uno la coreografía de
+   * la cámara, otro cuánto llevas leído— pero no puede haber dos sistemas de
+   * scroll compitiendo: eso es exactamente lo que hacía que las transiciones
+   * parecieran sucias antes de que existiera este archivo.
+   *
+   * De aquí salen tres cosas: el color de la atmósfera, cuánto se atenúa la
+   * escena que sigue viva por detrás, y qué área marca la navegación.
+   */
+  readingTarget: 0,
+  reading: 0,
 }
 
 /**
@@ -44,9 +113,15 @@ const TAU = 0.05
  * doble de rápido que a 60. Con la exponencial, el recorrido tarda lo mismo en
  * cualquier pantalla.
  */
+/** Cuántos "segundos" de animación dura el recorrido entero. Ver `beat`. */
+const BEAT = 40
+
 export function advance(delta) {
   const k = 1 - Math.exp(-Math.min(delta, 0.1) / TAU)
   journey.progress += (journey.target - journey.progress) * k
+  journey.reading += (journey.readingTarget - journey.reading) * k
+  journey.beat = journey.progress * BEAT
+  journey.spin = spinEase(journey.progress) * BEAT
 }
 
 /**
@@ -72,4 +147,15 @@ export function setTarget(value, stageId) {
     lastStageId = stageId
     listeners.forEach((listener) => listener())
   }
+}
+
+/**
+ * El progreso de la lectura, escrito por su propio ScrollTrigger.
+ *
+ * No avisa a los suscriptores: nada de la interfaz necesita reaccionar a un
+ * cambio de tramo aquí, y lo que sí lo necesita lo lee del reloj en su propio
+ * bucle.
+ */
+export function setReadingTarget(value) {
+  journey.readingTarget = value
 }

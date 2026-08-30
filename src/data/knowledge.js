@@ -56,16 +56,53 @@ export const knowledge = [
 ]
 
 /**
- * Colores por familia. Salen de la paleta del interior: el rosa es el tono
- * base y las familias se separan por temperatura, no por saltos de color, para
- * que la red siga leyéndose como una sola cosa.
+ * Colores por familia.
+ *
+ * ## Cuatro tonos, no siete
+ *
+ * Las siete familias tenían siete valores y **los siete eran rosa**: `#FFB6C1`,
+ * `#E98FA0`, `#F08FA5`, `#B85C76`… Sobre el papel eran distintos; en pantalla,
+ * a doce píxeles y en aditivo, eran el mismo punto rosa repetido dieciocho
+ * veces. La consecuencia no era solo que no se distinguieran las familias: es
+ * que la mente entera se leía de un color, que es el problema que arrastraba
+ * el interior.
+ *
+ * Ahora son cuatro tonos de la paleta —crema, rosa, coco y añil— repartidos
+ * entre las siete familias. Cuatro y no siete a propósito: **esto no puede
+ * convertirse en una colección multicolor.** Con cuatro hay variedad suficiente
+ * para que se vea que hay tipos de cosas, y pocos suficientes para que la red
+ * siga leyéndose como un solo organismo.
+ *
+ * ## El reparto, y por qué ese
+ *
+ * Sale del peso de cada familia, no del gusto. `graphics` son seis nodos de
+ * dieciocho, así que se lleva el rosa de marca: lo que más hay es lo que define
+ * el color del sitio. `tooling` son cuatro y se lleva el añil, que es el único
+ * frío —cuatro de dieciocho es una minoría visible, que es exactamente lo que
+ * tiene que ser un acento—. El resto se reparte entre crema y coco.
+ *
+ * Catorce cálidos contra cuatro fríos. Esa proporción es la paleta de la marca
+ * aplicada a la red.
+ *
+ * ## Todos claros, y no es una elección estética
+ *
+ * Los nodos se dibujan con `meshBasicMaterial` en aditivo: el color se SUMA al
+ * fondo. Un coco oscuro y bonito sobre papel aquí sería un nodo invisible. Por
+ * eso incluso el más apagado de los cuatro es un tono medio-alto.
  */
 export const KIND_COLORS = {
-  language: '#FFB6C1',
-  framework: '#E98FA0',
-  graphics: '#F08FA5',
-  animation: '#FFB6C1',
-  runtime: '#E98FA0',
-  format: '#B85C76',
-  tooling: '#B85C76',
+  // Crema: la base sobre la que se construye todo.
+  language: '#F2E2D0',
+  format: '#F2E2D0',
+
+  // Rosa de marca: lo que más hay, y el color de la casa.
+  graphics: '#E98FA0',
+  framework: '#F2A2B0',
+
+  // Coco: el vínculo con la mascota.
+  animation: '#D69A6E',
+  runtime: '#D69A6E',
+
+  // Añil: el único frío. La minoría que da contraste.
+  tooling: '#8FA8D0',
 }
