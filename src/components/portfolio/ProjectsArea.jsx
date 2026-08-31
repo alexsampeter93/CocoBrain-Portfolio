@@ -13,15 +13,10 @@ import { knowledgeById } from '../../data/network'
  * importa de cada una no es que exista, es CÓMO se pensó. Una tarjeta de 300
  * píxeles con un título y tres etiquetas no puede contar eso.
  *
- * Así que cada proyecto ocupa la pantalla entera y se lee en cuatro tiempos:
- *
- *     el qué        título, año, una línea
- *     el problema   por qué había que hacerlo
- *     la solución   qué se hizo, y cuál fue mi papel
- *     el resultado  qué salió y qué aprendí
- *
- * Es la estructura de un caso, no de una ficha. Y es la que un reclutador
- * técnico busca: no quiere saber que usaste React, quiere saber qué decidiste.
+ * Así que cada proyecto ocupa la pantalla entera y se lee en tiempos —el qué,
+ * el objetivo, el problema, la solución, el resultado—. Es la estructura de un
+ * caso, no de una ficha. Y es la que un reclutador técnico busca: no quiere
+ * saber que usaste React, quiere saber qué decidiste.
  *
  * ## El sitio del medio
  *
@@ -29,6 +24,16 @@ import { knowledgeById } from '../../data/network'
  * impares para que bajar por la sección no sea bajar por una lista. Ese hueco
  * admite captura, vídeo o un objeto 3D propio, y hasta que exista se dibuja
  * vacío con su proporción: la composición ya se puede juzgar sin las imágenes.
+ *
+ * ## FASE 5B: el medio ahora se DIBUJA de verdad
+ *
+ * Hasta esta ronda, `media` solo decidía si se enseñaba el hueco pendiente:
+ * si el campo tenía algo, no pasaba nada —no existía ningún componente que
+ * pintara la imagen—. Rellenar un proyecto con una foto real no habría
+ * enseñado la foto. Ahora `media` es un array y cada elemento se dibuja según
+ * su `kind`: el primero ocupa el hueco principal, el resto —si los hay— entra
+ * debajo en una fila de miniaturas. Un `kind: 'scene'` sigue mostrando el
+ * hueco pendiente, porque el objeto 3D de proyecto no está implementado.
  */
 
 /** Las tecnologías de un proyecto, nombradas desde la red cuando existen ahí. */
@@ -51,27 +56,74 @@ function Stack({ ids = [] }) {
   )
 }
 
+/**
+ * Un elemento de `media`, en su forma real —imagen o vídeo— o como hueco
+ * pendiente cuando es una escena 3D todavía sin implementar.
+ */
+function MediaItem({ item, ratio, kind, note }) {
+  if (item?.kind === 'image' && item.src) {
+    return (
+      <figure className="relative w-full overflow-hidden border border-rule" style={{ aspectRatio: ratio }}>
+        <img src={item.src} alt={item.alt || ''} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+      </figure>
+    )
+  }
+
+  if (item?.kind === 'video' && item.src) {
+    return (
+      <figure className="relative w-full overflow-hidden border border-rule" style={{ aspectRatio: ratio }}>
+        <video
+          src={item.src}
+          poster={item.poster || undefined}
+          controls
+          preload="none"
+          className="h-full w-full object-cover"
+        />
+      </figure>
+    )
+  }
+
+  // `kind: 'scene'`, o un elemento sin `src`: el objeto 3D de proyecto no
+  // existe todavía, así que se declara en vez de fingirse.
+  return <PendingMedia ratio={ratio} kind={item?.kind === 'scene' ? 'objeto 3D' : kind} note={note} />
+}
+
 function ProjectShowcase({ project, position }) {
   const flip = position % 2 === 1
+  const media = project.media ?? []
+  const [hero, ...gallery] = media
 
   return (
     <article className="border-t border-rule pt-block">
       <div className="grid gap-block lg:grid-cols-12">
         {/* El medio y el texto se turnan de lado. */}
         <div className={`lg:col-span-7 ${flip ? 'lg:order-2 lg:col-start-6' : ''}`}>
-          {project.media ? null : (
-            <PendingMedia
-              ratio="16 / 10"
-              kind="captura o escena"
-              note={project.title}
-            />
+          <MediaItem item={hero} ratio="16 / 10" kind="captura o escena" note={project.title} />
+
+          {/*
+            La galería secundaria. Solo aparece si hay más de un elemento en
+            `media`: un proyecto con una única imagen no tiene por qué reservar
+            el hueco de una fila que nunca se llena.
+          */}
+          {gallery.length > 0 && (
+            <div className="mt-4 grid grid-cols-3 gap-4">
+              {gallery.map((item, i) => (
+                <MediaItem
+                  key={item.src ?? item.id ?? i}
+                  item={item}
+                  ratio="4 / 3"
+                  kind="detalle"
+                />
+              ))}
+            </div>
           )}
         </div>
 
         <div className={`lg:col-span-5 ${flip ? 'lg:order-1 lg:row-start-1' : ''}`}>
           <p className="font-meta text-meta uppercase text-ink-faint">
-            {project.year}
-            {project.role && ` · ${project.role}`}
+            {[project.year, project.role, project.category, project.status]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
 
           <h3 className="mt-4 text-title font-display font-semibold text-ink">
@@ -86,6 +138,7 @@ function ProjectShowcase({ project, position }) {
 
           <dl className="mt-block space-y-8">
             {[
+              ['Objetivo', project.objective],
               ['Problema', project.problem],
               ['Solución', project.solution],
               ['Resultado', project.outcome],
@@ -98,6 +151,19 @@ function ProjectShowcase({ project, position }) {
                 </div>
               ))}
           </dl>
+
+          {project.features?.length > 0 && (
+            <div className="mt-8">
+              <h4 className="font-meta text-meta uppercase text-ink-faint">Características</h4>
+              <ul className="mt-3 max-w-read space-y-2">
+                {project.features.map((line) => (
+                  <li key={line} className="text-body text-ink-soft">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="mt-block">
             <Stack ids={project.stack} />
