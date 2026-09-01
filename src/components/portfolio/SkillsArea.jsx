@@ -37,18 +37,56 @@ import { knowledge } from '../../data/knowledge'
  */
 
 function SkillGroup({ group }) {
-  const items = group.knowledge
-    .map((id) => knowledgeById.get(id))
-    .filter(Boolean)
+  /*
+    ── UN ID QUE NO ESTÁ EN LA RED SE PINTA IGUAL ──────────────────────────
 
+    Esto hacía `.map(knowledgeById.get).filter(Boolean)`, o sea que DESCARTABA
+    EN SILENCIO cualquier tecnología que no fuera uno de los dieciocho nodos de
+    la red. Y la red es, por definición, el inventario de ESTA web.
+
+    Medido contra el stack real de Alex: de veintitrés tecnologías sobrevivían
+    nueve. Se caían Python, Java, TypeScript, Spring Boot, Spring Data JPA,
+    Java Swing, MySQL, SQLite, Oracle SQL Developer, Rust, Tauri, Phaser 3,
+    Tiled y Visual Studio — o sea el lenguaje de su CV, el backend de ActiHome,
+    la base de datos de los dos proyectos de escritorio y el motor del juego.
+
+    `ProjectsArea` ya resolvía esto bien —`knowledgeById.get(id)?.label ?? id`—
+    y el propio `portfolio.js` lo documenta para el stack de un proyecto: "si un
+    id no existe en la red, se muestra igualmente como texto". Habilidades era
+    la única de las dos que no lo hacía.
+
+    Lo que se conserva es el puente: un id que SÍ está en la red sigue trayendo
+    su etiqueta de allí, así que "three" sigue leyéndose "Three.js" y sigue
+    siendo el mismo nodo que se enciende dentro del cerebro.
+  */
+  const items = group.knowledge.map((id) => knowledgeById.get(id) ?? { id, label: id })
+
+  /*
+    ── UN GLOSARIO, NO UNA NUBE DE ETIQUETAS ──────────────────────────────
+
+    Los tres elementos —nombre del grupo, qué significa y las tecnologías—
+    estaban apilados dentro de una columna estrecha, así que las tecnologías
+    caían como un bloque de mayúsculas debajo del texto y se leían como un
+    amasijo de etiquetas.
+
+    Puestos en dos columnas cambia la lectura entera: a la izquierda el nombre
+    del grupo y su contexto, a la derecha la lista. Es la forma de un glosario o
+    de una ficha técnica de revista, y permite bajar la vista por los seis
+    nombres sin leer nada más — que es exactamente lo que hace quien busca una
+    tecnología concreta.
+  */
   return (
-    <div className="border-t border-rule pt-8">
-      <h3 className="text-lead font-display font-medium text-ink">{group.label}</h3>
-      {group.note && <p className="mt-3 max-w-read text-body text-ink-soft">{group.note}</p>}
+    <div className="grid gap-x-block gap-y-5 border-t border-rule pt-8 md:grid-cols-12">
+      <div className="md:col-span-4">
+        <h3 className="font-display text-lead font-medium text-ink">{group.label}</h3>
+        {group.note && (
+          <p className="mt-3 max-w-read text-body text-ink-soft">{group.note}</p>
+        )}
+      </div>
 
-      <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
+      <ul className="flex flex-wrap gap-x-6 gap-y-3 md:col-span-8 md:pt-2">
         {items.map((item) => (
-          <li key={item.id} className="font-meta text-meta uppercase text-ink-faint">
+          <li key={item.id} className="font-meta text-meta uppercase text-ink-soft">
             {item.label}
           </li>
         ))}
@@ -75,10 +113,17 @@ export default function SkillsArea({ index }) {
        * esta web —tecnologías que están en el repositorio, parte de ellas
        * escritas por otra mano— y presentarlas como "lo que sé hacer" sería
        * ponerle en la boca una afirmación que no ha hecho.
+       *
+       * Y decía "lo mismo que hay dentro del cerebro, ordenado para leerse de
+       * un vistazo". Era cierto mientras los grupos solo podían nombrar ids de
+       * la red; desde que admiten texto, la mayoría de lo que hay aquí —Python,
+       * Java, Spring, Rust, MySQL— NO está dentro del cerebro y nunca lo ha
+       * estado. Una frase que describe la arquitectura no puede sobrevivir a un
+       * cambio de la arquitectura.
        */
       lead={
         skillGroups.length > 0
-          ? 'Lo mismo que hay dentro del cerebro, ordenado para leerse de un vistazo.'
+          ? 'Lo que he usado en mis proyectos y en el ciclo, agrupado por para qué sirve.'
           : undefined
       }
     >
@@ -93,7 +138,14 @@ export default function SkillsArea({ index }) {
         <h3 className="font-meta text-meta uppercase text-ink-faint">Tecnología</h3>
 
         {skillGroups.length > 0 ? (
-          <div className="mt-6 grid gap-block md:grid-cols-2">
+          /*
+            Los grupos se apilan a lo ancho en vez de repartirse en dos
+            columnas. Con la retícula interna de cada grupo, dos columnas
+            dejarían el nombre y la lista en cajas de 250 px y volveríamos al
+            problema de partida. Apilados, cada filete cruza el ancho entero y
+            la sección se recorre de arriba abajo como una tabla de contenidos.
+          */
+          <div className="mt-8 space-y-block">
             {skillGroups.map((group) => (
               <SkillGroup key={group.id} group={group} />
             ))}

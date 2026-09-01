@@ -94,7 +94,25 @@ export default function PortfolioSection({ id, act, index, label, title, lead, c
           {title}
         </h2>
 
-        {lead && <p className="mt-8 max-w-read text-lead font-light text-ink-soft">{lead}</p>}
+        {/*
+          El resumen admite UNA frase o VARIAS.
+
+          Con una cadena se pinta un párrafo, como siempre. Con un array se
+          pinta uno por entrada, con el mismo tamaño y el mismo color: no es un
+          tratamiento nuevo, es el mismo con las pausas que el texto ya tenía.
+          Sobre mí llegaba a once líneas seguidas antes del primer respiro.
+        */}
+        {Array.isArray(lead)
+          ? lead.length > 0 && (
+              <div className="mt-8 space-y-5">
+                {lead.map((line) => (
+                  <p key={line.slice(0, 28)} className="max-w-read text-lead font-light text-ink-soft">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            )
+          : lead && <p className="mt-8 max-w-read text-lead font-light text-ink-soft">{lead}</p>}
 
         {children}
       </div>

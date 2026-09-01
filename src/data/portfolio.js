@@ -106,8 +106,19 @@
  */
 export const about = {
   headline: 'De la logística al software.',
-  summary:
-    'Durante varios años desarrollé mi trayectoria profesional en el mundo de la logística y el almacén. Con el tiempo decidí cambiar de rumbo y convertir mi interés por la tecnología en una nueva etapa profesional. Estudié Desarrollo de Aplicaciones Multiplataforma (DAM) y, durante mis prácticas en OVEUN, tuve mi primera experiencia profesional directamente relacionada con el desarrollo de software. Actualmente estoy construyendo mi camino como desarrollador junior, aprendiendo continuamente y explorando diferentes formas de crear aplicaciones y experiencias digitales.',
+  /**
+   * TRES PÁRRAFOS, NO UN BLOQUE.
+   *
+   * Estaban unidos en una sola cadena porque el campo se pintaba en un único
+   * `<p>`: once líneas seguidas antes del primer respiro. El texto es EL MISMO,
+   * palabra por palabra; lo único que cambia es que vuelve a tener las pausas
+   * que ya tenía cuando Alex lo escribió.
+   */
+  summary: [
+    'Durante varios años desarrollé mi trayectoria profesional en el mundo de la logística y el almacén. Con el tiempo decidí cambiar de rumbo y convertir mi interés por la tecnología en una nueva etapa profesional.',
+    'Estudié Desarrollo de Aplicaciones Multiplataforma (DAM) y, durante mis prácticas en OVEUN, tuve mi primera experiencia profesional directamente relacionada con el desarrollo de software.',
+    'Actualmente estoy construyendo mi camino como desarrollador junior, aprendiendo continuamente y explorando diferentes formas de crear aplicaciones y experiencias digitales.',
+  ],
   body: [
     'Cuando desarrollo una aplicación, no me centro únicamente en conseguir que haga aquello para lo que fue creada. También me importa cómo se presenta, cómo se utiliza y qué sensación transmite.',
     'Me gusta buscar ese equilibrio entre funcionalidad y cuidado por los detalles: que una aplicación sea útil, clara y fácil de utilizar, pero que también tenga personalidad y resulte agradable de ver.',
@@ -136,14 +147,14 @@ export const about = {
   education: [
     {
       title: 'Desarrollo de Aplicaciones Multiplataforma (DAM)',
-      place: '',
-      period: '',
+      place: 'Ilerna',
+      period: '2023 – 2025',
       note: 'Ciclo Formativo de Grado Superior · Desarrollo de software',
     },
     {
       title: 'Actividades Físicas y Deportivas (TAFAD)',
-      place: '',
-      period: '',
+      place: 'Liceo La Paz',
+      period: '2014 – 2016',
       note: 'Ciclo Formativo de Grado Superior',
     },
     {
@@ -218,44 +229,88 @@ export const about = {
  */
 export const experience = [
   {
-    company: 'Vegalsa',
-    role: 'Operario de logística',
-    period: '3 años',
+    track: 'logistica',
+    /**
+     * EL NOMBRE SALE DEL CV.
+     *
+     * Aquí ponía "Vegalsa" —así lo nombró Alex al dictar la trayectoria— y el
+     * CV dice "VEGOSUPERMERCADOS", con unas fechas que cuadran con los tres
+     * años declarados: septiembre de 2022 a octubre de 2025.
+     *
+     * No se dio por hecho que fueran lo mismo, se preguntó, y Alex lo ha
+     * confirmado: es el mismo empleo. Se queda el nombre del CV para que la web
+     * y el documento descargable digan lo mismo — si un reclutador abre los dos
+     * y no coinciden, el que pierde credibilidad es el candidato.
+     */
+    company: 'Vegosupermercados',
+    role: 'Profesional de logística',
+    // La duración la dijo Alex; las fechas están en el CV. Ahora que existen
+    // las dos, manda la fecha: es el dato comprobable.
+    period: 'Septiembre 2022 – Octubre 2025',
     summary: 'Experiencia profesional desarrollada en el ámbito de la logística y el almacén.',
-    responsibilities: [],
+    // Las dos que aparecen literalmente en el CV. Ni una más.
+    responsibilities: ['Manejo de aplicaciones para pedidos online.', 'Gestión de almacén.'],
     achievements: [],
     stack: [],
   },
   {
+    track: 'logistica',
     company: 'Leroy Merlin',
-    role: 'Operario de logística',
-    period: '1 año',
+    role: 'Profesional de logística',
+    period: 'Mayo 2021 – Marzo 2022',
     summary: 'Experiencia profesional desarrollada en el ámbito de la logística y el almacén.',
-    responsibilities: [],
+    responsibilities: [
+      'Gestión de almacén.',
+      'Preparación de pedidos online a través de aplicaciones informáticas.',
+    ],
     achievements: [],
     stack: [],
   },
   {
+    track: 'logistica',
     company: 'Inditex',
     role: 'Almacén',
-    // La condición —media jornada— es un dato del puesto y no había campo para
-    // ella. Va aquí, al lado de la duración, en vez de añadir un campo nuevo
-    // que solo usaría una de las cuatro entradas.
+    /**
+     * La condición —media jornada— es un dato del puesto y no había campo para
+     * ella. Va aquí, al lado de la duración, en vez de añadir un campo nuevo
+     * que solo usaría una de las cuatro entradas.
+     *
+     * Y aquí SÍ se queda la duración en años: este empleo no está en el CV, así
+     * que no hay fechas que poner. Deducirlas de los huecos entre los otros dos
+     * sería inventarlas.
+     */
     period: '2 años · media jornada',
     summary: 'Experiencia profesional desarrollada en el ámbito del almacén y la logística.',
+    // El CV no recoge este empleo, así que no hay responsabilidades que citar.
     responsibilities: [],
     achievements: [],
     stack: [],
   },
   {
-    company: 'OVEUN',
-    role: 'Prácticas profesionales del ciclo DAM',
-    period: '',
+    track: 'software',
+    /**
+     * FASE 5D.1 — el hueco que llevaba tres fases abierto, cerrado.
+     *
+     * Estaba sin fechas, sin responsabilidades y sin tecnologías porque el CV
+     * anterior no recogía este empleo. El CV NUEVO sí, y con todo: el nombre
+     * completo de la empresa, el puesto, las fechas y las dos tareas. Nada de
+     * esto se ha deducido — está escrito en el documento que se descarga desde
+     * esta misma web.
+     */
+    company: 'OVEUN Software & Tech',
+    role: 'Desarrollador · Prácticas',
+    period: 'Febrero 2026 – Mayo 2026',
     summary:
       'Primera experiencia profesional directamente relacionada con el desarrollo de software.',
-    responsibilities: [],
+    responsibilities: [
+      'Desarrollo de aplicaciones de escritorio con Python y PySide6.',
+      'Maquetación de interfaces con HTML.',
+    ],
     achievements: [],
-    stack: [],
+    // Las dos que nombra el CV. `Python` existe además en `skillGroups`; PySide6
+    // y HTML no, y aquí no hace falta que existan: el stack de un empleo se
+    // pinta con respaldo de texto igual que el de un proyecto.
+    stack: ['Python', 'PySide6', 'HTML'],
   },
 ]
 
@@ -292,6 +347,12 @@ export const experience = [
  *                  pequeña. Un proyecto sin `media` sigue mostrando el hueco
  *                  con su proporción, así que unos pueden tener imágenes y
  *                  otros no sin que la composición se rompa
+ *
+ *                  Cualquiera de las tres formas admite además `ratio`, la
+ *                  proporción CSS de su marco (`'2 / 1'`). Sin ella manda la
+ *                  del sitio donde se pinta —16/10—, que es lo correcto para
+ *                  una captura de aplicación. Se declara cuando el asset tiene
+ *                  otra y recortarlo perdería contenido: ver el juego
  * - `links`        { demo, github, video } — solo las claves que existan.
  *                  Admite además cualquier otra clave: se enseña igual
  *
@@ -310,8 +371,10 @@ export const experience = [
  * - `problem` — solo lo tiene Zalent. ActiHome y el juego no parten de un
  *   problema declarado, y escribirles uno sería inventar la motivación de un
  *   proyecto ajeno. El bloque simplemente no se dibuja
- * - `media` — array vacío. Los assets llegan en la fase visual, y hasta
- *   entonces cada proyecto enseña su hueco con la proporción correcta
+ * - `media` — vacío hasta la fase visual. **Cerrado en 5D.0 y 5E**: los tres
+ *   proyectos llevan ya capturas reales de su propia aplicación, tres cada
+ *   uno. No es simetría buscada: es que los tres tenían material suficiente
+ *   y ninguno tenía un cuarto que contara algo nuevo
  * - `links` — las tres claves declaradas y vacías. Se rellenan cuando existan
  *   las URLs; mientras no haya ninguna, no se dibuja ningún enlace
  *
@@ -325,7 +388,7 @@ export const projects = [
     id: 'zalent',
     title: 'Zalent',
     tagline: 'Gestión de talento local-first con IA.',
-    year: '2026',
+    year: 'Junio 2026',
     category: 'Aplicación de escritorio / IA',
     status: 'En desarrollo',
     objective:
@@ -361,7 +424,59 @@ export const projects = [
       'pdf.js',
       'Mammoth',
     ],
-    media: [],
+    /**
+     * FASE 5E — capturas REALES de la aplicación.
+     *
+     * Siete disponibles en `Assets/Zalent/`, todas con los datos de ejemplo
+     * ficticios de la propia aplicación —los correos son `@example.com`—, así
+     * que ninguna filtra a nadie.
+     *
+     * Tres, y cada una contesta una pregunta distinta:
+     *
+     *     busqueda-       QUÉ ES Y QUÉ  una consulta escrita en lenguaje
+     *     semantica       TIENE DE       natural, su resultado con el % de
+     *                     PARTICULAR     encaje y el fragmento del CV que lo
+     *                                    justifica, con la palabra resaltada
+     *     asistente-ia    CÓMO AYUDA     el panel de IA local sobre una ficha
+     *                                    con sus campos extraídos
+     *     bloqueo         POR QUÉ        la contraseña maestra y el cifrado en
+     *                     LOCAL-FIRST    el propio equipo
+     *
+     * Las otras —importar, vacantes, pipeline y panel— se quedan fuera por lo
+     * mismo: a 245 px de miniatura son pantallas medio vacías. El kanban
+     * además es lo menos distintivo que tiene un gestor de talento.
+     *
+     * **FASE 5F — la principal cambia.** Estaba la lista de candidatos, que
+     * enseña la forma de la aplicación con el buscador VACÍO. La de búsqueda
+     * semántica enseña esa misma forma —barra lateral, marca, lista, ficha con
+     * los campos extraídos— y además el buscador USADO: la consulta, el 47% de
+     * encaje, el bloque "Por qué encaja" y el fragmento del CV con la palabra
+     * resaltada. Es un superconjunto, no un intercambio: donde la anterior
+     * decía "esto es una lista", esta dice "esto busca por significado".
+     * Sale de `Zalent/docs/img/`, que es la carpeta que Alex documentó, y va
+     * a su ancho nativo —1338— porque el hueco se pinta a 487 y subirla a
+     * 1600 sería inventar píxeles.
+     *
+     * Se conserva la barra de título de la ventana, igual que en ActiHome: las
+     * dos son aplicaciones de escritorio y se enseñan como tales.
+     */
+    media: [
+      {
+        kind: 'image',
+        src: '/img/projects/zalent-busqueda-semantica.webp',
+        alt: 'Búsqueda semántica en Zalent: una consulta en lenguaje natural, el candidato con su porcentaje de encaje y el fragmento del CV que lo justifica.',
+      },
+      {
+        kind: 'image',
+        src: '/img/projects/zalent-asistente-ia.webp',
+        alt: 'Ficha de un candidato en Zalent, con los campos extraídos del CV y el panel del asistente de IA local.',
+      },
+      {
+        kind: 'image',
+        src: '/img/projects/zalent-bloqueo.webp',
+        alt: 'Pantalla de bloqueo de Zalent, con la contraseña maestra y el aviso de cifrado en el propio equipo.',
+      },
+    ],
     links: { demo: '', github: '', video: '' },
   },
 
@@ -369,14 +484,14 @@ export const projects = [
     id: 'actihome',
     title: 'ActiHome',
     tagline: 'Aplicación de escritorio para la gestión y reserva de alojamientos turísticos.',
-    year: '2026',
+    year: 'Febrero 2026',
     category: 'Aplicación de escritorio',
     status: 'Proyecto de fin de ciclo',
     objective:
       'Gestionar y reservar alojamientos turísticos desde una aplicación de escritorio, con roles distintos para quien administra y quien reserva.',
     problem: '',
     solution:
-      'La aplicación reúne la gestión de alojamientos y el ciclo de reserva en un único sitio, con dos roles —ADMIN y CUSTOMER— que la usan de forma distinta. Está construida sobre Spring Boot pero no levanta ningún servidor web: arranca el contexto de Spring y abre directamente una ventana de Swing, con la persistencia en MySQL a través de Spring Data JPA. El proyecto se migró de Spring Boot 2.2.2 y Java 11 a Spring Boot 3.5.3 y Java 17.',
+      'La aplicación reúne la gestión de alojamientos y el ciclo de reserva en un único sitio, con dos roles —ADMIN y CUSTOMER— que la usan de forma distinta. Está construida sobre Spring Boot pero no levanta ningún servidor web: arranca el contexto de Spring y abre directamente una ventana de Swing, con la persistencia en una base de datos H2 embebida a través de Spring Data JPA y un perfil alternativo para MySQL. El proyecto se migró de Spring Boot 2.2.2 y Java 11 a Spring Boot 3.5.3 y Java 17.',
     role: 'Desarrollo completo',
     outcome:
       'Proyecto de fin de ciclo desarrollado desde cero, iniciado en febrero de 2026 y retomado en agosto de 2026.',
@@ -388,8 +503,74 @@ export const projects = [
       'Estaciones que cambian la interfaz visual de la aplicación.',
       'Dos roles de usuario: ADMIN y CUSTOMER.',
     ],
-    stack: ['Java 17', 'Spring Boot 3.5.3', 'Spring Data JPA', 'MySQL', 'Java Swing'],
-    media: [],
+    /**
+     * FASE 5D.1 — el stack, corregido contra el código.
+     *
+     * Aquí ponía solo "MySQL", y la ventana "Acerca de" de la propia aplicación
+     * decía "H2 embebida". Se fue a mirar el proyecto en vez de elegir una:
+     *
+     *     application.yaml         jdbc:h2:file:${user.home}/.actihome/…
+     *                              ;MODE=MySQL          ← el POR DEFECTO
+     *     application-mysql.yaml   jdbc:mysql://localhost:3306/actihome
+     *     pom.xml                  h2 · mysql-connector-j · flyway-core
+     *                              flyway-mysql · flatlaf 3.7.2
+     *                              miglayout-swing 11.4.2
+     *
+     * O sea que no había que elegir: las DOS son ciertas. H2 es la de por
+     * defecto —y de hecho existe el archivo `~/.actihome` en la máquina— y
+     * MySQL es un perfil alternativo real. El `MODE=MySQL` de la URL de H2
+     * explica además de dónde venía la confusión.
+     *
+     * Y entran FlatLaf, MigLayout y Flyway, que estaban en el pom desde el
+     * principio y no en el portfolio.
+     */
+    stack: [
+      'Java 17',
+      'Spring Boot 3.5.3',
+      'Spring Data JPA',
+      'H2',
+      'MySQL',
+      'Flyway',
+      'Java Swing',
+      'FlatLaf',
+      'MigLayout',
+    ],
+    /**
+     * FASE 5D.0 — capturas REALES de la aplicación.
+     *
+     * Son las únicas de los tres proyectos: existen en `Assets/ActiHome/` y no
+     * hay ninguna de Zalent ni del juego. La regla del portfolio es que una
+     * captura real gana a cualquier objeto decorativo, así que aquí no hace
+     * falta nada más.
+     *
+     * Tres de once, elegidas porque enseñan cosas DISTINTAS: el acceso con la
+     * marca, el catálogo funcionando, y una segunda estación para que se vea
+     * que la interfaz cambia entera. Las otras ocho repiten pantalla o
+     * variante.
+     *
+     * La ficha "Acerca de" se queda fuera a propósito, y no por composición:
+     * declara "Spring Data JPA sobre H2 embebida" mientras el stack de arriba
+     * dice MySQL. Publicar las dos cosas a la vez sería enseñarle a un
+     * reclutador una contradicción sobre el propio proyecto. Se resuelve
+     * cuando Alex diga cuál es la buena.
+     */
+    media: [
+      {
+        kind: 'image',
+        src: '/img/projects/actihome-catalogo.webp',
+        alt: 'Catálogo de ActiHome con el filtro de estaciones, las tarjetas de alojamiento y sus precios por noche.',
+      },
+      {
+        kind: 'image',
+        src: '/img/projects/actihome-acceso.webp',
+        alt: 'Pantalla de acceso de ActiHome, con la marca a la izquierda y el formulario de entrada a la derecha.',
+      },
+      {
+        kind: 'image',
+        src: '/img/projects/actihome-mensajes.webp',
+        alt: 'Pantalla de mensajes de ActiHome con la paleta de otoño, distinta a la del catálogo.',
+      },
+    ],
     links: { demo: '', github: '', video: '' },
   },
 
@@ -397,7 +578,7 @@ export const projects = [
     id: 'cata-trufa',
     title: 'Las aventuras de Cata y Trufa',
     tagline: 'Una aventura cozy protagonizada por dos perras carlinas.',
-    year: '2026',
+    year: 'Junio 2026',
     category: 'Videojuego web 2D',
     status: 'En desarrollo',
     objective:
@@ -426,7 +607,50 @@ export const projects = [
       'Tiled',
       'localStorage',
     ],
-    media: [],
+    /**
+     * FASE 5E — capturas REALES del juego.
+     *
+     * Trece disponibles en `Assets/CATA Y TRUFA/`. Tres, y en este orden:
+     *
+     *     parque    QUE ES UN JUEGO   las dos carlinas, el marcador de mision,
+     *                                 el dialogo con retrato y los botones de
+     *                                 accion, todo en el mismo cuadro
+     *     casa      QUE ESTA HECHO    el interior cenital completo, con las
+     *               A MANO            dos camas rotuladas CATA y TRUFA
+     *     armario   QUE TIENE         una pestaña por protagonista y un traje
+     *               SISTEMAS          equipable
+     *
+     * Fuera: cuatro con el damero de tiles sin pintar, dos con el aviso de
+     * "captura copiada" de Windows encima, y cuatro variantes de calle que
+     * repiten lo que ya cuenta la del parque.
+     *
+     * **El marco del navegador se recorta.** El juego corre en el navegador y
+     * las capturas traen la pestaña y `localhost:5180`: eso es el entorno de
+     * desarrollo, no el producto. El contenido empieza en y=151, medido, y de
+     * ahi salen 1920 x 960 — 2/1, que es la proporcion que declara cada
+     * elemento. ActiHome y Zalent SI conservan su barra de ventana porque son
+     * aplicaciones de escritorio y esa ventana es parte de lo que se entrega.
+     */
+    media: [
+      {
+        kind: 'image',
+        ratio: '2 / 1',
+        src: '/img/projects/cata-trufa-parque.webp',
+        alt: 'Escena del juego en el parque: las dos carlinas, el marcador de misión y un diálogo con un personaje.',
+      },
+      {
+        kind: 'image',
+        ratio: '2 / 1',
+        src: '/img/projects/cata-trufa-casa.webp',
+        alt: 'Interior de la casa en vista cenital, con las dos protagonistas y sus camas rotuladas.',
+      },
+      {
+        kind: 'image',
+        ratio: '2 / 1',
+        src: '/img/projects/cata-trufa-armario.webp',
+        alt: 'El armario del juego, con una pestaña para cada protagonista y un traje equipable.',
+      },
+    ],
     links: { demo: '', github: '', video: '' },
   },
 ]
@@ -473,8 +697,121 @@ export const projects = [
  * - `body`          una o dos frases: qué significa en la práctica, con un
  *                   ejemplo si aporta algo. Opcional
  */
-export const skillGroups = []
-export const strengths = []
+/**
+ * FASE 5B.5 — la agrupación profesional, con el stack real.
+ *
+ * Cada tecnología está aquí porque se puede señalar dónde se usa: o aparece en
+ * el CV, o está en uno de los tres proyectos, o está en esta web. Nada más.
+ *
+ * **Ni niveles, ni años, ni porcentajes.** El esquema no los admite y no se han
+ * declarado: decir "React avanzado" sería inventar una medida que nadie ha
+ * tomado. Lo que sí dice cada grupo, en su `note`, es DÓNDE se ha usado — que
+ * es el dato que un reclutador puede comprobar y que además no exagera nada.
+ *
+ * Los ids que existen en la red van por su id (`react`, `three`, `git`…) para
+ * que sigan siendo el mismo nodo que se enciende dentro del cerebro. El resto
+ * va como texto, que es lo que `SkillGroup` admite desde esta fase.
+ */
+export const skillGroups = [
+  {
+    id: 'languages',
+    label: 'Lenguajes',
+    /**
+     * FASE 5F — Python deja de ser "del ciclo".
+     *
+     * La nota se escribió en 5B.5, cuando la única constancia de Python era el
+     * ciclo. El CV nuevo que entró en 5D.1 trae las prácticas de OVEUN, donde
+     * se usó para desarrollar aplicaciones de escritorio: la nota se había
+     * quedado corta, no equivocada. Se corrige lo justo.
+     */
+    note: 'JavaScript en el juego y en esta web, Java en ActiHome, TypeScript en Zalent y Python en el ciclo y en las prácticas de OVEUN.',
+    knowledge: ['javascript', 'Java', 'TypeScript', 'Python'],
+  },
+  {
+    id: 'frontend',
+    label: 'Frontend y web',
+    note: 'Zalent y este portfolio están construidos con React; el 3D de esta web y el juego son las dos formas en que he trabajado el lienzo.',
+    knowledge: ['react', 'vite', 'HTML', 'CSS', 'three', 'r3f', 'gsap', 'Phaser 3'],
+  },
+  {
+    id: 'desktop',
+    label: 'Escritorio y backend',
+    /**
+     * FASE 5F — entra PySide6, y con él un tercer camino.
+     *
+     * Cumple el criterio del grupo sin ampliarlo: "o aparece en el CV, o está
+     * en uno de los tres proyectos, o está en esta web". PySide6 aparece en el
+     * CV, en las prácticas de OVEUN, junto a Python.
+     *
+     * Va como TEXTO y no como id: `knowledge.js` son los dieciocho
+     * conocimientos que dibujan la red dentro del cerebro —todos de esta web—
+     * y PySide6 no es uno de ellos. Es el mismo tratamiento que ya tienen
+     * `Spring Boot`, `Tauri` o `Java Swing`.
+     *
+     * Y HTML ya estaba, en "Frontend y web": la otra mitad de esta cuestión
+     * llevaba resuelta desde 5B.5.
+     */
+    note: 'Tres caminos distintos hasta una ventana: ActiHome sobre Spring y Swing, Zalent sobre Tauri y Rust, y las prácticas de OVEUN sobre Python y PySide6.',
+    knowledge: ['Spring Boot', 'Spring Data JPA', 'Java Swing', 'Tauri', 'Rust', 'PySide6'],
+  },
+  {
+    id: 'data',
+    label: 'Datos',
+    note: 'MySQL en ActiHome, SQLite en Zalent y Oracle SQL Developer en el ciclo.',
+    knowledge: ['MySQL', 'SQLite', 'Oracle SQL Developer'],
+  },
+  {
+    id: 'local-ai',
+    label: 'IA en local',
+    note: 'La parte de Zalent que corre en el equipo del usuario: extracción, búsqueda semántica y modelos sin salir de la máquina.',
+    knowledge: ['Transformers.js', 'ONNX', 'Ollama'],
+  },
+  {
+    id: 'tooling',
+    label: 'Herramientas',
+    note: 'Control de versiones, el editor del ciclo y el editor de mapas del juego.',
+    knowledge: ['git', 'Visual Studio', 'Tiled'],
+  },
+]
+
+/**
+ * FASE 5B.5 — las fortalezas, en las palabras que ya ha usado Alex.
+ *
+ * Ninguna sale de una lista de tópicos de currículum. Las tres primeras son
+ * literalmente el perfil de su CV —"la curiosidad, el aprendizaje continuo y el
+ * deseo de convertir ideas en aplicaciones funcionales"— y las dos últimas
+ * salen de los párrafos que él mismo escribió para `about.body`.
+ *
+ * No llevan nivel, ni porcentaje, ni años: nada de eso se ha declarado y
+ * deducirlo sería inventarlo.
+ */
+export const strengths = [
+  {
+    id: 'curiosidad',
+    label: 'Curiosidad',
+    body: 'Es lo que empieza la mayoría de mis proyectos: probar una herramienta que no conozco y ver hasta dónde llega.',
+  },
+  {
+    id: 'aprendizaje',
+    label: 'Aprendizaje continuo',
+    body: 'Cada proyecto me obliga a aprender algo que no sabía, y buena parte del motivo por el que lo empiezo es justamente ese.',
+  },
+  {
+    id: 'ideas-a-aplicaciones',
+    label: 'Convertir ideas en aplicaciones',
+    body: 'Me interesa llegar hasta el final: que la idea acabe siendo algo que se pueda abrir y usar, no un experimento a medias.',
+  },
+  {
+    id: 'presentacion',
+    label: 'Cuidado por la presentación',
+    body: 'No me basta con que funcione. También me importa cómo se presenta, cómo se utiliza y qué sensación transmite.',
+  },
+  {
+    id: 'terrenos-distintos',
+    label: 'Moverme entre terrenos distintos',
+    body: 'Escritorio, web y videojuego. Prefiero cambiar de tipo de proyecto antes que quedarme en uno solo.',
+  },
+]
 
 /**
  * ── CV ──────────────────────────────────────────────────────────────────
@@ -487,11 +824,64 @@ export const strengths = []
  * - `updated`   'marzo 2026'. Un CV sin fecha no se cree
  * - `highlights` tres o cuatro líneas: lo que se lee en diez segundos
  */
+/**
+ * FASE 5B.5 — el resumen sale del CV, no de una redacción nueva.
+ *
+ * `summary` es LITERALMENTE el apartado "Perfil" del CV de Alex. Es la frase
+ * que él ya usa para presentarse, así que la web y el documento dicen lo mismo
+ * —que es justo lo que se espera de los dos— sin que nadie tenga que escribir
+ * una segunda versión que después se desincronice.
+ *
+ * `file` sigue vacío A PROPÓSITO, y ahora por un motivo concreto.
+ *
+ * El PDF existe y está verificado, pero lleva dentro el TELÉFONO y la DIRECCIÓN
+ * POSTAL de Alex. Conectarlo aquí no es "enlazar un documento": es publicar los
+ * dos datos que este mismo portfolio ha decidido no enseñar, en un archivo que
+ * puede descargar cualquiera — y, en cuanto hubiera un commit, dejarlos en el
+ * historial de git de forma permanente, donde borrarlos después no los quita.
+ *
+ * Se preguntó antes de tocar nada y Alex decidió preparar una versión sin esos
+ * datos. Con el email y el LinkedIn hay de sobra para que alguien escriba.
+ *
+ * Cuando exista, conectarlo es una línea:
+ *
+ *     public/cv/<archivo>.pdf   →   file: '/cv/<archivo>.pdf'
+ *
+ * `updated` va con él: un CV con fecha y sin archivo sería una fecha que no
+ * describe nada. Y no se deduce de la fecha del archivo — eso dice cuándo se
+ * copió, no de cuándo es el currículum.
+ *
+ * Y no está el teléfono, ni la dirección postal, ni los idiomas médicos ni nada
+ * del CV que no tenga por qué ser público. El CV completo es el documento; esto
+ * es la introducción.
+ */
 export const cv = {
-  summary: '',
-  file: '',
+  summary:
+    'En proceso de formación como desarrollador multiplataforma. Me impulso por la curiosidad, el aprendizaje continuo y el deseo de convertir ideas en aplicaciones funcionales.',
+  /**
+   * FASE 5D.1 — el CV ya está conectado.
+   *
+   * Es el documento NUEVO, el que Alex preparó sin el teléfono ni la dirección
+   * postal: su bloque de contacto se queda en el correo, "A Coruña" y el
+   * LinkedIn. Por eso ahora sí se publica — el motivo por el que no se conectó
+   * el anterior era exactamente ese, y ya no existe.
+   *
+   * `updated` se queda VACÍO a propósito. El documento no lleva ninguna fecha
+   * de actualización: lleva las fechas de los empleos y de los estudios, que
+   * son otra cosa. Y las tres fechas que sí tiene el archivo —creación,
+   * copia, modificación— dicen cuándo se movió el fichero, no de cuándo es el
+   * currículum. `CvArea` solo enseña la fecha si existe, así que un CV sin
+   * fecha no enseña una fecha falsa: no enseña ninguna.
+   */
+  file: '/cv/alejandro-sampedro-calo.pdf',
   updated: '',
-  highlights: [],
+  highlights: [
+    'Programador DAM. Ciclo Formativo de Grado Superior en Desarrollo de Aplicaciones Multiplataforma, Ilerna, 2023 – 2025.',
+    'Tres proyectos propios construidos desde cero: una aplicación de escritorio con IA, una aplicación de gestión y un videojuego web.',
+    'Prácticas del ciclo DAM en OVEUN: la primera experiencia profesional directamente relacionada con el desarrollo de software.',
+    'Experiencia previa en logística y almacén en Vegosupermercados, Leroy Merlin e Inditex.',
+    'Castellano nativo · gallego CELGA 4 · inglés medio.',
+  ],
 }
 
 /**
@@ -508,7 +898,22 @@ export const cv = {
  *            —Behance, un blog, lo que sea— no pide tocar el componente.
  *            Ejemplo de forma, sin datos: { label: 'GitHub', href: '' }
  */
+/**
+ * FASE 5B.5 — solo lo que es profesional y público.
+ *
+ * El CV trae además un teléfono y una dirección postal. No entran: un portfolio
+ * es una página abierta e indexable, y ninguna de las dos cosas hace falta para
+ * que alguien escriba. Quien las necesite las tiene en el documento.
+ *
+ * No hay GitHub porque no se ha dado ninguno. Cuando exista, es una línea más
+ * en `links`: el componente no distingue unas redes de otras.
+ */
 export const contact = {
-  email: '',
-  links: [],
+  email: 'alejsamcalo@hotmail.com',
+  links: [
+    {
+      label: 'LinkedIn',
+      href: 'https://www.linkedin.com/in/alejandro-sampedro-calo-77a738133',
+    },
+  ],
 }

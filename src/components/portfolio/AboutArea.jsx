@@ -39,7 +39,7 @@ export default function AboutArea({ index }) {
       index={index}
       label="Sobre mí"
       title={about.headline || 'Quién hay detrás'}
-      lead={about.summary || undefined}
+      lead={about.summary?.length ? about.summary : undefined}
     >
       <div className="mt-block grid gap-block lg:grid-cols-12">
         {/*
@@ -70,12 +70,25 @@ export default function AboutArea({ index }) {
             lleva a alguna parte deja de ser un manifiesto.
           */}
           {about.manifesto?.length > 0 && (
-            <div className="mt-block space-y-4">
-              {about.manifesto.map((line) => (
-                <p key={line} className="max-w-read text-lead font-light text-ink-soft">
-                  {line}
-                </p>
-              ))}
+            /*
+              El filete del acento por delante, no encima.
+
+              Es el mismo trazo que abre cada sección y el mismo que lleva el
+              nodo del que se viene, girado a vertical y puesto al costado. Con
+              él, estas dos frases dejan de ser dos párrafos más grandes al
+              final de una columna y pasan a ser una cita: el sitio donde la
+              marca habla en primera persona.
+
+              Ni caja, ni comillas, ni color propio. Un trazo y una sangría.
+            */
+            <div className="mt-block border-l-2 border-accent/60 pl-6 sm:pl-8">
+              <div className="space-y-4">
+                {about.manifesto.map((line) => (
+                  <p key={line} className="max-w-read text-lead font-light text-ink">
+                    {line}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
         </div>

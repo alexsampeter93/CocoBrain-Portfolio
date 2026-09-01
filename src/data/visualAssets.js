@@ -527,10 +527,15 @@ export const areaArt = {
    * mismo acto y tienen que leerse como pareja; lo que las separa es el peso,
    * no el motivo.
    */
-  skills: { asset: 'editorial.indigo', placement: 'edge', intensity: 0.5 },
+  skills: { asset: 'editorial.indigo', placement: 'edge', intensity: 0.35 },
 
-  /** CV: marfil limpio. Es la pieza que menos ruido admite. */
-  cv: { asset: 'editorial.light', placement: 'edge', intensity: 0.7 },
+  /**
+   * CV: marfil limpio. Es la pieza que menos ruido admite, y con la lámina
+   * común ya bajada a 0,2 esta puede bajar con ella: son las dos áreas con
+   * menos tinta del editorial, así que aquí la figura del fondo se queda sola
+   * en el cuadro y es donde antes más se veía.
+   */
+  cv: { asset: 'editorial.light', placement: 'edge', intensity: 0.45 },
 
   /**
    * Contacto: coco cálido. Cierra el círculo con la portada, que es de lo que

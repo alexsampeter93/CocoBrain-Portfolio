@@ -46,6 +46,16 @@
     --ink-faint: #857166; /* metadatos, numeración, lo que no se lee seguido */
     --accent: #e98fa0; /* el acento del acto en curso */
     --surface: #1a1210; /* la única superficie elevada que existe */
+
+    /*
+      El papel del editorial, declarado UNA vez.
+      Lo usan dos cosas que no comparten ancestro: las áreas —a través de
+      `--surface`, ahí abajo en `[data-act]`— y el velo de la navegación móvil,
+      que es `fixed` y por tanto resuelve sus variables contra `:root`, donde
+      `--surface` es el marrón oscuro de la mente. Sin esta variable, el velo
+      tendría que llevar el hexadecimal copiado a mano.
+    */
+    --surface-paper: #fbf7f1;
     --rule: rgba(248, 237, 239, 0.11); /* filetes y separadores */
 
     /**
@@ -184,7 +194,7 @@
     --ink: #2b211c;
     --ink-soft: #5f4c40;
     --ink-faint: #9a8878;
-    --surface: #fbf7f1;
+    --surface: var(--surface-paper);
     --rule: rgba(43, 33, 28, 0.14);
   }
 

@@ -24,6 +24,20 @@ import { knowledgeById } from '../../data/network'
  */
 
 function ExperienceItem({ item, last }) {
+  /*
+    ── QUÉ VA EN LA LÍNEA GRANDE ──────────────────────────────────────────
+
+    Iba el PUESTO, y con el contenido real eso rompía la sección: tres de los
+    cuatro eslabones dicen "Operario de logística", así que el titular se
+    repetía idéntico tres veces mientras lo único que los distingue
+    —Vegosupermercados, Leroy Merlin, Inditex— iba en cuerpo pequeño debajo.
+
+    Ahora manda la EMPRESA, que es el dato que cambia, y el puesto baja a la
+    línea de metadatos junto al periodo. Se lee "dónde → qué → cuándo", que
+    además es el orden en el que se lee un currículum.
+  */
+  const software = item.track === 'software'
+
   return (
     <li className="relative grid gap-6 pb-area last:pb-0 md:grid-cols-12">
       {/*
@@ -38,13 +52,57 @@ function ExperienceItem({ item, last }) {
         />
       )}
 
+      {/*
+        ── EL ESLABÓN EN EL QUE CAMBIA EL CAMINO ────────────────────────────
+
+        El punto sobre la cadena. En los tramos de logística es un filete hueco
+        del color de los separadores; en el de desarrollo se llena con el acento
+        del acto.
+
+        Es toda la señal que hace falta: la trayectoria se sigue leyendo como
+        una cadena de cuatro eslabones iguales, y el ojo encuentra solo el punto
+        en el que deja de ser logística. No hay flechas, ni etiquetas, ni una
+        línea de tiempo dibujada — que es exactamente lo que no se quería.
+
+        `track` no clasifica nada que no estuviera dicho: OVEUN se declara en su
+        propio texto como "prácticas del ciclo DAM" y como la primera
+        experiencia relacionada con el desarrollo de software.
+      */}
+      <span
+        aria-hidden="true"
+        className={`absolute -left-[3px] top-3 hidden h-[7px] w-[7px] rounded-full md:block ${
+          software ? 'bg-accent' : 'bg-rule'
+        }`}
+      />
+
       <div className="md:col-span-3 md:pl-8">
         <p className="font-meta text-meta uppercase text-ink-faint">{item.period}</p>
       </div>
 
       <div className="md:col-span-9">
-        <h3 className="text-title font-display font-semibold text-ink">{item.role}</h3>
-        <p className="mt-2 font-meta text-meta uppercase text-accent/80">{item.company}</p>
+        <h3
+          className={`font-display text-title font-semibold ${
+            software ? 'text-ink' : 'text-ink/85'
+          }`}
+        >
+          {item.company}
+        </h3>
+
+        {/*
+          El puesto baja aquí, a la línea de metadatos. Lleva el acento solo en
+          el eslabón de desarrollo: es la segunda vez que el color aparece en el
+          mismo eslabón, y las dos veces dice lo mismo.
+
+          El periodo no se repite: ya está en su columna, que en apaisado cae a
+          la izquierda y en vertical justo encima.
+        */}
+        <p
+          className={`mt-3 font-meta text-meta uppercase ${
+            software ? 'text-accent' : 'text-ink-faint'
+          }`}
+        >
+          {item.role}
+        </p>
 
         {item.summary && (
           <p className="mt-6 max-w-read text-body text-ink-soft">{item.summary}</p>

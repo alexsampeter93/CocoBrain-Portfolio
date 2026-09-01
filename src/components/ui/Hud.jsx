@@ -44,6 +44,7 @@ export default function Hud({
   const backRef = useRef(null)
   const meterRef = useRef(null)
   const cueRef = useRef(null)
+  const navVeilRef = useRef(null)
   const reducedMotion = usePrefersReducedMotion()
 
   /**
@@ -149,6 +150,10 @@ export default function Hud({
           lastBack = shown
           back.style.opacity = shown
           back.style.pointerEvents = shown > 0.4 ? '' : 'none'
+
+          // El velo de la navegación móvil sigue la misma señal: aparece
+          // cuando aparece el papel y no existe durante el recorrido.
+          if (navVeilRef.current) navVeilRef.current.style.opacity = shown
         }
       }
 
@@ -229,13 +234,34 @@ export default function Hud({
         camino de vuelta. No es una escena nueva: lleva el scroll al final de
         la pista, que es donde vive el acto 7.
       */}
-      <div className="pointer-events-none fixed left-6 top-[4.5rem] z-40 sm:left-10 sm:top-[6.5rem]">
+      {/*
+        En vertical baja a 5,5rem. El logotipo lleva `pt-9` DENTRO del botón
+        —para agrandar la zona de toque sin agrandar el texto— así que su caja
+        llega a 77 px desde arriba; con "Volver" en 4,5rem (72 px) los dos se
+        solapaban 5 px medidos. Ahora hay 11 px de aire, el mismo que en
+        escritorio, donde el logo cae más abajo y por eso nunca falló.
+      */}
+      <div className="pointer-events-none fixed left-6 top-[5.5rem] z-40 sm:left-10 sm:top-[6.5rem]">
         <button
           ref={backRef}
           type="button"
           onClick={onBackToHub}
           style={{ opacity: 0, pointerEvents: 'none' }}
-          className="group flex items-center gap-2 pl-9 font-mono text-[11px] leading-none text-coco-dark transition-colors hover:text-brain-glow focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-brain-glow"
+          /*
+            `pointer-events-auto` NO es decorativo: el contenedor fijo lleva
+            `pointer-events-none` y eso se HEREDA. El bucle de animación escribe
+            `style.pointerEvents = ''` para activarlo, pero borrar el inline
+            devuelve el control a la herencia, o sea a `none`.
+
+            Sin esta clase el botón se veía, tenía foco y respondía al teclado
+            —Enter dispara el manejador sin pasar por el puntero— pero un clic
+            de ratón caía en la sección del editorial que hay debajo. Medido:
+            `elementFromPoint` sobre su centro devolvía `SECTION#skills`.
+
+            Los otros tres controles del HUD ya la llevan; este se quedó sin
+            ella, y era el único camino explícito de vuelta al 3D.
+          */
+          className="group pointer-events-auto flex items-center gap-2 pl-9 font-mono text-[11px] leading-none text-coco-dark transition-colors hover:text-brain-glow focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-brain-glow"
         >
           <span
             aria-hidden="true"
@@ -288,6 +314,38 @@ export default function Hud({
           ref={meterRef}
           className="h-full w-full origin-top bg-accent"
           style={{ transform: 'scaleY(0)', opacity: 0 }}
+        />
+      </div>
+
+      {/*
+        ── EL VELO DE LA NAVEGACIÓN MÓVIL ────────────────────────────────────
+
+        En 390 px la navegación va en fila abajo, fija y sin fondo, así que el
+        texto del editorial le pasa por debajo y se leen los dos a la vez.
+        Medido: 15 px de solape sobre la línea de metadatos de un proyecto.
+
+        La solución no puede ser una caja: la regla de esta web es que la
+        navegación no tenga ni borde, ni relleno, ni aspecto de botón. Lo que sí
+        puede es apoyarse en el papel — un degradado del propio color de fondo
+        que sube desde el borde inferior y se disuelve. No hay ninguna arista
+        que ver, y aun así el texto deja de competir.
+
+        Aparece con `reading`, así que durante el recorrido 3D —donde el fondo
+        es la mente, no el papel— vale cero y no existe. Y solo en vertical: en
+        apaisado la navegación vive en la esquina, sobre el margen vacío.
+      */}
+      <div
+        ref={navVeilRef}
+        aria-hidden="true"
+        style={{ opacity: 0 }}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-28 sm:hidden"
+      >
+        <div
+          className="h-full w-full"
+          style={{
+            background:
+              'linear-gradient(to top, var(--surface-paper) 0%, var(--surface-paper) 42%, transparent 100%)',
+          }}
         />
       </div>
 

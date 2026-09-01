@@ -91,8 +91,65 @@ const CLIMATE = [
  * escritorio y 0,33 en móvil. El amanecer al 30% termina dentro de él en los
  * dos casos, y dura **2,0 pantallas de scroll** en escritorio y 2,2 en móvil.
  * Cuatro veces más que antes, y sigue acabando antes del primer titular.
+ *
+ * ── Y ESE 0,36 CADUCÓ ────────────────────────────────────────────────────
+ *
+ * Era cierto cuando se midió y ha dejado de serlo, por el motivo que este
+ * manual ya tiene escrito: **un número copiado a mano de una medición caduca
+ * cuando cambia lo medido.** Lo que se midió entonces fue un editorial de
+ * "unas seis pantallas" —lo dice el párrafo de arriba— y hoy, con el contenido
+ * real dentro, mide QUINCE.
+ *
+ * `reading` está normalizado sobre el editorial entero, así que al crecer el
+ * texto el umbral se queda con una fracción cada vez menor. Medido contra el
+ * build: el umbral acaba en `reading` 0,157 en escritorio y 0,112 en móvil, no
+ * en 0,36. Con el amanecer fijado en 0,30, el clima llegaba al 52% cuando
+ * empezaba "Sobre mí" — o sea que la primera área se leía sobre el fondo de la
+ * mente, con tinta oscura sobre un fondo oscuro.
+ *
+ * No es una regresión de esta fase: antes de tocar nada salía 0,175, también
+ * muy por debajo de 0,30. Lo que ha cambiado es que ahora hay contenido real
+ * que leer ahí, así que se ve.
+ *
+ * La constante se queda como RESPALDO —si no se puede medir, algo es mejor que
+ * nada— y el valor de verdad se deduce de la geometría en `useDawn`. Es la
+ * regla de siempre: si un dato depende de la geometría, se mide.
  */
 const DAWN = 0.3
+
+/**
+ * Hasta dónde llega el amanecer, deducido del documento.
+ *
+ * El disparador de la lectura va de `top bottom` a `bottom bottom`, así que su
+ * recorrido es la altura del editorial y arranca una ventana ANTES de que el
+ * umbral llegue arriba. El amanecer tiene que terminar justo cuando termina el
+ * umbral, o sea cuando la primera área toca el borde superior:
+ *
+ *     dawn = (alto del umbral + una ventana) / alto del editorial
+ *
+ * Se remide al cambiar el tamaño porque las dos alturas dependen de la ventana.
+ * Y se acota: sin el tope, un editorial muy corto —o un fallo de medición—
+ * pondría el amanecer más allá del final del recorrido.
+ */
+function useDawn() {
+  const dawn = useRef(DAWN)
+
+  useEffect(() => {
+    const medir = () => {
+      const main = document.querySelector('main')
+      const umbral = main?.firstElementChild
+      if (!main || !umbral || !main.offsetHeight) return
+      const hasta = (umbral.offsetHeight + window.innerHeight) / main.offsetHeight
+      dawn.current = Math.min(0.5, Math.max(0.05, hasta))
+    }
+
+    medir()
+    window.addEventListener('resize', medir)
+    return () => window.removeEventListener('resize', medir)
+  }, [])
+
+  return dawn
+}
 
 function climateAt(t) {
   let i = 0
@@ -127,6 +184,9 @@ function ramp01(value, start, end) {
 }
 
 export default function Backdrops() {
+  // Hasta dónde llega el amanecer. Se deduce del documento, no se escribe.
+  const dawn = useDawn()
+
   /**
    * Las tres ilustraciones fijas, pedidas por FUNCIÓN. Ninguna ruta vive en
    * este archivo: sustituir cualquiera de las tres es tocar `visualAssets`.
@@ -326,7 +386,31 @@ export default function Backdrops() {
         lastReading = reading
 
         if (climateRef.current) {
-          climateRef.current.style.backgroundColor = climateAt(reading)
+          /**
+           * ── EL COLOR TAMBIÉN SE REPARTE POR GEOMETRÍA ──────────────────
+           *
+           * `CLIMATE` pone el marfil en 0,5. Eso significaba "a mitad del
+           * editorial", y con seis pantallas de texto caía justo después del
+           * umbral. Con quince, 0,5 son SIETE pantallas: las dos primeras áreas
+           * se leían sobre un fondo a medio camino entre la mente y el papel.
+           *
+           * Es exactamente el mismo número caducado que `DAWN`, en la otra
+           * tabla — y da la misma cara: "Sobre mí" sobre un gris pardo.
+           *
+           * La tabla no se toca: es una PALETA y dice lo que tiene que decir
+           * —de dónde vienes, dónde estás y cómo cierras—. Lo que se corrige es
+           * CUÁNDO ocurre cada parada. El tramo oscuro→marfil se comprime
+           * dentro del umbral, que es el sitio donde este manual ya dice que
+           * pasa la transición, y el marfil→cálido se reparte por todo el resto
+           * de la lectura.
+           */
+          const d = dawn.current
+          const t =
+            reading <= d
+              ? (reading / d) * 0.5
+              : 0.5 + ((reading - d) / Math.max(0.001, 1 - d)) * 0.5
+
+          climateRef.current.style.backgroundColor = climateAt(t)
           /**
            * El clima cubre la ilustración de la mente durante el umbral, al
            * mismo ritmo al que la escena se retira. Al empezar es transparente
@@ -336,13 +420,30 @@ export default function Backdrops() {
            * Ese solape es la transición: no hay ningún punto en el que la
            * escena "termine" y empiece la página.
            */
-          climateRef.current.style.opacity = Math.min(1, reading / DAWN)
+          climateRef.current.style.opacity = Math.min(1, reading / dawn.current)
         }
 
         if (editorialRef.current) {
-          // Entra con el amanecer y se queda. La ilustración de cada área la
-          // pone el propio área; esta es la base común de todo el tramo.
-          editorialRef.current.style.opacity = Math.min(1, reading / DAWN) * 0.5
+          /**
+           * Entra con el amanecer y se queda. La ilustración de cada área la
+           * pone el propio área; esta es la base común de todo el tramo.
+           *
+           * ── DE 0,5 A 0,20, Y ESTÁ MEDIDO ────────────────────────────────
+           *
+           * La regla de esta web es que si puedes describir la ilustración sin
+           * fijarte, está demasiado fuerte. A 0,5 se identificaba al personaje
+           * en las cinco áreas.
+           *
+           * Comparando la misma captura con la lámina encendida y apagada, a
+           * 0,5 aportaba 4,6 de luminancia MEDIA —que suena inofensivo— con un
+           * PICO de 91 sobre 255. Esa es la cifra que importa: la media dice
+           * "sutil" y el pico dice que hay una figura reconocible. Un fondo que
+           * no se ve pero se nota no puede mover un píxel noventa niveles.
+           *
+           * Se nota más justo donde menos tinta hay —CV y Habilidades—, que
+           * son las dos áreas en las que la figura quedaba sola en el cuadro.
+           */
+          editorialRef.current.style.opacity = Math.min(1, reading / dawn.current) * 0.2
           editorialRef.current.style.transform = `translate3d(0, ${
             -reading * PARALLAX
           }%, 0)`
