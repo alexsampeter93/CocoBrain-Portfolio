@@ -34,5 +34,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Capturas de desarrollo
-.shots/
+# Capturas de desarrollo. El patrón lleva un comodín porque cada fase de
+# diagnóstico ha ido creando su propia carpeta (.shots9b/, .shots9c2/...) y
+# el match exacto ".shots/" dejaba esas variantes sin ignorar.
+.shots*/

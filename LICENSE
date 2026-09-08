@@ -1,0 +1,77 @@
+CocoBrain — Portfolio of Alex Sampedro
+Copyright (c) 2026 Alex Sampedro. All rights reserved.
+
+This repository is published publicly on GitHub so that its source code,
+architecture, and technical approach can be inspected as part of a
+professional portfolio. Public visibility does not constitute a license
+to use, copy, modify, distribute, sell, or otherwise reuse any part of
+this project.
+
+1. SCOPE OF THIS NOTICE
+
+Except where explicitly stated otherwise (see "Third-Party Materials"
+below), all original material in this repository is reserved by the
+author. This includes, without limitation:
+
+  - the names "CocoBrain" and "Olaz", and any associated visual identity,
+    logotype, wordmark, or character design;
+  - the original source code written for this project (React, Three.js /
+    React Three Fiber, GSAP, and CSS authored specifically for CocoBrain);
+  - the visual design, art direction, layout, typographic system, and
+    color system of the site;
+  - the original composition, curation, and arrangement of illustrations,
+    3D models, screenshots, video captures, and other visual assets used
+    throughout the site;
+  - the written content of the portfolio (copy, case studies, project
+    descriptions, and personal/professional information);
+  - the underlying concepts, narrative structure, and creative decisions
+    that shape the experience.
+
+No permission is granted to copy, modify, redistribute, sublicense, sell,
+or create derivative works from any of the above, in whole or in part,
+without prior written authorization from the author.
+
+Some visual assets in this project were produced with the assistance of
+AI image-generation tools and then art-directed, selected, composited,
+and integrated by the author. Where the eligibility of such individual
+assets for copyright protection may be limited under applicable law,
+this notice still applies to their original selection, arrangement, and
+integration into this project, and reuse of them outside this project is
+not authorized by the author regardless of that limitation.
+
+2. THIRD-PARTY MATERIALS
+
+This project is built with open-source software and, in a few cases,
+third-party assets. Those materials are NOT covered by this notice and
+remain governed by their own respective licenses, including but not
+limited to:
+
+  - React, React DOM — Meta Platforms, Inc. (MIT License)
+  - Three.js — Three.js authors (MIT License)
+  - @react-three/fiber, @react-three/drei, @react-three/postprocessing
+    (MIT License)
+  - GSAP — GreenSock (see GreenSock's own license terms)
+  - Vite, Tailwind CSS, PostCSS, and other build/development tooling
+    listed in package.json (their respective licenses)
+  - Google Draco (public/draco/) — Google LLC (Apache License 2.0)
+  - "Outfit" typeface (public/fonts/) — licensed under the SIL Open Font
+    License 1.1; see public/fonts/OFL.txt
+  - "Studio" HDRI environment (public/hdri/studio.hdr) — sourced from Poly
+    Haven (CC0 / public domain)
+
+Nothing in this notice restricts the rights granted by those third-party
+licenses, and nothing in those licenses is claimed as original work of
+the author.
+
+3. NO WARRANTY
+
+This project is provided "as is", for portfolio and demonstration
+purposes, without warranty of any kind, express or implied.
+
+4. PERMISSIONS
+
+If you are interested in using, licensing, or collaborating on any part
+of this project, please contact the author directly rather than assuming
+permission from the availability of this repository.
+
+— Alex Sampedro, 2026
