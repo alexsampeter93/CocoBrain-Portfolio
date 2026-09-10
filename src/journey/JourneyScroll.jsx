@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { setReadingTarget, setTarget } from './clock'
+import { setReadingTarget, setTarget, setThresholdTarget } from './clock'
 import { stageAt, unwarp, warp } from './stages'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -39,7 +39,7 @@ let track = null
  * amortiguación del reloj, que actúa donde importa —la cámara— en vez de sobre
  * el documento entero.
  */
-export default function JourneyScroll({ trackRef, pinRef, readingRef }) {
+export default function JourneyScroll({ trackRef, pinRef, readingRef, thresholdRef }) {
   // Solo sirve para volver a intentarlo en el frame siguiente si las
   // referencias no estaban listas. Ver la nota de dentro.
   const [attempt, setAttempt] = useState(0)
@@ -63,7 +63,16 @@ export default function JourneyScroll({ trackRef, pinRef, readingRef }) {
      * Costó encontrarlo porque todas las herramientas de captura apuntaban al
      * servidor de desarrollo. Desde ahora `shoot.mjs` mira también al build.
      */
-    if (!trackRef.current || !pinRef.current) {
+    /*
+      El umbral entra en la MISMA guarda, y no por simetría: de él cuelga la
+      retirada de la escena, así que un disparador que no llegue a crearse deja
+      el canvas al 100% encima del editorial entero. Es exactamente la forma
+      del fallo del `pin: null` que se publicó en silencio, y por eso se
+      comprueba aquí en vez de darlo por hecho. La condición mira si la
+      PROP existe: sin ella no habría a qué esperar y el reintento no pararía
+      nunca.
+    */
+    if (!trackRef.current || !pinRef.current || (thresholdRef && !thresholdRef.current)) {
       const retry = requestAnimationFrame(() => setAttempt((value) => value + 1))
       return () => cancelAnimationFrame(retry)
     }
@@ -109,6 +118,26 @@ export default function JourneyScroll({ trackRef, pinRef, readingRef }) {
           onUpdate: (self) => setReadingTarget(self.progress),
         })
       }
+
+      /**
+       * Y el TERCERO: el relevo del umbral. Tampoco anima nada — escribe un
+       * número que leen la retirada de la escena y la de su interfaz.
+       *
+       * Va de `top bottom` a `bottom top`, o sea desde que el umbral asoma por
+       * abajo hasta que sale por arriba: el cruce ENTERO, no solo la parte en
+       * la que llena la pantalla. Como el tramo mide 140vh, ese recorrido son
+       * siempre 2,4 alturas de ventana, y por eso el reparto interno de la
+       * transición es el mismo en 1920 que en 390 — que es justo lo que
+       * `reading` no podía dar. Ver `journey.threshold`.
+       */
+      if (thresholdRef?.current) {
+        ScrollTrigger.create({
+          trigger: thresholdRef.current,
+          start: 'top bottom',
+          end: 'bottom top',
+          onUpdate: (self) => setThresholdTarget(self.progress),
+        })
+      }
     })
 
     /**
@@ -143,7 +172,7 @@ export default function JourneyScroll({ trackRef, pinRef, readingRef }) {
       context.revert()
       track = null
     }
-  }, [trackRef, pinRef, readingRef, attempt])
+  }, [trackRef, pinRef, readingRef, thresholdRef, attempt])
 
   return null
 }

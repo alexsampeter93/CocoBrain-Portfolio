@@ -408,10 +408,48 @@ export default function PortalVeil() {
          * tercio del descenso, que es cuando de verdad se está dejando atrás la
          * sala, y nunca llega a tapar lo que tiene que enmarcar.
          */
-        const strength = ramp(going, 0.55, 1) * 0.55
+        /**
+         * ── Y SE RETIRA CUANDO EL DESCENSO SE ACABA ─────────────────────────
+         *
+         * `descent` es una RAMPA: llega a uno en 0,34 y **se queda ahí para
+         * siempre**. Así que esta atmósfera seguía encendida al 55% durante el
+         * interior, la salida, el hub y las ocho pantallas del editorial.
+         *
+         * Y es una VIÑETA, o sea que lo que oscurece son los bordes. Medido a
+         * 1920 contra el build, en Habilidades, la luminancia del fondo de
+         * borde a borde:
+         *
+         *     x=10  140 · x=320  180 · x=960  225 · x=1600  182 · x=1910  143
+         *
+         * 87 niveles de caída. El editorial no se leía sobre marfil: se leía
+         * sobre un lavado gris que se comía sus dos tercios exteriores, que es
+         * justo donde el contenido no llega. Apagando esta capa, 3.
+         *
+         * Es el error que este manual ya tiene escrito dos veces con otros
+         * disfraces: «una señal que se queda en uno no sirve para atenuar un
+         * instante» y «un tope puede caducar». El trabajo de la atmósfera
+         * termina con el descenso; el relevo lo coge el telón del interior,
+         * que para entonces ya está establecido y es igual de oscuro — que es
+         * exactamente lo que el comentario de arriba dice que tiene que pasar.
+         *
+         * La retirada va DESPUÉS de 0,34 a propósito: dentro del descenso no
+         * se toca ni un número, así que la caída de luz medida en §7 sigue
+         * siendo la misma.
+         */
+        const strength = ramp(going, 0.55, 1) * 0.55 * (1 - ramp(p, 0.34, 0.4))
 
-        if (last.sky === undefined || Math.abs(last.sky - going) > 0.003) {
-          last.sky = going
+        /*
+          Y la guarda vigila `strength`, no `going`.
+
+          Con `going` no se arreglaba nada: pasado 0,34 vale uno y no vuelve a
+          moverse, así que la condición no se cumplía nunca y la retirada de
+          arriba no llegaba a escribirse. Es la otra lección de la casa —«una
+          guarda de solo-escribo-si-algo-cambió tiene que vigilar TODAS las
+          señales que se escriben dentro»— y aquí habría dejado la corrección
+          en un número que nadie lee.
+        */
+        if (last.sky === undefined || Math.abs(last.sky - strength) > 0.002) {
+          last.sky = strength
           if (strength <= 0.002) {
             skyRef.current.style.visibility = 'hidden'
           } else {

@@ -95,6 +95,25 @@ const RAW = {
  * Sustituye a `flattenFor`, que solo sabia comprimir. Comprimir arreglaba el
  * movil y no hacia nada por el escritorio, donde el problema es el contrario.
  */
+/**
+ * ── LA COORDENADA DE UN AREA ────────────────────────────────────────────────
+ *
+ * El angulo y el radio con los que un area esta colocada en la constelacion,
+ * en crudo y sin proyectar. Lo lee el editorial para escribir su sello.
+ *
+ * No es un dato nuevo: es EL MISMO que coloca el nodo en la escena, leido
+ * desde el otro lado. Por eso puede aparecer impreso al lado del titulo sin
+ * inventarse nada — cuando alguien lee "03 · 28° · r1,10" al llegar a
+ * Proyectos, ese 28 es literalmente donde esta el punto de luz del que acaba
+ * de salir. Si algun dia se mueve el nodo, el sello se mueve con el.
+ *
+ * Es la traduccion a CocoBrain de un recurso que TBWAHAKUHODO usa como
+ * senal de identidad: repetir por toda la web las coordenadas de su oficina.
+ * Alli el sello dice DONDE ESTAN; aqui dice de que parte de la mente viene lo
+ * que se esta leyendo. Mismo mecanismo, contenido propio.
+ */
+export const nodeCoord = (nodeName) => RAW[nodeName] ?? null
+
 export function spreadFor(aspect) {
   if (!Number.isFinite(aspect) || aspect <= 0) return 1
   return Math.min(1.35, Math.max(0.5, aspect / 1.35))

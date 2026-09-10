@@ -1,7 +1,11 @@
 import PortfolioSection from './PortfolioSection'
+import EditorialObject from './EditorialObject'
+import { Mask } from './Type'
+import { useScene } from '../../animations/editorial'
 import { PendingList, PendingText } from './Pending'
 import { about } from '../../data/portfolio'
 import { knowledgeById } from '../../data/network'
+import { Icon } from '../ui/Icon'
 
 /**
  * SOBRE MÍ — el área de la voz.
@@ -29,7 +33,39 @@ import { knowledgeById } from '../../data/network'
  * llegue contenido real se decide si esto necesita otra composición —eso es
  * juicio visual, y esta ronda es solo de datos—.
  */
+/**
+ * El manifiesto entra como entra un capítulo: el filete largo se traza y las
+ * dos frases salen de su línea, una detrás de otra. Es el único sitio del área
+ * donde el texto entra ENMASCARADO en vez de con opacidad, y es deliberado — no
+ * es contenido, es la marca hablando.
+ */
+const MANIFESTO_CUES = {
+  rule: { at: 0, from: { scaleX: 0, transformOrigin: 'left center' }, dur: 0.8 },
+  title: { at: 0.24, from: { yPercent: 116 }, stagger: 0.24, dur: 1 },
+}
+
 export default function AboutArea({ index }) {
+  /*
+    ── SOBRE MÍ ES LA PRIMERA JERARQUÍA QUE SE LEE ──────────────────────────
+
+    Es lo primero después del umbral, así que su orden de lectura tiene que
+    quedar claro sin que nadie lo explique: identidad (el número y el rótulo),
+    titular, contenido, y el objeto colocándose mientras se lee lo anterior.
+
+    Dos escenas y no una: el cuerpo está a media pantalla del encabezado y el
+    manifiesto a tres pantallas. Una sola secuencia habría terminado de
+    reproducirse antes de que se llegara a ninguno de los dos.
+  */
+  const body = useScene({ start: 'top 84%', end: 'top 40%' })
+
+  /*
+    El manifiesto entra como entra un capítulo: el filete largo se traza y las
+    dos frases salen de su línea, una detrás de otra. Es el único sitio del
+    área donde el texto entra ENMASCARADO en vez de con opacidad, y es
+    deliberado — no es contenido, es la marca hablando.
+  */
+  const manifesto = useScene({ start: 'top 82%', end: 'top 42%', cues: MANIFESTO_CUES })
+
   const hasCta = Boolean(about.cta?.label && about.cta?.href)
 
   return (
@@ -41,15 +77,44 @@ export default function AboutArea({ index }) {
       title={about.headline || 'Quién hay detrás'}
       lead={about.summary?.length ? about.summary : undefined}
     >
-      <div className="mt-block grid gap-block lg:grid-cols-12">
+      <div ref={body} className="mt-block grid gap-block lg:grid-cols-12">
         {/*
-          La columna de lectura arranca en la cuarta doceava parte. El hueco de
-          la izquierda es tan parte de la composición como el texto.
+          ── EL OBJETO COCOBRAIN, EN EL HUECO QUE YA EXISTÍA ──────────────────
+
+          La columna de lectura arranca en la quinta doceava parte, así que las
+          cuatro primeras llevaban vacías desde que existe esta sección — el
+          manual las tenía anotadas como "media columna vacía". No se rellenan
+          con contenido: se rellenan con la marca.
+
+          El coco partido a 380 px, PEGADO mientras el relato se lee. Esa es la
+          diferencia entre un objeto y un icono: un icono aparece al lado de una
+          frase y se va con ella; este acompaña los siete párrafos enteros,
+          girando despacio con el scroll, y cuando se llega al manifiesto sigue
+          ahí. Es el objeto de CocoBrain presidiendo lo que CocoBrain cuenta de
+          sí mismo.
+
+          No compite con el texto porque no está en su columna: está en el aire
+          que la composición ya reservaba.
         */}
+        <div className="hidden lg:col-span-3 lg:col-start-1 lg:block">
+          <div className="sticky top-28">
+            <EditorialObject
+              model="/models/cocobrain_abstract_lo.glb"
+              cue="object"
+              className="w-full"
+              style={{ height: 'clamp(16rem, 24vw, 24rem)' }}
+            />
+          </div>
+        </div>
+
         <div className="lg:col-span-7 lg:col-start-5">
           {about.body.length > 0 ? (
             about.body.map((text) => (
-              <p key={text.slice(0, 24)} className="mb-6 max-w-read text-body text-ink-soft">
+              <p
+                key={text.slice(0, 24)}
+                data-cue="body"
+                className="mb-6 max-w-read text-body text-ink-soft"
+              >
                 {text}
               </p>
             ))
@@ -57,42 +122,55 @@ export default function AboutArea({ index }) {
             <PendingText label="presentación y trayectoria" lines={4} />
           )}
 
-          {/*
-            ── EL MANIFIESTO DE COCOBRAIN ────────────────────────────────
-
-            Va al final de la columna porque el cuerpo termina contando qué es
-            CocoBrain: estas dos frases son su remate, no un párrafo más.
-
-            No lleva maquetación nueva. Es exactamente la clase con la que la
-            coda de Contacto pinta la primera de las dos —`text-lead font-light
-            text-ink-soft`—, así que la frase se ve igual en los dos sitios y se
-            reconoce como la misma cosa. Y no es un enlace: un manifiesto que
-            lleva a alguna parte deja de ser un manifiesto.
-          */}
-          {about.manifesto?.length > 0 && (
-            /*
-              El filete del acento por delante, no encima.
-
-              Es el mismo trazo que abre cada sección y el mismo que lleva el
-              nodo del que se viene, girado a vertical y puesto al costado. Con
-              él, estas dos frases dejan de ser dos párrafos más grandes al
-              final de una columna y pasan a ser una cita: el sitio donde la
-              marca habla en primera persona.
-
-              Ni caja, ni comillas, ni color propio. Un trazo y una sangría.
-            */
-            <div className="mt-block border-l-2 border-accent/60 pl-6 sm:pl-8">
-              <div className="space-y-4">
-                {about.manifesto.map((line) => (
-                  <p key={line} className="max-w-read text-lead font-light text-ink">
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/*
+        ── EL MANIFIESTO SALE DE LA COLUMNA ───────────────────────────────────
+
+        Estaba al final del cuerpo, dentro de la columna de lectura y con un
+        filete al costado. Funcionaba como cita, y una cita es exactamente lo
+        que NO es esto: no es alguien citado dentro de un texto, es la marca
+        hablando en primera persona. Al final de una columna de siete párrafos,
+        las dos frases que resumen CocoBrain se leían como el remate de un
+        párrafo más.
+
+        Ahora ocupan una banda propia, a todo el ancho, en cuerpo de titular y
+        empujadas al tercio derecho. La asimetría es el recurso: el aire de la
+        izquierda es lo que hace que se lean como una declaración y no como
+        contenido. Y el filete del acento pasa a ser LARGO y horizontal, el
+        mismo que abre cada área — así el manifiesto se lee como un capítulo,
+        no como un aparte.
+
+        No lleva caja, ni comillas, ni color propio. Sigue siendo un trazo y
+        una sangría, pero a la escala que le corresponde.
+
+        Las dos frases son intocables (`CLAUDE.md` §2): aquí solo cambia dónde
+        y de qué tamaño se leen.
+      */}
+      {about.manifesto?.length > 0 && (
+        <div ref={manifesto} className="mt-area border-t border-rule pt-block">
+          <div className="lg:ml-[33%]">
+            <span
+              data-cue="rule"
+              aria-hidden="true"
+              className="block h-px w-20 bg-accent sm:w-32"
+            />
+            <div className="mt-block space-y-8">
+              {about.manifesto.map((line) => (
+                <Mask
+                  key={line}
+                  as="p"
+                  cue="title"
+                  className="max-w-[38rem] font-display text-title font-light leading-[1.12] text-ink"
+                >
+                  {line}
+                </Mask>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/*
         Formación y forma de trabajar van al pie y en dos columnas: son
@@ -215,7 +293,10 @@ export default function AboutArea({ index }) {
         <div className="mt-block">
           {hasCta ? (
             <a href={about.cta.href} className="link-quiet">
-              {about.cta.label} <span aria-hidden="true">→</span>
+              {about.cta.label}
+              {/* Lleva DENTRO de la web, así que su flecha es horizontal y no
+                  la diagonal de salir: ver `.link-arrow-right`. */}
+              <Icon name="forward" size="1.05em" className="link-arrow-right" />
             </a>
           ) : (
             <PendingList

@@ -45,6 +45,49 @@
     --ink-soft: #c7b4aa; /* secundario: descripciones, pies */
     --ink-faint: #857166; /* metadatos, numeración, lo que no se lee seguido */
     --accent: #e98fa0; /* el acento del acto en curso */
+
+    /**
+     * ── LA MARCA: EL COLOR DE LO QUE ESTÁ SEÑALADO (fase 10F) ───────────
+     *
+     * El área activa en la navegación, el subrayado del HUD y el ANILLO DE
+     * FOCO. Es un token y no el acento del acto por dos motivos medidos:
+     *
+     * - el acento del acto 3 es el rosa de marca, y sobre el marfil da 2,64
+     *   en Sobre mí y 2,82 en Proyectos. El mínimo de WCAG para un indicador
+     *   de foco es 3, así que dos de las seis áreas no llegaban;
+     * - y el HUD es `fixed`: no está dentro de ningún `[data-act]`, así que
+     *   tampoco puede tomar el acento de la sección que tiene detrás.
+     *
+     * Aquí, en `:root`, vale el rosa de la mente — que es lo que el recorrido
+     * 3D ha tenido siempre y no cambia. En el editorial pasa al añil, ver
+     * `[data-ground]` más abajo.
+     */
+    --mark: #e98fa0;
+
+    /**
+     * ── DOS COLORES QUE NO SIGUEN AL SUELO, A PROPÓSITO (fase 12F) ────────
+     *
+     * `--mark` cambia de rosa a añil en el editorial porque señala cosas que
+     * viven DENTRO de una sección —el foco, el enlace activo— y tiene que
+     * leerse con el resto de esa sección. Estos dos no: son la marca de un
+     * elemento concreto, y ese elemento es el MISMO se lea lo que se lea
+     * alrededor, así que no llevan variante por `[data-ground]`.
+     *
+     * `--cursor-mark` es el rosa de la mente, pedido por Alex para que el
+     * cursor propio del editorial se distinga del añil que lleva todo lo
+     * demás —el mismo rosa que `--mark` ya tiene aquí en `:root`, escrito
+     * aparte para que cambiar uno no mueva el otro por accidente.
+     *
+     * `--status-available` es el verde de "disponible para crear": el único
+     * verde de toda la paleta, y a propósito uno solo — un punto de doce
+     * píxeles no compite con la proporción 70/20/10 de §7, que es sobre
+     * SUPERFICIES grandes. Medido contra las dos superficies de la tarjeta:
+     * 3,80 : 1 sobre el papel claro, 3,87 : 1 sobre el añil noche — los dos
+     * por encima del mínimo gráfico de WCAG.
+     */
+    --cursor-mark: #e98fa0;
+    --status-available: #2f8f52;
+
     --surface: #1a1210; /* la única superficie elevada que existe */
 
     /*
@@ -56,7 +99,38 @@
       tendría que llevar el hexadecimal copiado a mano.
     */
     --surface-paper: #fbf7f1;
+    /*
+      La lámina que el HUD pone detrás de su texto de la esquina superior.
+      Es el papel por defecto; sobre un área de suelo oscuro pasa a ser ese
+      suelo, porque una lámina de marfil bajo texto marfil no respalda nada.
+    */
+    /*
+      Y en `:root` NO es el papel, es la MENTE (fase 11E).
+
+      Estuvo en `var(--surface-paper)` porque su unico lector vivia en el
+      editorial, donde `data-ground` siempre esta puesto. Desde 11E la lamina
+      tambien respalda al HUD durante el RECORRIDO, y ahi lo que hay detras
+      es la mente: una lamina de papel sobre el descenso seria un rectangulo
+      blanco en mitad de lo unico oscuro de la web.
+
+      Una lamina existe para que el texto de la esquina tenga suelo propio, y
+      solo desaparece si es del color del suelo que le toca.
+    */
+    --veil: #14100e;
     --rule: rgba(248, 237, 239, 0.11); /* filetes y separadores */
+
+    /**
+     * El telón de la navegación (fase 12B.1). Es el mismo #120D0B que
+     * `MindBackdrop` usa para `uMid` —el "cerca" del acto 2, lo más oscuro
+     * que declara esta paleta—, traído a CSS y no inventado de nuevo: reusar
+     * el tono ya existente es la regla de siempre, y aquí además ata el
+     * gesto de navegar al mismo color que tiene la mente por dentro.
+     *
+     * No lleva variante por `[data-ground]` a propósito: el telón tiene que
+     * ser el MISMO oscuro se navegue desde donde se navegue, o deja de leerse
+     * como un telón y pasa a ser "el fondo de la sección anterior asomando".
+     */
+    --curtain: #120d0b;
 
     /**
      * ── El añil ────────────────────────────────────────────────────────
@@ -71,6 +145,20 @@
      * más y se convierte en una web azul con detalles crema, que es otra cosa.
      */
     --indigo: #2c4a73;
+
+    /* La superficie de un area de suelo propio. Ver `.section-ground`. */
+    --ground-plate: #2b211c;
+
+    /* Las tres lamparas del entorno. Ver `.ambient-key`. */
+    --lamp-key-a: rgba(255, 251, 243, 0.26);
+    --lamp-key-b: rgba(255, 251, 243, 0.12);
+    --lamp-key-c: rgba(255, 251, 243, 0);
+    --lamp-coco-a: rgba(107, 69, 48, 0.075);
+    --lamp-coco-b: rgba(107, 69, 48, 0.035);
+    --lamp-coco-c: rgba(107, 69, 48, 0);
+    --lamp-indigo-a: rgba(44, 74, 115, 0.065);
+    --lamp-indigo-b: rgba(44, 74, 115, 0.03);
+    --lamp-indigo-c: rgba(44, 74, 115, 0);
   }
 
   /**
@@ -97,11 +185,113 @@
    * escritorio, en vez de saltar en un punto de ruptura.
    */
   :root {
+    /**
+     * El nombre de un proyecto tiene su propio escalón, por encima del de los
+     * titulares de área.
+     *
+     * No es capricho de tamaño: es jerarquía. "Proyectos" es un rótulo que
+     * dice dónde estás; "Zalent" es el sujeto de lo que vas a leer durante las
+     * tres pantallas siguientes. Con los dos al mismo cuerpo, el rótulo y el
+     * sujeto pesaban igual y la sección se leía como un índice.
+     */
+    --step-project: clamp(3rem, 9.5vw, 8rem);
+    /**
+     * ── Y EL DE UN CAPÍTULO, QUE ES OTRA COSA ────────────────────────────
+     *
+     * `--step-project` es el nombre de un proyecto dentro de una ficha. Esto
+     * es el nombre de un proyecto que ABRE una pantalla entera: a este cuerpo
+     * la palabra deja de leerse como un titular y pasa a ser el elemento
+     * gráfico de la composición, que es justo lo que se le pide.
+     */
+    /**
+     * La MEDIDA de un capítulo: el ancho de su columna de contenido, o sea el
+     * editorial menos el lomo (4,5 rem) y su calle (1,5 rem).
+     */
+    /**
+     * ── EL ANCHO DEL EDITORIAL, EN UN SOLO SITIO (fase 10B) ──────────────
+     *
+     * Estuvo escrito `78rem` en TRES sitios —el `max-w-editorial` de Tailwind,
+     * la medida de un capítulo y el margen natural del HUD— que es exactamente
+     * el duplicado que este manual persigue: tres copias de un dato que dejan
+     * de coincidir el día que cambia una.
+     *
+     * Y cambió. A 78rem la caja medía 1248 px, o sea el **49% de una pantalla
+     * de 2560** y el 65% de una de 1920: media ventana permanentemente vacía a
+     * los dos lados. §16 lo tenía aparcado "hasta el contenido real"; el
+     * contenido ya es real.
+     *
+     * 106rem son 1696 px: el 89% de 1920 y el 66% de 2560. La caja deja de ser
+     * una columna centrada y pasa a ser un CAMPO en el que colocar — que es lo
+     * que permite que un bloque caiga a la izquierda y el siguiente a la
+     * derecha, y que una captura pueda ocupar las doce columnas.
+     *
+     * Ancho no es medida de lectura: lo que impide que un párrafo se estire
+     * hasta los 1696 px es `max-w-read`, que va en CARACTERES. Ver ahí.
+     */
+    --editorial-max: 106rem;
+    --chapter-measure: calc(min(var(--editorial-max), 100vw - 2 * var(--gutter)) - 6rem);
+    /**
+     * Y el cuerpo del nombre sale de esa medida, no de la ventana. Con un
+     * `vw` el mismo nombre llenaba el 84% de la columna a 1920 y el 76% a
+     * 1366 —medido—, porque el ancho editorial está topado en 78rem y el
+     * viewport no: el titular encogía mientras su columna se quedaba igual.
+     * Atado a la medida, el reparto es el mismo en las dos: 190 y 187 px.
+     *
+     * Y el tope de 26vh es la otra mitad: un nombre de tres líneas a 187 px en
+     * una pantalla de 768 ocupa 428 de los 660 de la portada y se mete debajo
+     * del HUD. Un titular no puede ser más alto que su pantalla.
+     */
+    --step-chapter: clamp(3.4rem, min(calc(var(--chapter-measure) * 0.165), 26vh), 14rem);
+    /** El folio del lomo: grande para ser un marcador, pequeño para no
+     *  competir con el nombre del proyecto. */
+    --step-folio: clamp(1.8rem, 3.4vw, 3.1rem);
     --step-display: clamp(2.6rem, 7vw, 5.5rem);
+    /**
+     * ── EL CUERPO DE UNA MARCA DENTRO DEL TEXTO ──────────────────────────
+     *
+     * Entre el titular de un área y el de un bloque. Existe por OVEUN: a
+     * `--step-display` (88 px a 1920) el nombre llegaba al borde de su columna
+     * y se partía por donde caía el ancho; a 62 px le sobra aire por la derecha
+     * y sigue siendo un 22% mayor que el de los otros eslabones. Un titular que
+     * llega al borde no tiene jerarquía: tiene ruido.
+     */
+    --step-mark: clamp(2.2rem, 4.6vw, 3.9rem);
     --step-title: clamp(1.9rem, 4.2vw, 3.2rem);
-    --step-lead: clamp(1.15rem, 1.9vw, 1.6rem);
-    --step-body: clamp(0.98rem, 1.05vw, 1.08rem);
-    --step-meta: 0.72rem;
+    /**
+     * La entradilla sube su SUELO con el cuerpo (fase 10B). Al pasar el cuerpo
+     * de 15,7 a 18,2 px en 1024, esta se quedó en 19,5: ratio 1,07, o sea que
+     * la entradilla y el texto normal pesaban lo mismo y la jerarquía
+     * desaparecía justo en las pantallas donde más falta hace. Medido en las
+     * seis anchuras, ahora se mantiene entre 1,23 y 1,28 veces el cuerpo.
+     */
+    --step-lead: clamp(1.36rem, 0.75vw + 0.92rem, 1.6rem);
+    /**
+     * ── EL CUERPO DE LECTURA (fase 10B) ──────────────────────────────────
+     *
+     * Estaba en `clamp(0.98rem, 1.05vw, 1.08rem)`, o sea topado en **17,3 px**
+     * a partir de 1646 px de ventana. Medido contra el build, ese era el
+     * cuerpo del GRUESO del editorial: doce párrafos en Sobre mí, quince en
+     * Proyectos, dieciséis en Habilidades. Los de 25,6 px que sí se leían bien
+     * eran los `lead`, y hay uno o tres por área.
+     *
+     * El error de la fórmula anterior no es el tope: es que un cuerpo de
+     * lectura NO debe escalar con la ventana. Una línea de texto se lee a la
+     * misma distancia en un portátil que en un monitor grande, así que lo que
+     * tiene que crecer con la pantalla es cuántas columnas caben, no cuánto
+     * mide una letra. Con `1.05vw` el cuerpo valía 14 px a 1366 y 17 a 1920:
+     * la misma página, dos legibilidades.
+     *
+     * Ahora es casi constante en escritorio —19,8 px a 1366, 20 de 1600 en
+     * adelante— y baja a 17 en móvil, donde la distancia de lectura es otra.
+     */
+    --step-body: clamp(1.06rem, 0.45vw + 0.85rem, 1.25rem);
+    /**
+     * Y los metadatos dejan de ser un valor FIJO. 0,72rem son 11,5 px en
+     * cualquier pantalla, y a 11,5 px un rótulo no se lee: se adivina. Es el
+     * cuerpo de "RESPONSABILIDADES", "FORTALEZAS", "OBJETIVO" y del sello de
+     * coordenadas — o sea de todo lo que da estructura a la página.
+     */
+    --step-meta: clamp(0.75rem, 0.18vw + 0.62rem, 0.88rem);
 
     /**
      * El espaciado sale de una sola unidad, para que los huecos entre cosas
@@ -112,6 +302,79 @@
     --gap-area: clamp(7rem, 14vh, 12rem); /* entre áreas del portfolio */
     --gap-block: clamp(3rem, 6vh, 5rem); /* entre bloques de un área */
     --gutter: clamp(1.5rem, 5vw, 5rem); /* margen lateral de la página */
+
+    /**
+     * ── LA ZONA SEGURA DEL HUD ───────────────────────────────────────────
+     *
+     * Fase 9B.3. Hasta aquí, que el contenido no invadiera el HUD lo
+     * resolvía cada componente por su cuenta —`lg:pr-32 2xl:pr-0` en dos
+     * sitios de `ProjectChapter`, `lg:mr-28 2xl:mr-0` en el objeto— con
+     * números que no coincidían entre sí y un corte en `2xl` (1536px)
+     * que no correspondía a nada real.
+     *
+     * Medido con la página en marcha (`nav[aria-label="Secciones"]`), la
+     * lista de áreas ocupa siempre los mismos ~201px desde el borde
+     * derecho — constante entre 1024 y 1920, porque es texto de ancho
+     * fijo anclado con `right-10`, no algo que crezca con la ventana.
+     *
+     * Lo que SÍ cambia con la ventana es cuánto margen le queda ya al
+     * editorial de forma natural: por debajo de ~1387px de ancho el
+     * contenido llena la caja con gutter a los lados (margen = gutter);
+     * por encima, `max-w-editorial` se centra y el margen es
+     * `(100vw - 78rem) / 2`. `--hud-natural-margin` junta las dos
+     * fórmulas con `max()` — de las dos, siempre gana la que aplica.
+     *
+     * `--hud-right-clear` solo entra en juego cuando ese margen natural
+     * no llega a los 201px medidos (con un pequeño colchón, 13rem). Por
+     * eso desaparece solo pasados los ~1650px, no en un breakpoint fijo
+     * —y por eso el corte en 1536 se quedaba corto: entre 1536 y 1650 el
+     * margen natural son unos 144px, menos de lo que la lista necesita,
+     * y ahí `pr-0` dejaba el hueco sin proteger.
+     *
+     * Y por debajo de 640px no existe en absoluto: ahí la lista de áreas
+     * deja de ser una columna a la derecha y pasa a ser una fila abajo
+     * del todo —la misma media query que ya usa `nav` en `Hud.jsx`—, así
+     * que no hay nada a la derecha de lo que protegerse. Sin este cero,
+     * la fórmula seguía viendo 201px de hueco que rellenar y el titular
+     * de Contacto llegó a perder más de la mitad de su columna en 375px.
+     */
+    --hud-right-clear: 0px;
+    --hud-natural-margin: max(var(--gutter), calc((100vw - var(--editorial-max)) / 2));
+    --hud-right-pad: max(0px, var(--hud-right-clear) - var(--hud-natural-margin));
+
+    /**
+     * Y la esquina superior izquierda, que es el otro punto fijo del HUD
+     * ("CocoBrain — Alex" + "Volver a la red"). Ahí el problema no es de
+     * columna sino de SCROLL: una sección alta hace pasar su propio
+     * encabezado por detrás de esa esquina según se sube o se baja, y a
+     * diferencia de la lista de la derecha, esto le pasa a las seis
+     * áreas por igual, no solo a Proyectos — medido en la transición de
+     * Habilidades a CV, con "Escritorio, web y videojuego" (opacidad 1,
+     * `rgb(95,76,64)`) escrito encima de "CocoBrain — Alex". No se
+     * arregla con un margen —el contenido tiene que poder seguir
+     * subiendo, es lectura continua— así que la resuelve el propio HUD
+     * con una lámina detrás de su texto. Ver `Hud.jsx`, `topVeilRef`.
+     *
+     * Las dos medidas de `ProjectChapter` que ya despejaban esta esquina
+     * —el lomo y el `padding-top` de la portada— se quedan: son una
+     * composición deliberada del capítulo, medida en píxeles concretos
+     * ("el folio le quedaba a catorce píxeles"), no un parche de
+     * legibilidad. Se tokenizan aquí para que el número viva en un solo
+     * sitio y no dentro de una clase de Tailwind.
+     */
+    --hud-top-lomo: max(9.5rem, 16vh);
+    --hud-top-pad: max(6rem, 7vh);
+  }
+
+  /*
+    La lista de áreas solo es una columna a la derecha desde 640px —la misma
+    marca de agua que ya usa `nav` en `Hud.jsx` con `sm:`—; por debajo va en
+    una fila abajo del todo, y ahí `.hud-safe-r` no tiene nada que despejar.
+  */
+  @media (min-width: 640px) {
+    :root {
+      --hud-right-clear: 13rem;
+    }
   }
 
   /*
@@ -148,11 +411,336 @@
     cero.
   */
 
-  /* Foco visible: los nodos y la nav se recorren con teclado */
+  /*
+    Foco visible: los nodos y la nav se recorren con teclado.
+
+    Va en `--mark` y no en `--accent` porque un indicador de foco es un
+    elemento de INTERFAZ: tiene que dar la misma respuesta en toda la página
+    y llegar al 3:1 en todos los suelos. El acento del acto no puede hacer ni
+    lo uno ni lo otro — cambia con el scroll y en el acto 3 da 2,64. Ver la
+    fase 10F.
+  */
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--mark);
     outline-offset: 4px;
     border-radius: 2px;
+  }
+
+  /**
+   * ── EL TELÓN DEL CAMBIO DE TEMA (fase 11D) ────────────────────────────
+   *
+   * Sale de una referencia de Alex —theme-toggle.rdsx.dev— y encaja por lo
+   * que NO trae: es copia y pega, cero dependencias, y va sobre la View
+   * Transitions API del navegador. La regla 4 no se toca.
+   *
+   * El gesto es un telón que se ABRE desde el centro: el tema nuevo aparece
+   * por una franja horizontal que crece hacia arriba y hacia abajo. No es un
+   * fundido —un fundido entre dos temas deja medio segundo de barro— y no es
+   * un círculo desde el interruptor, que es lo que hace media internet.
+   *
+   * ## Y funciona sobre el canvas de WebGL, que era la duda
+   *
+   * Una view transition congela la página en una CAPTURA, y un canvas sin
+   * `preserveDrawingBuffer` puede salir en blanco ahí. Medido antes de
+   * construir nada, comparando la captura congelada contra la página viva:
+   *
+   *     portada, canvas al 100%    diferencia media por canal  0,0
+   *     dentro de la mente         0,0
+   *     editorial, canvas al 6%    0,7   (el grano y la banda, no el canvas)
+   *
+   * El canvas entra entero en el telón. Eso es lo que permite además usar el
+   * mismo gesto para la navegación del HUD, que es 11E.
+   *
+   * ## El coste, y por qué se acepta
+   *
+   * Esto anima un `clip-path` a pantalla completa, que es la familia que §9
+   * prohíbe en el scroll. Aquí se acepta por lo mismo que el acuse del clic
+   * en un nodo: es un evento DISCRETO que el visitante ha pedido, dura 620 ms
+   * y se extingue solo. Lo que §9 prohíbe es pagarlo en cada frame de scroll.
+   *
+   * Y las capturas de una view transition son elementos compuestos por el
+   * navegador para esto exactamente, no capas del documento.
+   */
+  ::view-transition-old(root) {
+    /* El reposo: la vieja se queda quieta debajo y la nueva se mueve encima.
+       El telón de NAVEGAR es la única excepción — mueve las dos, ver 12B.1 más
+       abajo — y por eso declara su propia animación en vez de tocar esta. */
+    animation: none;
+    z-index: 0;
+  }
+  ::view-transition-new(root) {
+    z-index: 1;
+  }
+
+  /**
+   * ── DOS GESTOS, PORQUE SON DOS COSAS DISTINTAS (fase 12A.1) ───────────
+   *
+   * El telon abre desde el centro y es el de NAVEGAR: algo que viene de
+   * fuera y te lleva a otro sitio.
+   *
+   * El del TEMA es un iris que se abre desde el propio interruptor, asi que
+   * el color sale de donde has tocado. Si los dos se vieran igual, el gesto
+   * dejaria de decir cual de las dos cosas ha pasado — que es justo lo que
+   * un gesto tiene que decir.
+   *
+   * Se distinguen por `data-vt`, que `App` escribe antes de arrancar la
+   * transicion y retira al acabar. Sin la marca no hay animacion y el cambio
+   * es instantaneo, que es el comportamiento correcto para cualquier otra
+   * transicion que aparezca en el futuro sin haberlo pedido.
+   */
+  html[data-vt='tema']::view-transition-new(root) {
+    animation: cb-iris 640ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /**
+   * ── Y EL TELÓN DE NAVEGAR CIERRA ANTES DE ABRIR (fase 12B.1) ───────────
+   *
+   * Hasta aquí "el telón abre desde el centro" era literal y era solo la
+   * mitad de la palabra: no había telón que CERRAR — nacía ya entreabierto,
+   * una franja de un píxel de alto en el primer frame, y crecía hasta cubrir
+   * la pantalla. Eso no se lee como un telón: se lee como una persiana
+   * subiendo deprisa. Alex pidió lo literal — que cierre a oscuras y abra ya
+   * en el sitio correcto— y se puede sin ninguna pieza nueva.
+   *
+   * ## El mecanismo: las dos capturas que la API ya da, y nada más
+   *
+   * `::view-transition-old(root)` y `::view-transition-new(root)` son las
+   * dos fotografías —la de antes y la de después— y las dos ya existen sin
+   * que nadie las pida. Cerrando la VIEJA hacia el centro mientras la NUEVA
+   * arranca ya recogida y se abre DESPUÉS, con las dos comparten el mismo
+   * instante de cero altura, queda un fotograma en el que ninguna de las dos
+   * pinta nada.
+   *
+   * Lo que se ve ahí no es un hueco: es el fondo de
+   * `::view-transition-group(root)`, el contenedor que envuelve a las dos
+   * capturas y que SÍ pinta lo que ellas dejen sin cubrir. Puesto al oscuro
+   * de `--curtain`, ese fotograma es la pantalla entera de ese color, sin
+   * fundido y sin fotografía de por medio — un cierre de verdad, no una
+   * cortina que nace a medias.
+   *
+   * **Y no hace falta una tercera capa.** Lo obvio habría sido un `div` fijo
+   * animado por GSAP; aquí sobra, porque las dos fotografías que la API ya
+   * toma SON las dos mitades del gesto —una se recoge, la otra se
+   * despliega— y el fondo del grupo, que existe de todas formas, es el
+   * negro que faltaba. Añadir una capa sería duplicar un mecanismo que la
+   * plataforma ya da, y va contra la regla de siempre: si el sistema actual
+   * ya da una solución, se reutiliza.
+   *
+   * ## Las dos mitades no pesan igual, y el hueco entre ellas es el gesto
+   *
+   * Cerrar es un golpe corto y con prisa —260 ms, `ease-in` pronunciado,
+   * como un telón que cae por su propio peso—. Abrir es más pausado —340 ms,
+   * `ease-out`— porque es la parte que hay que LEER: ahí aparece el destino.
+   * Entre medias, 60 ms enteros a oscuras. Sin ese hueco el cierre y la
+   * apertura se tocan y se leen como una sola cortina rebotando, no como dos
+   * actos — es la misma razón por la que `useSectionExit` no deja nada en
+   * cero: un extremo sin margen no se lee como una pausa, se lee como un
+   * error de sincronismo.
+   *
+   * Comprobado contra el build con `.shots/curtain.mjs`, muestreando el
+   * color medio del cuadro cada 40 ms: a los 280–320 ms el 100% de los
+   * píxeles son `--curtain`, ni la vieja sección ni la nueva asoman.
+   */
+  html[data-vt='nav']::view-transition-group(root) {
+    background-color: var(--curtain);
+  }
+  html[data-vt='nav']::view-transition-old(root) {
+    /* Por delante mientras se cierra: es ella la que hay que ver recogerse.
+       Deja de importar en cuanto termina, porque a partir de ahí no pinta
+       nada — pero declararlo evita depender de en qué orden decida el
+       navegador resolver el instante exacto en que las dos coinciden. */
+    z-index: 2;
+    animation: cb-curtain-close 260ms cubic-bezier(0.6, 0, 1, 0.4) both;
+  }
+  html[data-vt='nav']::view-transition-new(root) {
+    /* Arranca recogida —el `from` de su propio keyframe— y el retraso de
+       320 ms es la suma de los 260 del cierre más los 60 del hueco a
+       oscuras: no un número suelto, la cuenta de las dos partes de arriba. */
+    animation: cb-curtain-open 340ms cubic-bezier(0, 0.6, 0.4, 1) 320ms both;
+  }
+  @keyframes cb-curtain-close {
+    from {
+      clip-path: inset(0 0 0 0);
+    }
+    to {
+      clip-path: inset(50% 0 50% 0);
+    }
+  }
+  @keyframes cb-curtain-open {
+    from {
+      clip-path: inset(50% 0 50% 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  @keyframes cb-iris {
+    from {
+      clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%));
+    }
+    to {
+      clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%));
+    }
+  }
+
+  /*
+    ── LA ENTRADA DEL PRELOADER VA EN CSS, NO EN GSAP ────────────────────────
+
+    Es la única animación de esta web que corre mientras el hilo principal está
+    ocupado, y por eso es la única que no puede escribirse desde él.
+
+    La composición de la marca —10G— la llevaba una línea de tiempo de GSAP, o
+    sea JavaScript escribiendo `transform` y `opacity` en cada frame. Eso
+    funciona en cualquier otro sitio de la web porque en cualquier otro sitio el
+    hilo está libre; aquí no lo está por definición: detrás del velo se monta
+    React entero, se parsean los `.glb`, se subdivide la sala interior a 233.612
+    triángulos y se compila cada material del recorrido.
+
+    Medido contra el build, dos pasadas, durante los 2,6 s de la entrada:
+
+        pasada 1    55 frames · 13 por encima de 33 ms · 1.843 ms bloqueados
+        pasada 2    93 frames · 10 por encima de 33 ms · 1.090 ms bloqueados
+
+    Cincuenta y cinco frames en dos segundos y medio son 21 fps. La animación no
+    iba lenta: iba A TIRONES, que es lo que Alex describe como "donde más se
+    nota". Y no se arregla aligerando la carga —la carga es lo que es— sino
+    quitando la animación del hilo que se bloquea.
+
+    Una animación de CSS sobre `transform` y `opacity` se entrega al
+    COMPOSITOR: sigue corriendo con su propio reloj aunque el hilo principal
+    esté parado 250 ms. Es la misma propiedad que §9 tiene medida —esas dos son
+    gratis porque no las resuelve el hilo— leída al revés: no solo son baratas,
+    es que ni siquiera dependen de él.
+
+    La coreografía es la MISMA, número por número: mismos tiempos, mismos
+    desplazamientos y las curvas de GSAP escritas como bézier —`power2.out` es
+    un cúbico de salida y `power3.out` un cuártico—.
+
+    Y el reposo lo declara el estilo, nunca la animación. Es la lección que
+    10G ya pagó con Olaz invisible bajo `prefers-reduced-motion`: sin la clase
+    `.cb-boot` no hay ni una interpolación y todo está en su sitio desde el
+    primer frame.
+  */
+  .cb-boot .cb-boot-rule {
+    animation: cb-boot-rule 700ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+  }
+  .cb-boot .cb-boot-mark {
+    animation: cb-boot-mark 950ms cubic-bezier(0.165, 0.84, 0.44, 1) 250ms both;
+  }
+  .cb-boot .cb-boot-meta {
+    animation: cb-boot-meta 500ms cubic-bezier(0.215, 0.61, 0.355, 1) 1150ms both;
+  }
+  /*
+    Olaz necesita DOS elementos, y es la ley de la casa: en el DOM manda un
+    dueño por ELEMENTO. Su llegada escala y funde; su balanceo gira. Las dos
+    cosas escriben `transform`, y dos animaciones de CSS sobre la misma
+    propiedad no se suman —gana la última que esté en efecto—, así que la
+    envoltura se queda la llegada y la imagen el giro.
+  */
+  .cb-boot .cb-boot-olaz-in {
+    animation: cb-boot-olaz-in 300ms cubic-bezier(0.215, 0.61, 0.355, 1) 950ms both;
+  }
+  /*
+    El péndulo amortiguado y el balanceo en reposo, encadenados por retardo. El
+    segundo va con `fill: none` a propósito: durante su retardo no está en
+    efecto, así que quien manda es el `forwards` del primero y no hay salto
+    entre uno y otro.
+  */
+  .cb-boot .cb-boot-olaz {
+    animation:
+      cb-boot-olaz-swing 2550ms cubic-bezier(0.37, 0, 0.63, 1) 1250ms both,
+      cb-boot-olaz-idle 1100ms cubic-bezier(0.37, 0, 0.63, 1) 3800ms infinite alternate none;
+  }
+
+  @keyframes cb-boot-rule {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes cb-boot-mark {
+    from {
+      opacity: 0;
+      transform: translateY(108%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes cb-boot-meta {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes cb-boot-olaz-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  /*
+    Las tres paradas del péndulo duran 0,75 · 0,85 · 0,95 s, que sobre los 2,55
+    del total caen en el 29,41% y el 62,75%. Las amplitudes decrecen y las
+    duraciones se alargan: un balanceo de amplitud constante parece un
+    metrónomo, uno que se apaga parece peso colgando.
+  */
+  @keyframes cb-boot-olaz-swing {
+    0% {
+      transform: rotate(-34deg);
+    }
+    29.41% {
+      transform: rotate(16deg);
+    }
+    62.75% {
+      transform: rotate(-11deg);
+    }
+    100% {
+      transform: rotate(6deg);
+    }
+  }
+  @keyframes cb-boot-olaz-idle {
+    from {
+      transform: rotate(6deg);
+    }
+    to {
+      transform: rotate(-3deg);
+    }
+  }
+
+  /*
+    Con movimiento reducido no hay telón: el tema cambia y ya. `JourneyScroll`
+    y el resto de la web siguen la misma regla — lo que se apaga es el gesto,
+    nunca el resultado.
+
+    Y lleva `!important`, no solo la selectividad de siempre — hacía falta
+    medirlo para verlo: `html[data-vt='nav']::view-transition-old(root)` y
+    `html[data-vt='tema']::view-transition-new(root)` pesan (0,1,2) por el
+    atributo `[data-vt]`, y esta regla sin `!important` pesaba (0,0,1) —
+    perdía SIEMPRE, telón puesto o no. Comprobado con
+    `document.getAnimations()` bajo `prefers-reduced-motion: reduce`: las
+    tres animaciones seguían con su duración completa (260 · 320+340 · 250),
+    ni una desactivada. Es el mismo `!important` que ya lleva el reset
+    general de más abajo, para el mismo problema: una regla de accesibilidad
+    tiene que ganar siempre, no cuando el cascade se alinee a su favor.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    html[data-vt]::view-transition-group(root),
+    html[data-vt]::view-transition-old(root),
+    html[data-vt]::view-transition-new(root) {
+      animation: none !important;
+    }
   }
 
   ::selection {
@@ -190,10 +778,50 @@
    */
   [data-act='3'],
   [data-act='4'],
-  [data-act='5'] {
+  [data-act='5'],
+  /*
+    Y el DOCUMENTO, cuando lo que se lee es editorial de suelo claro.
+
+    No es una copia de los tres de arriba: es el mismo bloque con un cuarto
+    selector. Los tres primeros visten el contenido en flujo; este viste al
+    HUD, que es `fixed` y por tanto resuelve contra `:root` — donde la tinta
+    es el marfil de la mente. Medido en 10F antes de esto: el HUD daba entre
+    1,00 y 1,13 : 1 sobre el marfil, o sea que no estaba. Ver la fase 10F.
+  */
+  [data-ground='paper'] {
+    /*
+      Y declara su propia lamina. Sin esta linea caia al `--veil` de `:root`,
+      que desde 11E es la MENTE: la lamina del HUD pintaba una banda oscura
+      sobre la crema de la portada. Un token que existe en dos regimenes tiene
+      que estar declarado en los dos.
+    */
+    --veil: var(--surface-paper);
     --ink: #2b211c;
     --ink-soft: #5f4c40;
-    --ink-faint: #9a8878;
+    /*
+      ── LOS METADATOS PASABAN DE LARGO EL CONTRASTE MÍNIMO (fase 10D) ────
+
+      Lo destapó medir el área oscura: puestos los seis fondos y las seis
+      tintas en la misma tabla, la que fallaba no era la nueva sino las cinco
+      de marfil. Medido contra el build, `#9A8878` sobre su propio fondo:
+
+          Sobre mí   2,31 : 1        el resto   2,95 : 1
+
+      El mínimo AA para texto pequeño es 4,5. Y no es texto decorativo: es el
+      cuerpo de "RESPONSABILIDADES", "OBJETIVO", "FORTALEZAS" y del sello de
+      coordenadas — o sea de todo lo que da ESTRUCTURA a la página.
+
+      Sobre mí sale peor porque su fondo es el más oscuro de las seis: su
+      terreno es el más denso y su sombra la más fuerte, unos veinte niveles
+      por debajo del resto. El valor se elige contra ESE, no contra la media.
+
+      `#6B584A` da 4,56 en Sobre mí y 5,84 en las demás. Acerca los
+      metadatos al color del cuerpo, y se acepta: lo que distingue un rótulo
+      de un párrafo aquí no es solo el color — es que va en versalitas,
+      espaciado y en la voz monoespaciada. Un rótulo que no se lee no es una
+      jerarquía más fina: es un rótulo que no está.
+    */
+    --ink-faint: #6b584a;
     --surface: var(--surface-paper);
     --rule: rgba(43, 33, 28, 0.14);
   }
@@ -208,6 +836,157 @@
 
   [data-act='5'] {
     --accent: #8a5a3c;
+  }
+
+  /**
+   * ── UN ÁREA SOBRE SUELO OSCURO (fase 10D) ────────────────────────────
+   *
+   * El editorial eran ocho pantallas del mismo marfil con filetes de un
+   * píxel: ninguna superficie, ningún plano, nada contra lo que leer un
+   * borde. Esto le da UNA, y una sola.
+   *
+   * **Por qué Experiencia.** Su acento es el añil, y medido sobre el marfil
+   * el añil se lee gris —§16 lo tiene anotado desde 9B—. Sobre coco oscuro
+   * recupera el contraste que la paleta le promete. Además cae en mitad del
+   * editorial, así que puntúa entre Proyectos (claro y lleno) y Habilidades
+   * (claro y denso), y su costura con Habilidades ya es un evento narrativo.
+   *
+   * **Y una sola.** Dos áreas oscuras dejarían de ser un paréntesis y
+   * pasarían a ser el tono de la web, que es exactamente lo que la
+   * proporción 70/20/10 prohíbe. La oscuridad de esta web es la mente.
+   *
+   * **El acento CAMBIA de tono, y no es un capricho.** Medidos los
+   * contrastes sobre #2B211C:
+   *
+   *     añil del acto 4  #2C4A73   ->  1,75 : 1   invisible
+   *     añil de la mente #8FA8D0   ->  6,49 : 1
+   *
+   * El segundo ya está en la paleta: es el añil de los nodos del interior.
+   * O sea que el área oscura no estrena color — toma prestado el que la
+   * mente ya usa cuando el fondo es oscuro, que es de donde viene.
+   *
+   * Lo mismo con los metadatos: #857166 da 3,40:1 aquí y no llega a AA, así
+   * que sube a #9C8A7D (4,75:1). El cuerpo va a 7,88:1 y el titular a 13,73.
+   */
+  [data-ground='dark'] {
+    --veil: #2b211c;
+    /* El añil de la marca, en su versión de fondo oscuro: es el MISMO cambio
+       de tono que hace `--accent` justo debajo, y por el mismo motivo. Con
+       esto `--indigo` se puede usar en cualquier sitio del editorial sin que
+       deje de leerse al cruzar un suelo oscuro. */
+    --indigo: #8fa8d0;
+    --ink: #f8edef;
+    --ink-soft: #c7b4aa;
+    --ink-faint: #9c8a7d;
+    --surface: #3a2e27;
+    --rule: rgba(248, 237, 239, 0.16);
+    --accent: #8fa8d0;
+  }
+  /**
+   * ── EL SUELO DE NOCHE (fase 11D) ──────────────────────────────────────
+   *
+   * El editorial en modo oscuro. **No es el coco de la mente, y esa es toda
+   * la decisión**: con el coco, "modo oscuro" habría significado que la web
+   * entera se convierte en el cerebro, que es lo que §7 prohíbe. Con el añil
+   * noche la mente conserva su exclusividad.
+   *
+   * `#16233A` está elegido por medición, no por gusto: es contrastivamente
+   * IDÉNTICO al coco de la mente, así que ningún token ha tenido que
+   * recalibrarse al llegar aquí.
+   *
+   *     marfil #F8EDEF  13,74     coco daba 13,73
+   *     soft   #C7B4AA   7,89     coco daba  7,88
+   *     añil   #8FA8D0   6,50     coco daba  6,49
+   *     faint  #9C8A7D   4,75     coco daba  4,75
+   *
+   * Y el añil de marca cambia de tono igual que en el suelo oscuro y por el
+   * mismo motivo: el Santorini `#2C4A73` sobre este fondo daría 1,3 : 1.
+   */
+  /*
+    Y entra por CUATRO puertas, no por una.
+
+    El documento lleva `data-ground` y la seccion hereda... salvo que la
+    seccion declare lo suyo, y lo declara: su `[data-act]` pone `--ink` en
+    #2B211C. Una declaracion propia gana siempre a una heredada, asi que en
+    modo noche el editorial se quedaba con tinta oscura sobre suelo oscuro
+    -medido: 1,04 : 1 en el cuerpo, o sea invisible-.
+
+    En modo CLARO esto no pasa porque 10D escribe `data-ground="dark"` en la
+    propia seccion de Experiencia. Aqui se resuelve igual pero sin tocar
+    ningun componente: el bloque anade los tres actos bajo `[data-theme]`,
+    que es una declaracion sobre la seccion y de mayor especificidad que su
+    `[data-act]` suelto. Los VALORES siguen escritos una sola vez.
+  */
+  [data-ground='night'],
+  [data-theme='dark'] [data-act='3'],
+  [data-theme='dark'] [data-act='4'],
+  [data-theme='dark'] [data-act='5'] {
+    --veil: #16233a;
+    --indigo: #8fa8d0;
+    --ink: #f8edef;
+    --ink-soft: #c7b4aa;
+    /*
+      Mas claro que su equivalente sobre coco, y esta medido contra los seis
+      suelos REALES -los del pixel, no los del token, porque la luna del
+      entorno los aclara-. Con el #9C8A7D del suelo oscuro los metadatos
+      daban 3,16 a 4,28 en cinco de las seis areas: por debajo del 4,5 de AA.
+
+      El peor caso manda, y aqui el peor no es el anil: es la lamina calida
+      de Experiencia, rgb(77,60,51). Contra ella este valor da 4,77.
+
+          about 6,90 · work 6,37 · experiencia 4,77
+          skills 6,46 · cv 6,21 · contacto 5,69
+
+      Se acerca a --ink-soft, y se acepta por lo mismo que en 10D: lo que
+      distingue un rotulo de un parrafo aqui no es solo el color, es que va
+      en versalitas, espaciado y en la voz monoespaciada.
+    */
+    --ink-faint: #bdaca1;
+    --surface: #22334d;
+    --rule: rgba(248, 237, 239, 0.16);
+    --accent: #8fa8d0;
+    /* El area de suelo propio se ELEVA en calido en vez de hundirse. */
+    --ground-plate: #4a392f;
+
+    /* Una luna, no un sol: mucho mas floja y mas fria. Y las sombras
+       OSCURECEN, que sobre un fondo claro no hacia falta pero aqui si. */
+    --lamp-key-a: rgba(206, 224, 255, 0.07);
+    --lamp-key-b: rgba(206, 224, 255, 0.032);
+    --lamp-key-c: rgba(206, 224, 255, 0);
+    --lamp-coco-a: rgba(10, 8, 6, 0.3);
+    --lamp-coco-b: rgba(10, 8, 6, 0.14);
+    --lamp-coco-c: rgba(10, 8, 6, 0);
+    --lamp-indigo-a: rgba(4, 8, 16, 0.32);
+    --lamp-indigo-b: rgba(4, 8, 16, 0.15);
+    --lamp-indigo-c: rgba(4, 8, 16, 0);
+  }
+
+  /**
+   * ── Y LA MARCA ES EL AÑIL EN TODO EL EDITORIAL ────────────────────────
+   *
+   * Una sola regla para los dos suelos: `--indigo` ya cambia de tono solo
+   * —#2C4A73 sobre marfil, #8FA8D0 sobre coco— así que esto no elige un
+   * color, elige QUÉ color de la paleta hace de marca aquí.
+   *
+   * Medido contra el build, el anillo de foco sobre el suelo de cada área:
+   *
+   *     acento del acto        2,64 · 2,82 · 6,25 · 7,09 · 4,67 · 4,75
+   *     el añil                7,09 · 7,09 · 6,25 · 7,09 · 7,09 · 7,09
+   *
+   * Las dos primeras son Sobre mí y Proyectos, y son las que no llegaban al
+   * mínimo de 3. Con el añil las seis pasan y además dan la MISMA respuesta:
+   * el foco deja de cambiar de color según por dónde vayas, que es lo que se
+   * le pide a un elemento de interfaz frente a uno de contenido.
+   *
+   * Y no estrena nada: §5 ya decía que el añil es "el foco del teclado y
+   * algún filete". El código decía otra cosa; lo que estaba mal era el
+   * código.
+   *
+   * Durante el recorrido 3D no hay `data-ground`, así que la marca sigue
+   * siendo el rosa de la mente. Ahí no se toca nada.
+   */
+  [data-ground] {
+    --mark: var(--indigo);
   }
 }
 
@@ -234,7 +1013,23 @@
     letter-spacing: 0.14em;
     color: var(--ink-soft);
     padding-block: 0.35rem;
-    transition: color 220ms ease;
+    transition: color 220ms ease, transform 120ms ease;
+  }
+  /**
+   * ── EL PULSO SE SIENTE, NO SOLO SE VE (fase 12F) ────────────────────────
+   *
+   * Cada enlace de la web tenía hover y foco — crecer el filete, encenderse
+   * en `--mark` — y nada para el instante de PULSAR. En táctil ese instante
+   * es el único que existe: no hay hover que lo preceda. Y en ratón, entre
+   * "encima" y "ha pasado algo" no había ningún tercer estado.
+   *
+   * Un `scale(0.97)`, casi nada — la misma contención que ya rige el resto
+   * del movimiento de esta web (§7: "20 px sobre 1262 son el 1,6%"). No dice
+   * "he cambiado", dice "te he oído": se suelta y vuelve, tanto si lo que
+   * sigue es una navegación como si es solo abrir una tarjeta.
+   */
+  .link-quiet:active {
+    transform: scale(0.97);
   }
   .link-quiet::after {
     content: '';
@@ -247,13 +1042,736 @@
     transform-origin: left;
     transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
   }
+  /**
+   * ── UN ENLACE SE ENCIENDE EN LA MARCA, NO EN EL ACENTO (fase 10F) ──────
+   *
+   * Iba en `--accent`, y eso fallaba en dos sitios distintos por la misma
+   * razón —el acento es del ACTO, y un control no siempre está dentro de uno—:
+   *
+   * - en el acto 3 el acento es el rosa de marca, que sobre el marfil da 2,82
+   *   contra el 4,5 que pide un texto. Hoy no se ve porque ni el CTA de Sobre
+   *   mí ni los enlaces de proyecto tienen destino todavía, pero se vería el
+   *   día que Alex los rellene;
+   * - y el visor de medios va en un PORTAL colgado del `body`, así que
+   *   resuelve contra `:root`, donde el acento es el rosa de la mente. Al
+   *   abrirlo, el foco salta a "Cerrar" —eso es correcto y está documentado—
+   *   y ese botón salía rosa sobre el velo de papel: medido en píxel,
+   *   **2,21 : 1**. El control principal de un diálogo modal.
+   *
+   * Con `--mark` los dos dan 7,09 sobre marfil y 6,25 sobre el suelo oscuro,
+   * y el recorrido 3D no cambia: allí `--mark` sigue siendo el rosa. Es la
+   * misma respuesta que ya da el anillo de foco, y esa es la idea — un
+   * elemento de interfaz se enciende siempre igual.
+   */
   .link-quiet:hover,
   .link-quiet:focus-visible {
-    color: var(--accent);
+    color: var(--mark);
   }
   .link-quiet:hover::after,
   .link-quiet:focus-visible::after {
     transform: scaleX(1);
+  }
+
+  /**
+   * ── LA FLECHA SE MUEVE HACIA DONDE LLEVA (fase 12A) ────────────────────
+   *
+   * Los "↗", "↓" y "→" eran CARACTERES, asi que su grosor, su tamano y su
+   * alineacion los decidia la tipografia monoespaciada del sistema —distinta
+   * en cada plataforma— y no cuadraban con nada de lo que tenian al lado.
+   * Ahora son trazos del mismo sistema que los demas iconos.
+   *
+   * Y se mueven: un enlace que sale de la pagina empuja su flecha hacia
+   * fuera, uno que baja la empuja hacia abajo. No es un adorno — es la unica
+   * parte del enlace que dice HACIA DONDE va, y por eso el gesto ocurre en el
+   * eje correcto en cada caso.
+   *
+   * Dos pixeles y `transform`, que el compositor resuelve gratis (§9). Y solo
+   * donde hay un puntero de verdad: en tactil el navegador simula un hover
+   * pegajoso que se queda puesto despues de tocar.
+   */
+  /**
+   * ── Y CADA UNA SE MUEVE EN SU PROPIO EJE (fase 12B) ────────────────────
+   *
+   * Lo de arriba lo decía y el código no lo hacía: había UNA regla, y esa
+   * regla empujaba `translate(2px, -2px)` a todo lo que llevara la clase. O
+   * sea que la flecha de "Baja para entrar" salía hacia ARRIBA, el sobre del
+   * correo se iba volando en diagonal y el icono de descargar el CV subía en
+   * vez de bajar.
+   *
+   * Es el patrón que §13 ya tiene con nombre —un comentario que lleva dentro
+   * la refutación de lo que afirma— y estaba en la misma regla que describe.
+   *
+   * Ahora hay una variante por eje y el reposo lo declara la transición, no
+   * cada uso. Y la que NO se mueve también es una decisión: un sobre y una
+   * hoja de copiar no son direcciones, son objetos. Moverlos es decorar.
+   */
+  .link-arrow,
+  .link-arrow-down,
+  .link-arrow-right,
+  .link-arrow-back,
+  .link-arrow-still {
+    transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  @media (hover: hover) {
+    .link-quiet:hover .link-arrow,
+    .link-quiet:focus-visible .link-arrow,
+    a:hover .link-arrow,
+    button:hover .link-arrow,
+    button:focus-visible .link-arrow,
+    .group:hover .link-arrow {
+      transform: translate(2px, -2px);
+    }
+    .link-quiet:hover .link-arrow-down,
+    .link-quiet:focus-visible .link-arrow-down,
+    a:hover .link-arrow-down,
+    button:hover .link-arrow-down,
+    button:focus-visible .link-arrow-down,
+    .group:hover .link-arrow-down {
+      transform: translateY(3px);
+    }
+    .link-quiet:hover .link-arrow-right,
+    .link-quiet:focus-visible .link-arrow-right,
+    a:hover .link-arrow-right,
+    button:hover .link-arrow-right,
+    button:focus-visible .link-arrow-right,
+    .group:hover .link-arrow-right {
+      transform: translateX(3px);
+    }
+    .link-quiet:hover .link-arrow-back,
+    .link-quiet:focus-visible .link-arrow-back,
+    button:hover .link-arrow-back,
+    button:focus-visible .link-arrow-back {
+      transform: translateX(-3px);
+    }
+  }
+
+  /**
+   * ── Y EN TÁCTIL EL ÁREA DE TOQUE LLEGA A 44 px ────────────────────────
+   *
+   * Medido a 390: "LinkedIn ↗" daba 88 × 24. El mínimo de WCAG 2.5.8 son
+   * 24 × 24, así que pasaba — clavado en el suelo, sin un píxel de margen.
+   *
+   * No se arregla con relleno: el filete de `::after` va pegado al borde
+   * inferior de la caja de relleno, así que subir `padding-block` lo
+   * separaría del texto y cambiaría el dibujo del enlace en todas partes.
+   * Un pseudoelemento vacío extiende la zona sensible sin mover NADA de lo
+   * que se ve, y solo donde el dedo es el puntero.
+   */
+  @media (pointer: coarse) {
+    .link-quiet::before {
+      content: '';
+      position: absolute;
+      inset-block: -10px;
+      inset-inline: 0;
+    }
+  }
+
+  /**
+   * ── UNA CAPTURA SE COMPORTA COMO UN OBJETO ─────────────────────────────
+   *
+   * Al pasar por encima, la lámina se acerca un 1,2% y su marco se aclara.
+   * Nada más: ni giro, ni inclinación, ni sombra, ni zoom. Lo que se busca no
+   * es un efecto, es que el elemento acuse que hay un cursor encima — la
+   * diferencia entre una imagen pegada en la página y un objeto que está en
+   * ella.
+   *
+   * El 1,2% está elegido por abajo a propósito: es el mínimo que se percibe.
+   * Cualquier valor que se pueda MEDIR a ojo ya es un efecto de plantilla, y
+   * además recorta la captura mientras dura, que en una imagen de interfaz
+   * significa tapar contenido.
+   *
+   * **Solo donde hay un cursor de verdad.** `hover: hover` deja fuera el
+   * táctil, donde el navegador simula un hover pegajoso que se queda puesto
+   * después de tocar: en un móvil la captura se quedaría ampliada sin que
+   * nadie lo haya pedido.
+   *
+   * Y solo `transform` y el color del borde: las dos las resuelve el
+   * compositor. La transición es corta —180 ms— porque es una respuesta, no
+   * una animación; el movimiento largo de esta web sale del scroll.
+   */
+  /**
+   * ── LA JERARQUÍA DE COMPOSICIÓN DEL EDITORIAL ──────────────────────────
+   *
+   * Cinco planos declarados, y la escala es LOCAL: `.composition` abre un
+   * contexto de apilado propio con `isolation`, así que un número de aquí
+   * dentro no puede competir nunca con el HUD, el grano o el preloader. Es lo
+   * que permite que sean cinco valores pequeños en vez de un 9999.
+   *
+   * El orden y el porqué están en `animations/tokens.js`. En resumen: hasta la
+   * fase 7A el orden de pintado no lo decidía nadie —lo decidía el orden del
+   * DOM y qué elementos resultaban estar posicionados— y por eso la lista de
+   * tecnologías, que es `sticky` y por tanto un elemento posicionado, se
+   * pintaba encima de las capturas del abanico. Medido: hasta 4.048 px² de
+   * nombres de tecnología escritos sobre una captura de aplicación.
+   *
+   * `.layer-text` no lleva fondo a propósito. Poner uno resolvería el
+   * solapamiento tapando la imagen, que es la solución de una plantilla: aquí
+   * el texto y el medio no se solapan porque la COMPOSICIÓN no los hace
+   * coincidir, y el orden solo decide qué pasa en los roces.
+   */
+  /**
+   * ── EL VELO DEL VISOR ──────────────────────────────────────────────────
+   *
+   * Sobre el papel del editorial, no sobre negro: un velo negro convierte el
+   * visor en una galería de escaparate y esto es un documento abierto encima
+   * de otro. Al 96% deja intuir dónde estabas sin que nada de debajo compita.
+   *
+   * La entrada y la salida ya no son un `@keyframes` de CSS: las lleva GSAP,
+   * porque el visor entero pasó a tener un solo dueño de su `opacity` y su
+   * `transform` — la lámina que se despega de la mesa, no un fundido del
+   * marco completo. Ver `MediaViewer.jsx`.
+   */
+  .viewer {
+    background-color: color-mix(in srgb, var(--surface-paper) 96%, transparent);
+  }
+
+  /**
+   * ── EL ENTORNO: CÓMO CAMBIA DE ESTADO ──────────────────────────────────
+   *
+   * El campo topográfico no se redibuja al cambiar de área: cambia de COLOR,
+   * de densidad, de altura de vuelo y de luz, y las cuatro transicionan solas.
+   * Alrededor de segundo y medio, que es lo bastante lento como para que nadie
+   * vea el momento en que ocurre — si se ve el cambio, el fondo deja de ser un
+   * entorno y pasa a ser un efecto.
+   *
+   * Y va en CSS y no en GSAP a propósito: un cambio de área es un evento
+   * DISCRETO —o estás en una o estás en la otra— así que no hay ninguna
+   * posición de scroll a la que atarlo. Es la misma excepción, y por el mismo
+   * motivo, que el índice del HUD.
+   *
+   * Cada propiedad la escribe UN elemento distinto, que es la ley de la casa
+   * para el DOM: el grupo de estado lleva el color y la escala, la envoltura de
+   * cada plano lleva su densidad, y el plano de dentro es el único que GSAP
+   * toca con el desplazamiento. Sin ese reparto, el cambio de área daría un
+   * salto en la deriva cada vez que React volviera a pintar.
+   */
+  .ambient-state {
+    transition:
+      color 1400ms ease,
+      transform 1800ms cubic-bezier(0.33, 0, 0.2, 1);
+  }
+
+  .ambient-depth {
+    transition: opacity 1400ms ease;
+  }
+
+  /**
+   * ── LA LUZ ─────────────────────────────────────────────────────────────
+   *
+   * Dos manchas enormes y muy suaves —una clave cálida y una sombra— que
+   * cambian de sitio y de fuerza en cada zona. No es un degradado por sección:
+   * es la misma luz moviéndose alrededor del mismo terreno.
+   *
+   * **El degradado no se toca nunca.** Un `background-image` no interpola, así
+   * que cambiar su color obligaría a repintar una capa de pantalla completa en
+   * cada frame de la transición. Lo único que se escribe es `transform` y
+   * `opacity`, que las resuelve el compositor y son gratis (§9).
+   *
+   * Por eso la sombra son DOS manchas, coco y añil, que se cruzan por opacidad:
+   * es la forma de cambiar de temperatura sin repintar nada.
+   *
+   * Y son mucho mayores que la ventana —140% de la diagonal— para que su borde
+   * no entre nunca en cuadro. Una mancha con borde visible es un círculo; una
+   * mancha sin borde es luz.
+   */
+  .ambient-light {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .ambient-lamp {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 140vmax;
+    height: 140vmax;
+    margin-left: -70vmax;
+    margin-top: -70vmax;
+    border-radius: 50%;
+    will-change: transform, opacity;
+    transition:
+      opacity 1600ms ease,
+      transform 1800ms cubic-bezier(0.33, 0, 0.2, 1);
+  }
+
+  /**
+   * La clave: un crema mas claro y mas calido que el papel.
+   *
+   * Su color sale de tokens desde 11D porque en modo noche no puede ser el
+   * mismo: una clave crema al 26% sobre el anil noche lo subia 38 niveles
+   * -medido, el suelo salia en rgb(60,68,86) en vez de rgb(22,35,58)- y lo
+   * que se veia no era una luz, era el fondo lavado.
+   *
+   * De noche la luz entra mucho mas floja y mas fria: una luna, no un sol.
+   */
+  .ambient-key {
+    background: radial-gradient(
+      closest-side,
+      var(--lamp-key-a) 0%,
+      var(--lamp-key-b) 38%,
+      var(--lamp-key-c) 72%
+    );
+  }
+
+  /** La sombra cálida: el coco de la paleta, a muy poca fuerza. */
+  .ambient-shade-coco {
+    background: radial-gradient(
+      closest-side,
+      var(--lamp-coco-a) 0%,
+      var(--lamp-coco-b) 40%,
+      var(--lamp-coco-c) 72%
+    );
+  }
+
+  /** Y la fría: el añil, que es el acento de Experiencia y Habilidades. */
+  .ambient-shade-indigo {
+    background: radial-gradient(
+      closest-side,
+      var(--lamp-indigo-a) 0%,
+      var(--lamp-indigo-b) 40%,
+      var(--lamp-indigo-c) 72%
+    );
+  }
+
+  /**
+   * En móvil se van las cotas y las curvas se afinan.
+   *
+   * No es degradar: es que a 390 px el campo entero ocupa la mitad de píxeles
+   * y las mismas seis marcas pasan de ser un apunte a ser seis manchas encima
+   * del texto. La identidad la llevan las curvas, y esas se quedan.
+   *
+   * La luz también baja: en una pantalla estrecha las dos manchas ocupan
+   * proporcionalmente mucho más cuadro, así que la misma fuerza que en
+   * escritorio se lee como un degradado de sección — que es exactamente lo que
+   * esto no puede ser.
+   */
+  @media (max-width: 1023px) {
+    .ambient-marks {
+      display: none;
+    }
+    .ambient-svg {
+      opacity: 0.62;
+    }
+    .ambient-light {
+      opacity: 0.6;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-state,
+    .ambient-depth,
+    .ambient-lamp {
+      transition: none;
+    }
+  }
+
+  .composition {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /**
+   * ── LA SUPERFICIE DE UN ÁREA OSCURA ──────────────────────────────────
+   *
+   * A sangre sin `100vw`: un elemento absoluto se posiciona contra la CAJA
+   * DE RELLENO de su contenedor, y la sección ocupa el ancho completo, así
+   * que `inset: 0` ya llega a los dos bordes. Con `100vw` habría desbordado
+   * por el ancho de la barra de desplazamiento — y este manual mide los
+   * desbordes en cada fase.
+   *
+   * **Y entra por un degradado, no por un canto.** Un rectángulo oscuro con
+   * borde recto es un cambio de diapositiva, que es justo lo que el
+   * editorial evita desde la fase 7B: aquí las áreas se solapan al entrar y
+   * salir. El fundido ocupa exactamente `--gap-area` por arriba y por abajo
+   * — la MISMA variable que genera el relleno vertical de la sección— así
+   * que el degradado cae siempre donde no hay texto, por definición y no
+   * por ajuste.
+   *
+   * Va en el plano ART (0), detrás de medios y texto. Y como `.composition`
+   * aísla su contexto de apilado, no puede colarse por delante del HUD ni
+   * del grano — el grano, de hecho, la cruza igual que cruza todo lo demás,
+   * que es lo que impide que se lea como una caja pegada encima.
+   */
+  /**
+   * La superficie de un área de suelo propio. El color sale de un token
+   * porque cambia con el tema, y la dirección del gesto cambia con él:
+   *
+   *     claro   coco #2B211C   el área se HUNDE en un plano oscuro
+   *     noche   coco #4A392F   el área se ELEVA en un plano cálido
+   *
+   * No es un capricho de simetría: en noche no PUEDE hundirse. Medido, el
+   * coco oscuro y el añil noche tienen la misma luminancia —1,00 : 1— y
+   * cualquier oscuro razonable se queda entre 1,00 y 1,16, así que un plano
+   * más oscuro sobre un fondo oscuro no deja ningún escalón que ver. Lo que
+   * sí lo deja es subir el valor y conservar la temperatura: 1,44 : 1 contra
+   * el suelo, con marfil a 9,57 y los acentos a 4,4.
+   *
+   * El fundido ocupa `--gap-area` por arriba y por abajo, o sea la MISMA
+   * variable que genera el relleno vertical de la sección: cae siempre donde
+   * no hay texto, por definición y no por ajuste.
+   */
+  .section-ground {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      transparent 0,
+      var(--ground-plate) var(--gap-area),
+      var(--ground-plate) calc(100% - var(--gap-area)),
+      transparent 100%
+    );
+  }
+
+  /**
+   * La zona segura del HUD, aplicada UNA vez sobre la caja del editorial
+   * (`PortfolioSection`, `ContactCoda`) en vez de repartida por componente.
+   * Ver `--hud-right-pad` arriba: por qué es una fórmula y no un breakpoint.
+   */
+  .hud-safe-r {
+    padding-right: var(--hud-right-pad);
+  }
+  .layer-art {
+    position: absolute;
+    z-index: 0;
+  }
+  .layer-media {
+    position: relative;
+    z-index: 10;
+  }
+  .layer-object {
+    position: relative;
+    z-index: 20;
+  }
+  .layer-text {
+    position: relative;
+    z-index: 30;
+  }
+  .layer-ui {
+    position: relative;
+    z-index: 40;
+  }
+
+  .media-frame img,
+  .media-frame video {
+    transition: transform 460ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .media-frame {
+    /**
+     * ── LA SOMBRA, COMPUESTA DESDE VARIABLES ──────────────────────────────
+     *
+     * Vive aquí y no en el contenedor del escenario porque su dueño tiene que
+     * ser el mismo elemento que conoce el cursor: `usePlate` escribe estas
+     * cuatro variables en el marco mientras la lámina se inclina, y la sombra
+     * sale sola de ellas.
+     *
+     * Los valores en reposo son los que tenía la sombra fija: desplazada hacia
+     * abajo, muy difusa y muy tenue. No es el contorno duro de una tarjeta de
+     * panel; es lo que proyecta una hoja apoyada sobre otra.
+     *
+     * La transición es corta —140 ms— y hace dos trabajos: suaviza el
+     * seguimiento del cursor y evita que al salir la sombra vuelva de golpe.
+     */
+    /*
+      ── Y SON DOS CAPAS, NO UNA (fase 10C) ────────────────────────────────
+
+      Con una sola sombra muy difusa las láminas no se apoyaban en nada: en
+      las capturas salían como recortes pegados sobre el marfil. Lo que hace
+      que un objeto se lea APOYADO no es cuánta sombra tiene, es que tenga
+      DOS: una de contacto —pequeña, oscura y pegada al canto, la que dice
+      dónde toca— y una ambiental —grande y tenue, la que dice a qué altura
+      está—. Con solo la segunda el objeto flota; con solo la primera, está
+      pegado con cola.
+
+      La de contacto es FIJA: no depende del cursor, porque el punto donde
+      una hoja toca la mesa no se mueve cuando la miras. La ambiental sigue
+      saliendo de las cuatro variables del cursor, así que ese contrato no
+      cambia.
+    */
+    --sx: 0;
+    --sy: 26;
+    --sblur: 58;
+    --salpha: 0.3;
+    box-shadow:
+      0 1px 2px rgba(43, 33, 28, 0.16),
+      0 4px 10px -5px rgba(43, 33, 28, 0.22),
+      calc(var(--sx) * 1px) calc(var(--sy) * 1px) calc(var(--sblur) * 1px) -14px
+        rgba(43, 33, 28, var(--salpha));
+    transition:
+      border-color 180ms ease,
+      box-shadow 140ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    /**
+     * La perspectiva vive en el MARCO, no en la lámina. Puesta en el elemento
+     * que gira, cada lámina tendría su propio punto de fuga en su centro y
+     * todas mirarían al frente a la vez, que es como se ve una tarjeta de
+     * plantilla. En el marco, el punto de fuga es el de la composición.
+     *
+     * 1200 px es una perspectiva LARGA: a esta distancia una inclinación de dos
+     * grados deforma poquísimo. Es lo que hace que se lea como una lámina
+     * rígida y no como algo de goma.
+     */
+    perspective: 1200px;
+  }
+  .media-plate {
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /**
+   * El brillo que recorre la cara.
+   *
+   * Es una sola capa con un degradado radial muy abierto y muy tenue, anclada a
+   * la posición del cursor por dos variables. No es cristal esmerilado ni una
+   * capa de mezcla: es el reflejo de una superficie mate, que es lo que hace
+   * que la inclinación se lea como volumen en vez de como una imagen torcida.
+   *
+   * En reposo vale cero, así que no hay nada que componer mientras nadie la
+   * toca.
+   */
+  .media-plate::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 320ms ease;
+    background: radial-gradient(
+      42% 60% at var(--sheen-x, 50%) var(--sheen-y, 50%),
+      rgba(255, 252, 246, 0.26) 0%,
+      rgba(255, 252, 246, 0) 68%
+    );
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .media-frame:hover {
+      border-color: var(--accent);
+    }
+    .media-frame:hover img,
+    .media-frame:hover video {
+      transform: scale(1.012);
+    }
+    .media-frame:hover .media-plate::after {
+      opacity: 1;
+    }
+  }
+
+  /**
+   * ── EL NODO DE CONTACTO: EL MISMO GESTO QUE ELEGIR UN ÁREA (fase 12C) ────
+   *
+   * Contacto no tiene nodo en la constelación —está escrito en `ContactCoda`
+   * desde que existe: "no es un sitio que se visita, es donde acabas"— y esa
+   * decisión no cambia. Esto no es un sexto nodo de la escena: es el MISMO
+   * lenguaje visual —un punto de luz en `--mark`, con su halo— prestado al
+   * DOM para un gesto que ya existe en el hub: pulsar un punto y que se abra
+   * su ficha. Cerrar el recorrido con el mismo gesto con que se abrió es lo
+   * que Alex pidió.
+   *
+   * El punto no respira ni pulsa solo —eso sería el parpadeo que §7 prohíbe—
+   * y el halo es MUY tenue a propósito: la misma lección que tiene medida la
+   * luz de `Ambient`, "una luz que se puede señalar con el dedo no es luz".
+   */
+  .contact-node {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .contact-node-dot {
+    position: relative;
+    display: block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--mark);
+    transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .contact-node-dot::after {
+    content: '';
+    position: absolute;
+    inset: -0.6rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--mark) 0%, transparent 72%);
+    opacity: 0.22;
+    transition: opacity 260ms ease;
+  }
+  /**
+   * ── "DISPONIBLE PARA CREAR": EL ÚNICO PUNTO QUE NO ES `--mark` ──────────
+   *
+   * Pedido de Alex: el mismo punto con halo, pero en verde — el color de un
+   * piloto que dice "disponible", no el de algo seleccionado. Por eso no
+   * lleva `--mark` como el resto de esta familia: `--status-available` es
+   * fijo, no sigue al suelo, porque "disponible" no cambia de significado
+   * entre un área y otra.
+   *
+   * Y no lleva NADA de lo de abajo: ni el `:hover` que agranda el punto ni
+   * el `:active` que lo comprime. No está dentro de `.contact-node` —vive en
+   * su propia línea, debajo de los enlaces— así que esas reglas no lo
+   * alcanzan de todos modos, pero conviene decirlo: es un piloto, no un
+   * control, y un piloto no reacciona al ratón.
+   */
+  .contact-node-dot--status {
+    background: var(--status-available);
+  }
+  .contact-node-dot--status::after {
+    background: radial-gradient(circle, var(--status-available) 0%, transparent 72%);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .contact-node:hover .contact-node-dot {
+      transform: scale(1.15);
+    }
+    .contact-node:hover .contact-node-dot::after {
+      opacity: 0.36;
+    }
+  }
+  /*
+    El mismo pulso que `.link-quiet`, con el mismo número que ya usa el
+    cursor propio sobre este mismo punto (`--cursor-press: 0.8` en
+    `.cb-cursor-dot`, más abajo): el nodo real y su eco en el puntero se
+    comprimen igual al pulsarlos.
+
+    Va DESPUÉS del bloque `:hover` a propósito, y no es orden cosmético: un
+    clic de ratón cumple `:hover` Y `:active` a la vez, misma especificidad
+    las dos reglas, y en un empate gana la que está más abajo. Puesta antes,
+    el pulso nunca se vería con ratón — solo en táctil, donde no hay hover
+    que gane la partida.
+  */
+  .contact-node:active .contact-node-dot {
+    transform: scale(0.8);
+  }
+
+  /**
+   * ── LA TARJETA: ELEVADA Y TRANSLÚCIDA, NUNCA OPACA ───────────────────────
+   *
+   * Decisión de Alex sobre la regla 2 —ver el CLAUDE.md, "excepción con
+   * nombre y condiciones"—: el campo topográfico tiene que seguir viéndose
+   * A TRAVÉS de la tarjeta, y moviéndose. Por eso el fondo es `--surface` con
+   * opacidad y no un color sólido, y por eso esta regla no toca `Ambient`: el
+   * campo sigue exactamente donde estaba, la tarjeta solo se pone delante.
+   *
+   * Sin `border-radius`: es la misma esquina recta que ya tiene la hoja del
+   * CV y el marco de una captura. Un canto curvo aquí sería la única
+   * superficie redondeada de todo el editorial, y eso se leería como un
+   * material distinto en vez de una variación del mismo.
+   */
+  .contact-card {
+    /*
+      Iba al 82%, y contra `--surface-paper` —casi el mismo tono que el
+      fondo de página en claro— eso se leía como una superficie sólida: el
+      campo topográfico no se distinguía a través de ella. Medido en
+      píxel, al 58% el campo vuelve a verse y el texto sigue muy por
+      encima del mínimo de contraste — se comprueba en `.shots`, no se
+      supone.
+    */
+    position: relative;
+    background: color-mix(in srgb, var(--surface) 58%, transparent);
+    border: 1px solid var(--rule);
+    box-shadow:
+      0 1px 2px rgba(20, 16, 14, 0.14),
+      0 18px 34px -18px rgba(20, 16, 14, 0.28);
+    backdrop-filter: blur(3px);
+  }
+
+  /**
+   * ── UN GRUPO DE HABILIDADES RESPONDE COMO GRUPO ────────────────────────
+   *
+   * Al señalar una tecnología, las demás de SU grupo se retiran un poco y ella
+   * toma el acento del acto. No es una tarjeta, ni un botón, ni un borde: es
+   * contraste, que es lo que hace falta para leer un sistema por partes.
+   *
+   * Va en CSS puro y no en JavaScript a propósito. Son veintiséis tecnologías:
+   * con un manejador por elemento serían veintiséis suscripciones y otros
+   * tantos re-renderizados de React para algo que el navegador resuelve solo.
+   * Y por ser CSS, la regla de `prefers-reduced-motion` que ya existe en este
+   * archivo le quita la transición sin que haya que enterarse aquí.
+   *
+   * El atenuado llega al 40% y no más: por debajo, las que no se señalan dejan
+   * de leerse, y entonces el gesto no destaca una — esconde veinticinco.
+   */
+  /**
+   * ── EL CAMPO DE TECNOLOGÍAS SE ENCIENDE POR FAMILIAS ───────────────────
+   *
+   * Todo el comportamiento sale de UN atributo: `data-active` en el
+   * contenedor, con el id de la familia señalada. JavaScript solo escribe esa
+   * palabra; el resto —qué se apaga, qué se enciende, qué nota aparece— lo
+   * decide la hoja de estilos.
+   *
+   * Es la diferencia entre veintiséis manejadores con su estado de React y un
+   * atributo. Y por ser CSS, la regla de `prefers-reduced-motion` que ya vive
+   * en este archivo le quita las transiciones sin que haya que enterarse.
+   *
+   * El apagado llega al 22% y no a cero: una tecnología que desaparece del
+   * todo convierte el gesto en un filtro, y esto no filtra —destaca—. Con el
+   * 22% el campo entero sigue ahí, en sombra, y se ve de un vistazo qué parte
+   * del inventario ocupa la familia que estás mirando.
+   */
+  .tech,
+  .tech-family,
+  .tech-dot {
+    transition:
+      color 220ms ease,
+      opacity 220ms ease;
+  }
+  .tech-family span:last-child {
+    transition: color 220ms ease;
+  }
+
+  /* Con algo señalado, todo lo que no sea de esa familia se retira. */
+  .tech-field[data-active] .tech,
+  .tech-field[data-active] .tech-dot {
+    opacity: 0.22;
+  }
+  .tech-field[data-active] .tech-family {
+    opacity: 0.35;
+  }
+
+  /* Y lo de la familia señalada toma el acento del acto. */
+  .tech-field[data-active='languages'] [data-group='languages'],
+  .tech-field[data-active='frontend'] [data-group='frontend'],
+  .tech-field[data-active='desktop'] [data-group='desktop'],
+  .tech-field[data-active='data'] [data-group='data'],
+  .tech-field[data-active='local-ai'] [data-group='local-ai'],
+  .tech-field[data-active='tooling'] [data-group='tooling'] {
+    opacity: 1;
+    color: var(--accent);
+  }
+
+  /**
+   * Las seis notas viven en el mismo sitio, superpuestas, y solo se ve la de
+   * la familia señalada. Ocupan la misma caja para que el bloque no cambie de
+   * alto al encenderse una — un salto de maquetación en un hover se lee como
+   * un fallo, no como una respuesta.
+   */
+  .tech-note,
+  .tech-hint {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+  .tech-note {
+    pointer-events: none;
+  }
+  .tech-field .tech-hint {
+    opacity: 1;
+  }
+  .tech-field[data-active] .tech-hint {
+    opacity: 0;
+  }
+  .tech-field[data-active='languages'] [data-note='languages'],
+  .tech-field[data-active='frontend'] [data-note='frontend'],
+  .tech-field[data-active='desktop'] [data-note='desktop'],
+  .tech-field[data-active='data'] [data-note='data'],
+  .tech-field[data-active='local-ai'] [data-note='local-ai'],
+  .tech-field[data-active='tooling'] [data-note='tooling'] {
+    opacity: 1;
+  }
+
+  /* El foco de teclado se ve, y se ve igual que el señalado con el ratón. */
+  .tech:focus-visible,
+  .tech-family:focus-visible {
+    outline: 1px solid var(--mark);
+    outline-offset: 4px;
   }
 
   /**
@@ -282,6 +1800,122 @@
      * encima de lo que más contrasta. Empujándolas, el texto cae sobre el aire.
      */
     object-position: right center;
+  }
+
+  /**
+   * ── EL CURSOR: EL MISMO NODO, PRESTADO AL PUNTERO (fase 12F) ─────────────
+   *
+   * Solo en `<main>` —el editorial, nunca la portada ni el recorrido 3D—, y
+   * solo con ratón: `Cursor.jsx` no llega a suscribir un solo listener si el
+   * puntero es táctil o si hay que quedarse quieto. Aquí solo viven los
+   * ESTADOS; quién los enciende es JavaScript.
+   *
+   * Es el punto CON HALO que ya existía —la misma forma que lleva el nodo de
+   * Contacto, la misma que llevan los nodos del hub— prestado al puntero en
+   * vez de inventar un cursor nuevo. Sobre un enlace florece EXACTAMENTE
+   * como florece ese nodo al pasarle el ratón por encima: misma escala,
+   * 1,15; mismo halo, del 22% al 36%. Un vocabulario, dos sitios.
+   *
+   * **Y el color es el único que no se presta.** Lleva `--cursor-mark`, no
+   * `--mark`: es el mismo rosa de la mente, pero fijo — pedido por Alex para
+   * que se distinga del añil que lleva todo lo demás señalado en el
+   * editorial (el foco, el enlace activo, el propio nodo de Contacto). Ver
+   * `:root` para el porqué de que no cambie con el suelo.
+   *
+   * Sobre algo que se puede ampliar —una captura, la hoja del CV— crece más
+   * y aparece una palabra, en la misma voz de metadatos de siempre. Sustituye
+   * a `cursor-zoom-in`, que decía lo mismo en el idioma del sistema operativo
+   * y no en el de esta web.
+   *
+   * `--cursor-scale` y `--cursor-press` se multiplican en vez de pisarse: la
+   * misma composición por variables que ya usa `.area-art` con su opacidad,
+   * aplicada aquí para que el gesto de PULSAR no tenga que conocer en qué
+   * ESTADO está el cursor cuando se pulsa.
+   */
+  .cb-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 80;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .cb-cursor.cb-cursor-visible {
+    opacity: 1;
+  }
+  .cb-cursor-dot {
+    position: absolute;
+    top: -0.25rem;
+    left: -0.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--cursor-mark);
+    --cursor-scale: 1;
+    --cursor-press: 1;
+    transform: scale(calc(var(--cursor-scale) * var(--cursor-press)));
+    transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .cb-cursor-dot::after {
+    content: '';
+    position: absolute;
+    inset: -0.6rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--cursor-mark) 0%, transparent 72%);
+    opacity: 0.22;
+    transition: opacity 260ms ease;
+  }
+  [data-state='link'] .cb-cursor-dot {
+    --cursor-scale: 1.15;
+  }
+  [data-state='link'] .cb-cursor-dot::after {
+    opacity: 0.36;
+  }
+  /*
+    "view" —capturas, la hoja del CV— y "button" —cerrar, copiar, abrir la
+    tarjeta— comparten el mismo florecimiento: los dos son "aquí pasa algo
+    que merece una palabra", y lo único que cambia entre ellos es CUÁL.
+  */
+  [data-state='view'] .cb-cursor-dot,
+  [data-state='button'] .cb-cursor-dot {
+    --cursor-scale: 1.9;
+  }
+  [data-state='view'] .cb-cursor-dot::after,
+  [data-state='button'] .cb-cursor-dot::after {
+    opacity: 0.36;
+  }
+  .cb-cursor.cb-cursor-pressed .cb-cursor-dot {
+    --cursor-press: 0.8;
+  }
+  /*
+    La palabra —"Ver", "Cerrar", "Copiar", "Abrir"— solo existe sobre algo
+    que la declara. Ancla a la IZQUIERDA de su propio texto y no al cursor,
+    para que una palabra más larga el día de mañana no lo desplace hacia el
+    punto.
+  */
+  .cb-cursor-label {
+    position: absolute;
+    top: -0.4rem;
+    left: 0.85rem;
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cursor-mark);
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  [data-state='view'] .cb-cursor-label,
+  [data-state='button'] .cb-cursor-label {
+    opacity: 1;
+  }
+
+  /* Y el navegador deja de dibujar el suyo mientras el propio vive. */
+  main.cb-cursor-active,
+  main.cb-cursor-active * {
+    cursor: none;
   }
 }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { areaArt, getVisualAsset } from '../../data/visualAssets'
+import { useDrift } from '../../animations/motion'
 
 /**
  * La ilustración de fondo de un área editorial.
@@ -58,6 +59,25 @@ export default function AreaArt({ area }) {
   const asset = entry ? getVisualAsset(entry.asset) : null
   const [failed, setFailed] = useState(false)
 
+  /**
+   * ## Y se desplaza, muy poco, mientras el área pasa
+   *
+   * Es el ÚNICO paralaje del editorial, y está aquí por eliminación. En la
+   * columna del medio rompería el `sticky` que ya produce el diferencial de
+   * verdad; dentro de una captura obligaría a ampliarla y recortaría la
+   * interfaz que se está enseñando. Aquí no hay nada pegado, nada que recortar
+   * y nada que leer: solo una lámina al 20% que puede ir a otra velocidad que
+   * el texto.
+   *
+   * Veintiséis píxeles en toda la travesía del área. Si se nota, sobra.
+   *
+   * Va en una envoltura propia y no en la imagen porque la imagen ya lleva su
+   * `transform` —la escala del asset— y su `filter`, escritos por React en cada
+   * render: dos dueños para la misma propiedad es el fallo que se arregla
+   * después, no el que se evita antes.
+   */
+  const drift = useDrift()
+
   if (!asset) return null
 
   const treatment = asset.treatment ?? {}
@@ -90,7 +110,7 @@ export default function AreaArt({ area }) {
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      className="layer-art pointer-events-none inset-0 overflow-hidden"
       aria-hidden="true"
       // La máscara va en la envoltura y no en la imagen: así el suelo de color
       // se disuelve con ella. Un color plano a pantalla completa deja la misma
@@ -101,6 +121,12 @@ export default function AreaArt({ area }) {
       {/* El suelo. Siempre presente, tape o no la imagen. */}
       <div className="absolute inset-0" style={{ backgroundColor: asset.tint, opacity: 0.16 }} />
 
+      {/*
+        La envoltura del desplazamiento. Se estira por arriba y por abajo para
+        que el recorrido nunca destape un borde: la imagen mide más que el
+        hueco, así que puede moverse dentro de él.
+      */}
+      <div ref={drift} className="absolute -inset-y-8 inset-x-0">
       {!failed && (
         <img
           src={asset.src}
@@ -126,6 +152,7 @@ export default function AreaArt({ area }) {
           className="area-art absolute inset-0 h-full w-full object-cover"
         />
       )}
+      </div>
     </div>
   )
 }

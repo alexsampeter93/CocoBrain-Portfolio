@@ -5,6 +5,7 @@ import { Bloom, EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { ACESFilmicToneMapping, Box3, FogExp2, Raycaster, Vector3 } from 'three'
 import { advance, journey } from '../journey/clock'
+import { markWarmed } from '../state/warmup'
 import { useViewportAspect } from '../layout/useViewportAspect'
 import {
   cameraPath,
@@ -322,7 +323,7 @@ function SceneRetreat() {
      * moviéndose un poco más. Ese desfase es lo que hace que el cambio no
      * termine de golpe en un punto identificable.
      */
-    const value = sceneRetreat(journey.reading)
+    const value = sceneRetreat(journey.threshold)
     if (Math.abs(value - last.current) < 0.004) return
     last.current = value
     gl.domElement.style.opacity = value
@@ -566,6 +567,14 @@ function Warmup() {
     } else {
       journey.progress = resume.current
       journey.target = resume.current
+
+      /*
+        Y se avisa de que el barrido ha TERMINADO. Lo escucha el preloader, que
+        hasta ahora se retiraba por un temporizador calibrado cuando esto eran
+        tres paradas: con veinticuatro, el velo se iba a mitad del barrido y lo
+        que quedaba en pantalla era el interior del cerebro. Ver 'state/warmup'.
+      */
+      markWarmed()
     }
   }, -200)
 

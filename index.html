@@ -27,6 +27,41 @@
     <link rel="icon" type="image/png" href="/img/favicon.png" />
 
     <!--
+      ── ESTA PÁGINA NO RESTAURA EL SCROLL ──────────────────────────────
+
+      El navegador guarda dónde estabas y te devuelve ahí al recargar. En una
+      página normal es una cortesía; aquí es un fallo de guion: el documento
+      mide 47.937 px, así que recargar en cualquier sitio abre la web a mitad
+      del recorrido —medido: recargando en 9.000 se reabre en 9.000, o sea
+      dentro del cerebro— sin portada, sin descenso y sin nada que explique
+      dónde estás. Es exactamente lo que se ve en la grabación del 8 de
+      septiembre: tras el preloader aparece el túnel.
+
+      Y no es solo narrativo. `Warmup` dibuja la mente detrás del preloader
+      en cuatro puntos para que la primera compilación de cada material no
+      caiga durante el viaje; aterrizando a mitad, esa preparación llega tarde
+      y los frames caros se pagan en pantalla.
+
+      **Y va aquí, no en `main.jsx`.** Estuvo ahí y no servía de nada: los
+      `import` de un módulo se ELEVAN, así que ScrollTrigger se evaluaba antes
+      que la línea siguiente, guardaba el valor que había —`auto`— y lo
+      restauraba al terminar cada scroll programado. Medido interceptando el
+      descriptor: manual, manual, manual… y `auto` al final, que es el que
+      manda. Desde el HTML se escribe antes de que exista ningún módulo, así
+      que lo que ScrollTrigger guarda ya es `manual`.
+
+      No rompe los enlaces con ancla: el navegador sigue saltando a #skills si
+      la URL lo pide, y por eso el reinicio de arriba solo actúa cuando no hay
+      ninguna.
+    -->
+    <script>
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+      if (!location.hash) {
+        addEventListener('load', function () { scrollTo(0, 0) })
+      }
+    </script>
+
+    <!--
       La tipografía se sirve desde aquí, nunca desde un CDN.
 
       Estaba en fonts.googleapis.com: dos conexiones a un tercero bloqueando el

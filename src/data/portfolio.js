@@ -353,6 +353,44 @@ export const experience = [
  *                  del sitio donde se pinta —16/10—, que es lo correcto para
  *                  una captura de aplicación. Se declara cuando el asset tiene
  *                  otra y recortarlo perdería contenido: ver el juego
+ *
+ *                  **Vídeo.** `{ kind: 'video', src, poster, alt }`. Se pinta
+ *                  con el MISMO marco que una captura —misma sombra, misma
+ *                  inclinación, mismo abanico— y sin controles, sin sonido y
+ *                  en bucle: es una captura que se mueve, no un reproductor.
+ *                  `poster` es obligatorio en la práctica, porque es lo que se
+ *                  ve mientras carga. Se reproduce SOLO mientras está en
+ *                  pantalla —ver `useVideoPlayback`— y con movimiento reducido
+ *                  se queda en el póster y aparecen los controles nativos, que
+ *                  es devolverle la decisión al visitante en vez de esconderle
+ *                  el contenido.
+ *
+ *                  Para prepararlo, con ffmpeg:
+ *
+ *                      ffmpeg -ss 12 -t 10 -i grabacion.mp4 \
+ *                        -vf "scale=1280:-2,fps=30" -an \
+ *                        -c:v libx264 -crf 30 -preset slow \
+ *                        -movflags +faststart public/video/zalent.mp4
+ *
+ *                  Diez segundos a 1280 px y sin audio pesan unos 150 KB —
+ *                  medido sobre el demo real de Zalent, que en origen son
+ *                  2560 × 1440 a 60 fps y 21 MB. Más largo no aporta: lo que
+ *                  hay que demostrar cabe en diez segundos, y el visitante no
+ *                  va a esperar más.
+ *
+ *                  Y `focus: [x, y]`, en porcentaje: el punto de la imagen
+ *                  que DEMUESTRA el proyecto. De ahí sale el origen del
+ *                  acercamiento al pasar el cursor, así que la imagen se
+ *                  acerca hacia lo que hay que ver en vez de hacia su centro
+ *                  geométrico. Opcional: una captura sin un punto importante
+ *                  —una pantalla de acceso centrada— no lo lleva
+ *
+ *                  **El número de elementos decide la composición.** El
+ *                  escenario tiene un reparto por cantidad, de una a cinco
+ *                  secundarias (`STAGE_LAYOUTS` en `ProjectsArea`), y el
+ *                  abanico las recoge midiendo dónde han quedado. Añadir una
+ *                  captura es añadir una entrada aquí: no hay que escribir
+ *                  ninguna animación nueva
  * - `links`        { demo, github, video } — solo las claves que existan.
  *                  Admite además cualquier otra clave: se enseña igual
  *
@@ -386,6 +424,12 @@ export const experience = [
 export const projects = [
   {
     id: 'zalent',
+    /**
+     * El emblema tridimensional del proyecto. Es IDENTIDAD, no evidencia: lo
+     * que demuestra que el proyecto existe son sus capturas, que están unas
+     * líneas más abajo. Ver `EditorialObject`.
+     */
+    object3d: '/models/zalent_icon_3d.glb',
     title: 'Zalent',
     tagline: 'Gestión de talento local-first con IA.',
     year: 'Junio 2026',
@@ -461,14 +505,37 @@ export const projects = [
      * dos son aplicaciones de escritorio y se enseñan como tales.
      */
     media: [
+      /*
+        ── EL VÍDEO VA PRIMERO, Y ESO ES LA DECISIÓN ────────────────────────
+
+        La captura de búsqueda semántica enseña el RESULTADO; el vídeo enseña
+        que el resultado APARECE. En un buscador por significado eso es
+        exactamente lo que hay que demostrar, y es lo único que una imagen fija
+        no puede: se escribe "almacen", se pulsa buscar, y Olaz contesta con
+        tres candidatos ordenados por relevancia y su porcentaje de encaje.
+
+        Elegido midiendo, no al azar: de los 84 segundos de la grabación, el
+        tramo 45–55 es el único que contiene la consulta y su respuesta
+        seguidas. Antes está la importación de CVs y después el pipeline.
+      */
+      {
+        kind: 'video',
+        src: '/video/zalent.mp4',
+        poster: '/img/projects/zalent-video.webp',
+        alt: 'Búsqueda semántica de Zalent en funcionamiento: se escribe una consulta en lenguaje natural y aparecen los candidatos ordenados por relevancia con su porcentaje de encaje.',
+      },
       {
         kind: 'image',
         src: '/img/projects/zalent-busqueda-semantica.webp',
+        // Hacia el bloque "Por qué encaja · 47%" con el fragmento del CV resaltado.
+        focus: [68, 72],
         alt: 'Búsqueda semántica en Zalent: una consulta en lenguaje natural, el candidato con su porcentaje de encaje y el fragmento del CV que lo justifica.',
       },
       {
         kind: 'image',
         src: '/img/projects/zalent-asistente-ia.webp',
+        // Hacia el panel del asistente de IA local.
+        focus: [72, 62],
         alt: 'Ficha de un candidato en Zalent, con los campos extraídos del CV y el panel del asistente de IA local.',
       },
       {
@@ -482,6 +549,12 @@ export const projects = [
 
   {
     id: 'actihome',
+    /**
+     * El emblema tridimensional del proyecto. Es IDENTIDAD, no evidencia: lo
+     * que demuestra que el proyecto existe son sus capturas, que están unas
+     * líneas más abajo. Ver `EditorialObject`.
+     */
+    object3d: '/models/actihome_icon_3d_v2.glb',
     title: 'ActiHome',
     tagline: 'Aplicación de escritorio para la gestión y reserva de alojamientos turísticos.',
     year: 'Febrero 2026',
@@ -555,9 +628,34 @@ export const projects = [
      * cuando Alex diga cuál es la buena.
      */
     media: [
+      /*
+        ── EL INTERCAMBIO, QUE NINGUNA CAPTURA PODÍA ENSEÑAR ────────────────
+
+        Es la característica más distintiva de ActiHome y no aparecía en
+        ninguna de las tres capturas, porque es un PROCESO: se elige un
+        alojamiento propio, se propone a cambio de otro, se confirma y la
+        propuesta se envía. Eso son cuatro pantallas, o diez segundos.
+
+        Del minuto y medio de grabación, el tramo 55–63 es el que lo contiene
+        entero.
+
+        **Y abre con el splash de CocoBrain**, recortado: en la grabación
+        original esa lámina aparece pequeña en mitad del escritorio, con el
+        fondo de pantalla y los iconos alrededor. Aquí se recorta a la lámina
+        y nada más —medido, `crop=972:656:866:391`— así que lo que se ve es la
+        marca presentando la aplicación, no el escritorio de nadie.
+      */
+      {
+        kind: 'video',
+        src: '/video/actihome.mp4',
+        poster: '/img/projects/actihome-video.webp',
+        alt: 'ActiHome en funcionamiento: la presentación de CocoBrain y el intercambio de un alojamiento por otro, desde la propuesta hasta el envío.',
+      },
       {
         kind: 'image',
         src: '/img/projects/actihome-catalogo.webp',
+        // Hacia las tarjetas de alojamiento con sus precios.
+        focus: [55, 62],
         alt: 'Catálogo de ActiHome con el filtro de estaciones, las tarjetas de alojamiento y sus precios por noche.',
       },
       {
@@ -576,6 +674,12 @@ export const projects = [
 
   {
     id: 'cata-trufa',
+    /**
+     * El emblema tridimensional del proyecto. Es IDENTIDAD, no evidencia: lo
+     * que demuestra que el proyecto existe son sus capturas, que están unas
+     * líneas más abajo. Ver `EditorialObject`.
+     */
+    object3d: '/models/cata_trufa_combined_3.glb',
     title: 'Las aventuras de Cata y Trufa',
     tagline: 'Una aventura cozy protagonizada por dos perras carlinas.',
     year: 'Junio 2026',
@@ -632,16 +736,47 @@ export const projects = [
      * aplicaciones de escritorio y esa ventana es parte de lo que se entrega.
      */
     media: [
+      /*
+        ── EL JUEGO, EN MOVIMIENTO ─────────────────────────────────────────
+
+        Un videojuego es lo único de los tres proyectos que una captura no
+        puede representar: lo que define un juego es qué pasa cuando lo
+        tocas. El tramo 63–73 tiene las dos carlinas recorriendo el estanque,
+        objetos que se recogen, una colmena que reacciona —"¡Las abejas salen
+        volando!"— y la indicación de nadar.
+
+        **Sin el marco del navegador.** El juego se grabó en una ventana con
+        su barra de pestañas y `localhost` a la vista, igual que las capturas
+        de la fase 5E. El lienzo empieza en y=192, medido sobre un fotograma,
+        y de ahí sale un recorte de 2496 × 1248 que es exactamente 2:1 — la
+        misma proporción que declaran las capturas de este proyecto.
+
+        No he encontrado en la grabación un momento inequívoco de CAMBIO de
+        personaje, que era lo ideal. Lo que sí demuestra este tramo es la
+        mecánica que lo rodea: las dos protagonistas en el mundo, moviéndose y
+        provocando reacciones.
+      */
+      {
+        kind: 'video',
+        ratio: '2 / 1',
+        src: '/video/cata-trufa.mp4',
+        poster: '/img/projects/cata-trufa-video.webp',
+        alt: 'Las aventuras de Cata y Trufa en movimiento: las dos carlinas recorriendo el estanque, recogiendo objetos y provocando que las abejas salgan de la colmena.',
+      },
       {
         kind: 'image',
         ratio: '2 / 1',
         src: '/img/projects/cata-trufa-parque.webp',
+        // Hacia las dos carlinas.
+        focus: [55, 70],
         alt: 'Escena del juego en el parque: las dos carlinas, el marcador de misión y un diálogo con un personaje.',
       },
       {
         kind: 'image',
         ratio: '2 / 1',
         src: '/img/projects/cata-trufa-casa.webp',
+        // Hacia las dos carlinas y sus camas.
+        focus: [27, 62],
         alt: 'Interior de la casa en vista cenital, con las dos protagonistas y sus camas rotuladas.',
       },
       {
@@ -874,6 +1009,33 @@ export const cv = {
    * fecha no enseña una fecha falsa: no enseña ninguna.
    */
   file: '/cv/alejandro-sampedro-calo.pdf',
+  /**
+   * ── LA PORTADA ES UNA CAPTURA DEL DOCUMENTO REAL, NO UNA ETIQUETA ────────
+   *
+   * Hasta aquí la hoja de la sección llevaba "Curriculum Vitae" escrito como
+   * titular — correcto mientras no había PDF, y ya no: el archivo existe, así
+   * que lo que la hoja tiene que enseñar es SU PORTADA, no su nombre.
+   *
+   * No es un PDF incrustado —esa regla sigue en pie, y sigue significando lo
+   * mismo: nada de `<iframe>`, nada de visor nativo cambiando tipografía y
+   * scroll dentro de la página—. Es una CAPTURA, exactamente el mismo trato
+   * que ya reciben las tres aplicaciones de Proyectos: una imagen real de lo
+   * que hay, no una ilustración de lo que podría haber.
+   *
+   * Generada una vez con `.shots/cv-preview.mjs` —Playwright, con el Edge del
+   * sistema y no el Chromium que trae por defecto, que no lleva visor de PDF—
+   * y recortada contra el fondo del visor. 792×1122, que es A4 casi exacto:
+   * por eso la hoja no necesita recortar nada, solo llenar su propio marco.
+   */
+  preview: {
+    // `kind` no es decorativo: `MediaViewer.canView()` exige 'image' o
+    // 'video' para aceptar el elemento, y sin él `viewer.open()` filtra la
+    // lista a cero y no abre nada — en silencio, sin ningún error.
+    kind: 'image',
+    src: '/img/cv-preview.webp',
+    srcSet: '/img/cv-preview-sm.webp 480w, /img/cv-preview.webp 780w',
+    alt: 'Portada del currículum de Alex',
+  },
   updated: '',
   highlights: [
     'Programador DAM. Ciclo Formativo de Grado Superior en Desarrollo de Aplicaciones Multiplataforma, Ilerna, 2023 – 2025.',

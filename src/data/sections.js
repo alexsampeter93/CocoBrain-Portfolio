@@ -1,3 +1,5 @@
+import { nodeCoord } from './nodeLayout.js'
+
 /**
  * Única fuente de verdad de las ÁREAS del portfolio: su identidad y nada más.
  *
@@ -33,6 +35,21 @@
  * una esfera pequeña iluminada por una ambiental tenue, y el añil de los
  * filetes de CSS ahí saldría negro.
  */
+/**
+ * ── QUÉ ÁREAS SE LEEN SOBRE SUELO OSCURO (fase 10D) ─────────────────────────
+ *
+ * Una, y aquí. Lo leen DOS sitios que no comparten árbol —`PortfolioSection`,
+ * que pinta la superficie, y `App`, que se lo cuenta al documento para que el
+ * HUD fijo voltee su tinta— y un dato con dos lectores no puede estar escrito
+ * dos veces: es la regla de esta casa desde que el sello de coordenadas dejó
+ * de copiarse a mano.
+ *
+ * Y es un conjunto de UNO a propósito. Dos áreas oscuras dejarían de ser un
+ * paréntesis y pasarían a ser el tono de la web, que es lo que la proporción
+ * 70/20/10 prohíbe. Ver §7.
+ */
+export const DARK_GROUND_AREAS = new Set(['experience'])
+
 export const sections = [
   {
     id: 'about',
@@ -65,3 +82,43 @@ export const sections = [
     accent: '#B98A62',
   },
 ]
+
+/**
+ * ── EL NÚMERO DE UN ÁREA, EN UN SOLO SITIO ──────────────────────────────────
+ *
+ * Estaba escrito a mano en `App.jsx` —`index="01"`, `index="03"`…— y además en
+ * el nombre del nodo de cada área, que es `node_01`. Dos copias del mismo dato,
+ * y la web tiene ya escrito lo que pasa con eso: tarde o temprano dejan de
+ * coincidir.
+ *
+ * El número ES el del nodo, porque el número que se lee al llegar a un área es
+ * el del punto de luz del que se viene. Se deriva, no se repite.
+ */
+export const areaIndex = Object.fromEntries(
+  sections.map((section) => [section.id, section.nodeName.slice(-2)]),
+)
+
+/**
+ * ── EL SELLO DE CADA AREA ───────────────────────────────────────────────────
+ *
+ * El numero, el angulo y el radio con los que el area esta colocada alrededor
+ * del cerebro. Los tres salen de `nodeLayout`, o sea del MISMO dato que pone
+ * el nodo en su sitio: no hay una segunda copia que se pueda desfasar.
+ *
+ * El angulo se redondea a grados enteros y el radio a dos decimales porque un
+ * sello es una marca, no una medicion: "28° · r1,10" se lee de un vistazo y
+ * "28,0000° · r1,1000" no se lee.
+ */
+export const areaStamp = Object.fromEntries(
+  sections.map((section) => {
+    const coord = nodeCoord(section.nodeName)
+    return [
+      section.id,
+      {
+        index: section.nodeName.slice(-2),
+        angle: coord ? Math.round(coord.angle) : null,
+        radius: coord ? coord.radius.toFixed(2) : null,
+      },
+    ]
+  }),
+)

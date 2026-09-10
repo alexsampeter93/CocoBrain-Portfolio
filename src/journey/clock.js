@@ -95,6 +95,35 @@ export const journey = {
    */
   readingTarget: 0,
   reading: 0,
+
+  /**
+   * EL RELEVO: cuánto se lleva recorrido del UMBRAL.
+   *
+   * Va de 0 a 1 mientras `ReadingThreshold` cruza la ventana, de abajo del
+   * todo a fuera por arriba. Es el tercer canal del mismo reloj y existe por
+   * una razón medida:
+   *
+   * La retirada de la escena colgaba de `reading`, que está normalizado sobre
+   * el editorial ENTERO. Cuando se escribió, el editorial eran huecos
+   * pendientes y su 15% era "una pantalla larga" — así está documentado en
+   * `World.jsx`. Con el contenido real dentro, el mismo 15% pasó a ser tres
+   * pantallas: medido contra el build, el umbral ocupa el **6,8%** de `main` a
+   * 1920 y el **5,8%** a 1366, o sea menos de la mitad de la ventana en la que
+   * la escena se estaba retirando. Resultado: el canvas llegaba al titular de
+   * Sobre mí al 27% y al primer párrafo al 11%.
+   *
+   * El fallo no es el número: es de qué depende. Una fracción del editorial
+   * cambia cada vez que Alex escribe un párrafo. El umbral, en cambio, mide
+   * 140vh, así que sobre ÉL las mismas cifras valen en todas las pantallas —
+   * comprobado: su reparto interno sale idéntico (0,417 y 0,583) en 1920, 1366
+   * y 390. Es la regla de siempre: si un dato depende de la geometría, se mide
+   * contra la geometría que lo describe.
+   *
+   * No es un reloj nuevo: se amortigua en la misma función, en el mismo frame
+   * y con la misma constante que los otros dos, y no mueve nada por su cuenta.
+   */
+  thresholdTarget: 0,
+  threshold: 0,
 }
 
 /**
@@ -120,6 +149,7 @@ export function advance(delta) {
   const k = 1 - Math.exp(-Math.min(delta, 0.1) / TAU)
   journey.progress += (journey.target - journey.progress) * k
   journey.reading += (journey.readingTarget - journey.reading) * k
+  journey.threshold += (journey.thresholdTarget - journey.threshold) * k
   journey.beat = journey.progress * BEAT
   journey.spin = spinEase(journey.progress) * BEAT
 }
@@ -158,4 +188,9 @@ export function setTarget(value, stageId) {
  */
 export function setReadingTarget(value) {
   journey.readingTarget = value
+}
+
+/** El relevo del umbral, escrito por su propio ScrollTrigger. Ver `threshold`. */
+export function setThresholdTarget(value) {
+  journey.thresholdTarget = value
 }

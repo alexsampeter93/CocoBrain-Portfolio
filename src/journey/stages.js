@@ -606,23 +606,81 @@ export function hubFocus(progress) {
  * `FLOOR` es lo que queda encendido: el 6% de la escena sigue vivo detrás del
  * editorial a propósito, para que el fondo no sea una superficie plana. Lo que
  * no puede quedar es un solo píxel de INTERFAZ.
+ *
+ * ## Y SE MEDÍA CONTRA EL SITIO EQUIVOCADO
+ *
+ * Colgaba de `reading`, o sea de una fracción del editorial ENTERO, con la
+ * ventana en 0,15. Cuando se escribió eso era "una pantalla larga" porque el
+ * editorial eran huecos pendientes. Con el contenido real dentro, medido
+ * contra el build:
+ *
+ *     el umbral ocupa   6,8% de `main` a 1920 · 5,8% a 1366 · 6,0% a 390
+ *     la retirada duraba          15% de `main`, o sea más del doble
+ *
+ * Así que la escena seguía retirándose mucho después de haber entrado en Sobre
+ * mí: **27% de canvas sobre el titular y 11% sobre el primer párrafo** a 1920;
+ * 38% y 25% a 1366. Eso es el "mundo 3D encima de una página editorial".
+ *
+ * Ahora cuelga de `journey.threshold`, que mide el cruce del propio umbral. El
+ * tramo son 140vh, así que su reparto interno es el mismo en toda pantalla
+ * —comprobado: el umbral llena el cuadro en 0,417 y Sobre mí asoma en 0,583 en
+ * 1920, 1366 y 390— y las cifras de abajo dejan de depender de cuánto escriba
+ * Alex.
+ *
+ * ## Las etapas del cruce
+ *
+ *     0,00 – 0,22   la escena manda todavía. Nada se ha ido
+ *     0,08 – 0,34   se retira su INTERFAZ: etiquetas y ficha, del todo
+ *     0,16 – 0,62   la constelación se aleja hacia el fondo
+ *     0,22 – 0,58   el canvas baja hasta su 6%
+ *     0,58 – 1,00   LA RESPIRACIÓN: solo terreno, casi una pantalla entera
+ *     1,00          Sobre mí llega arriba, con el texto limpio
+ *
+ * La respiración es una etapa declarada y no lo que sobra al final: el canvas
+ * termina de retirarse en 0,58, que es exactamente cuando el borde de Sobre mí
+ * asoma por abajo. Lo que queda hasta que su titular llega arriba es terreno
+ * solo — el instante en el que el mundo ya se ha depositado y todavía no hay
+ * nada que leer.
  */
-const RETREAT = { over: 0.15, floor: 0.06 }
+const RETREAT = { from: 0.22, to: 0.58, floor: 0.06 }
 
-export function sceneRetreat(reading) {
-  return 1 - Math.min(1, Math.max(0, reading) / RETREAT.over) * (1 - RETREAT.floor)
+export function sceneRetreat(threshold) {
+  return 1 - ramp(threshold, RETREAT.from, RETREAT.to) * (1 - RETREAT.floor)
 }
 
 /**
- * Y lo mismo para lo que es DOM: llega a cero de verdad y llega antes.
+ * Y la constelación no se apaga: se ALEJA.
+ *
+ * Bajar la opacidad y ya está deja el mismo cuadro cada vez más tenue, que se
+ * lee como que alguien ha bajado un interruptor. Contrayendo el anillo hacia
+ * el cerebro mientras se atenúa, lo que se ve es que el conjunto se va al
+ * fondo: primero deja de rodearte y después deja de estar.
+ *
+ * Es una escala, no una deformación de la geometría ni una cámara nueva —la
+ * cámara está aparcada durante la lectura y moverla sería un segundo dueño—.
+ * Y empieza antes que el desvanecido del canvas y termina después, para que el
+ * gesto no coincida exactamente con él: si las dos curvas fueran la misma, se
+ * leerían como una sola cosa.
+ */
+const RECEDE = { from: 0.16, to: 0.62, depth: 0.78 }
+
+export function hubRecede(threshold) {
+  return 1 - ramp(threshold, RECEDE.from, RECEDE.to) * (1 - RECEDE.depth)
+}
+
+/**
+ * Y lo mismo para lo que es DOM: llega a cero de verdad y llega ANTES.
  *
  * Un texto a media opacidad sobre otro texto no es una transición, es un
  * estorbo: mientras la etiqueta de un nodo se lea, compite con el titular que
- * tiene debajo. Así que la interfaz de la escena se va en el primer 60% de la
- * ventana en la que el canvas se atenúa, y se va del todo.
+ * tiene debajo. Así que la interfaz de la escena se va primero y se va del
+ * todo, con el umbral todavía llenando el cuadro — para cuando Sobre mí asoma
+ * (0,58) hace rato que no queda ni un píxel de ella.
  */
-export function overlayRetreat(reading) {
-  return 1 - Math.min(1, Math.max(0, reading) / (RETREAT.over * 0.6))
+const OVERLAY = { from: 0.08, to: 0.34 }
+
+export function overlayRetreat(threshold) {
+  return 1 - ramp(threshold, OVERLAY.from, OVERLAY.to)
 }
 
 /**

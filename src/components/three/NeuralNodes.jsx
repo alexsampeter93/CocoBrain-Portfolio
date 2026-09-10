@@ -4,7 +4,14 @@ import { Html, Line } from '@react-three/drei'
 import { AdditiveBlending, CanvasTexture, CatmullRomCurve3, Color } from 'three'
 import { nodePositions, nodeConnections, spreadFor } from '../../data/nodeLayout'
 import { journey } from '../../journey/clock'
-import { hubFocus, layerOpacity, orbitBasis, overlayRetreat, ramp } from '../../journey/stages'
+import {
+  hubFocus,
+  hubRecede,
+  layerOpacity,
+  orbitBasis,
+  overlayRetreat,
+  ramp,
+} from '../../journey/stages'
 import { useViewportAspect } from '../../layout/useViewportAspect'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
@@ -345,7 +352,7 @@ function Node({
       `cortex`. Una guarda tiene que vigilar TODAS las senales que se escriben
       dentro de ella.
     */
-    const away = overlayRetreat(journey.reading)
+    const away = overlayRetreat(journey.threshold)
 
     if (
       Math.abs(born - grownRef.current) > 0.001 ||
@@ -782,6 +789,8 @@ export default function NeuralNodes({
   const rootRef = useRef(null)
   const basesRef = useRef(null)
   const fadeRef = useRef(-1)
+  /** Cuánto se ha alejado ya la constelación en el umbral. Ver `hubRecede`. */
+  const recedeRef = useRef(-1)
   const linksRef = useRef([])
   const wovenRef = useRef(-1)
   /**
@@ -829,14 +838,38 @@ export default function NeuralNodes({
     if (!root) return
 
     const fade = layerOpacity(layer, journey.progress)
+
+    /**
+     * ── Y LA CONSTELACIÓN SE ALEJA MIENTRAS SE VA ─────────────────────────
+     *
+     * El anillo se contrae hacia el cerebro durante el cruce del umbral, así
+     * que lo que se ve no es un interruptor bajando: es el conjunto yéndose al
+     * fondo. Ver `hubRecede`.
+     *
+     * Es el único sitio que escribe la escala de este grupo —nadie la declara
+     * en el JSX— y es una función pura del scroll: parado no se mueve y al
+     * subir se deshace.
+     *
+     * LA GUARDA VIGILA LAS DOS SEÑALES. Es el error que este manual tiene
+     * documentado dos veces: durante el editorial `progress` está clavado en 1,
+     * así que `fade` no se mueve y un `return` que solo lo mire deja fuera todo
+     * lo que cuelgue del otro canal — que es exactamente lo que dejó las cinco
+     * etiquetas encima del texto.
+     */
+    const recede = hubRecede(journey.threshold)
+    const still =
+      Math.abs(fade - fadeRef.current) < 0.002 && Math.abs(recede - recedeRef.current) < 0.002
     // Fuera del tramo de aparicion el valor no se mueve, y esos son casi todos
     // los frames. Recorrer el grafo entero en cada uno para no cambiar nada
     // era trabajo puro.
-    if (Math.abs(fade - fadeRef.current) < 0.002) return
+    if (still) return
     fadeRef.current = fade
+    recedeRef.current = recede
 
     root.visible = fade > 0.02
     if (!root.visible) return
+
+    root.scale.setScalar(recede)
 
     // El grafo se recorre una sola vez, guardando la opacidad original de cada
     // material. A partir de ahi solo se multiplican valores.

@@ -3,6 +3,7 @@ import { journey } from '../../journey/clock'
 import { descent, layerOpacity } from '../../journey/stages'
 import { getVisualAsset } from '../../data/visualAssets'
 import { getCalmMode } from '../../state/calmMode'
+import { isDarkTheme, subscribeTheme } from '../../state/theme'
 
 /**
  * El fondo de toda la web: las ilustraciones y el clima cromático.
@@ -151,12 +152,36 @@ function useDawn() {
   return dawn
 }
 
-function climateAt(t) {
-  let i = 0
-  while (i < CLIMATE.length - 2 && t >= CLIMATE[i + 1].at) i += 1
 
-  const from = CLIMATE[i]
-  const to = CLIMATE[i + 1]
+
+/**
+ * La misma paleta en modo noche (fase 11D).
+ *
+ * La primera parada NO cambia: de donde vienes es la mente, y la mente es la
+ * misma en los dos temas. Lo que cambia es a donde llegas: en vez de salir al
+ * marfil, sales al anil noche.
+ *
+ * Y el cierre sigue subiendo un punto, igual que en claro: es el mismo gesto
+ * -el anochecer de Contacto- leido en el otro registro.
+ *
+ * **El precio, aceptado con los ojos abiertos**: en modo noche el recorrido ya
+ * no va de la luz a la luz, que es lo que la seccion 7 dice que cierra el
+ * circulo. Es el coste real del modo oscuro y no hay forma de tenerlo sin
+ * pagarlo.
+ */
+const CLIMATE_NIGHT = [
+  { at: 0.0, color: [0x10, 0x0c, 0x0a] }, // la mente, sin cambios
+  { at: 0.5, color: [0x16, 0x23, 0x3a] }, // el anil noche: el trabajo
+  { at: 1.0, color: [0x1a, 0x28, 0x42] }, // un punto mas alto en el cierre
+]
+
+function climateAt(t, night) {
+  const table = night ? CLIMATE_NIGHT : CLIMATE
+  let i = 0
+  while (i < table.length - 2 && t >= table[i + 1].at) i += 1
+
+  const from = table[i]
+  const to = table[i + 1]
   const span = to.at - from.at
   const k = span <= 0 ? 1 : Math.min(1, Math.max(0, (t - from.at) / span))
 
@@ -168,15 +193,26 @@ function climateAt(t) {
 }
 
 /**
- * Cuánto se desplaza la ilustración editorial mientras se lee, en porcentaje de
- * su propia altura.
+ * ── LA LÁMINA COMÚN DEL EDITORIAL SALIÓ EN LA FASE 9B ───────────────────────
  *
- * Muy poco. Un parallax que se ve es un parallax mal puesto: lo que tiene que
- * hacer es que el fondo y el texto no parezcan pegados el uno al otro, y para
- * eso basta con que se muevan a velocidades distintas. Con más recorrido el
- * fondo empieza a llamar la atención y compite con lo único que hay que leer.
+ * Aquí iba una ilustración a pantalla completa al 20% con seis puntos de
+ * parallax: la base común de todo el tramo de lectura. Ha salido con las seis
+ * de área, y por el mismo motivo.
+ *
+ * No sobraba por estar mal puesta —estaba medida, y su 0,2 salió de comparar
+ * capturas con y sin— sino porque el editorial ha dejado de tener fondo de
+ * imagen. Lo que hay debajo del texto es ahora un TERRENO: curvas de nivel con
+ * profundidad, altura de vuelo y luz. Ver `Ambient.jsx`.
+ *
+ * Y mientras esta lámina estuvo puesta el terreno no podía ganar: medido en la
+ * primera captura de 9B, con las de área ya retiradas, la mancha del render
+ * seguía siendo lo más visible del cuadro en Sobre mí. Un fondo no puede tener
+ * dos fondos.
+ *
+ * El clima cromático —el color que cubre la ilustración de la mente durante el
+ * umbral— se queda: eso no es una imagen, es la transición entre el recorrido y
+ * la lectura, y sigue haciendo falta.
  */
-const PARALLAX = 6
 
 /** Un tramo de 0 a 1 dentro de otro valor de 0 a 1. Sin suavizado: ya lo trae. */
 function ramp01(value, start, end) {
@@ -194,7 +230,6 @@ export default function Backdrops() {
   const hero = getVisualAsset('hero.background')
   const environment = getVisualAsset('hero.far')
   const mind = getVisualAsset('mind.backdrop')
-  const editorial = getVisualAsset('editorial.light')
 
   const heroRef = useRef(null)
   const worldRef = useRef(null)
@@ -202,7 +237,30 @@ export default function Backdrops() {
   const navWashRef = useRef(null)
   const mindRef = useRef(null)
   const climateRef = useRef(null)
-  const editorialRef = useRef(null)
+
+  /**
+   * El tema, por una REF y no por estado.
+   *
+   * El clima se escribe dentro de un bucle de `requestAnimationFrame` que se
+   * monta una vez; una variable capturada en el render se quedaria congelada
+   * en el valor del primer frame -es el mismo fallo que costo una vuelta con
+   * el `darkRef` del HUD en 10D-. Y pasar el tema por estado volveria a
+   * renderizar este componente, que es lo que su bucle evita.
+   *
+   * Se suscribe al almacen: el tema cambia una vez cada mucho, no por frame.
+   */
+  const nightRef = useRef(isDarkTheme())
+  const repaintRef = useRef(null)
+  useEffect(
+    () =>
+      subscribeTheme(() => {
+        nightRef.current = isDarkTheme()
+        // Y se repinta YA: el bucle solo escribe cuando la lectura se mueve,
+        // asi que con el scroll quieto el cambio de tema no llegaria nunca.
+        repaintRef.current?.()
+      }),
+    [],
+  )
 
   useEffect(() => {
     const treatment = environment?.treatment ?? {}
@@ -276,6 +334,16 @@ export default function Backdrops() {
     let lastRedraw = -99
     let lastReading = -1
     let lastDrift = -99
+
+    /*
+      El cambio de tema tiene que poder forzar un repintado. El bucle solo
+      escribe el clima cuando la lectura se ha movido, asi que con el scroll
+      quieto -que es exactamente cuando alguien pulsa el interruptor- el
+      color nuevo no llegaria hasta el siguiente movimiento del dedo.
+    */
+    repaintRef.current = () => {
+      lastReading = -1
+    }
 
     const tick = (now) => {
       /**
@@ -410,7 +478,7 @@ export default function Backdrops() {
               ? (reading / d) * 0.5
               : 0.5 + ((reading - d) / Math.max(0.001, 1 - d)) * 0.5
 
-          climateRef.current.style.backgroundColor = climateAt(t)
+          climateRef.current.style.backgroundColor = climateAt(t, nightRef.current)
           /**
            * El clima cubre la ilustración de la mente durante el umbral, al
            * mismo ritmo al que la escena se retira. Al empezar es transparente
@@ -423,31 +491,6 @@ export default function Backdrops() {
           climateRef.current.style.opacity = Math.min(1, reading / dawn.current)
         }
 
-        if (editorialRef.current) {
-          /**
-           * Entra con el amanecer y se queda. La ilustración de cada área la
-           * pone el propio área; esta es la base común de todo el tramo.
-           *
-           * ── DE 0,5 A 0,20, Y ESTÁ MEDIDO ────────────────────────────────
-           *
-           * La regla de esta web es que si puedes describir la ilustración sin
-           * fijarte, está demasiado fuerte. A 0,5 se identificaba al personaje
-           * en las cinco áreas.
-           *
-           * Comparando la misma captura con la lámina encendida y apagada, a
-           * 0,5 aportaba 4,6 de luminancia MEDIA —que suena inofensivo— con un
-           * PICO de 91 sobre 255. Esa es la cifra que importa: la media dice
-           * "sutil" y el pico dice que hay una figura reconocible. Un fondo que
-           * no se ve pero se nota no puede mover un píxel noventa niveles.
-           *
-           * Se nota más justo donde menos tinta hay —CV y Habilidades—, que
-           * son las dos áreas en las que la figura quedaba sola en el cuadro.
-           */
-          editorialRef.current.style.opacity = Math.min(1, reading / dawn.current) * 0.2
-          editorialRef.current.style.transform = `translate3d(0, ${
-            -reading * PARALLAX
-          }%, 0)`
-        }
       }
 
       frame = requestAnimationFrame(tick)
@@ -563,9 +606,9 @@ export default function Backdrops() {
         className="absolute inset-0 hidden lg:block"
         style={{
           background:
-            'linear-gradient(95deg, rgba(245,230,211,0.60) 0%,' +
-            ' rgba(245,230,211,0.55) 18%,' +
-            ' rgba(245,230,211,0.26) 34%,' +
+            'linear-gradient(95deg, rgba(245,230,211,0.70) 0%,' +
+            ' rgba(245,230,211,0.64) 18%,' +
+            ' rgba(245,230,211,0.30) 34%,' +
             ' rgba(245,230,211,0) 48%)',
           /*
             Y se apaga hacia abajo. La luz tiene que caer sobre el texto, no
@@ -573,10 +616,17 @@ export default function Backdrops() {
             —que empiezan en el 74% del alto— perdían densidad justo donde
             acaba de recuperarse el apoyo de Olaz.
           */
+          /*
+            El macizo llega al 66% y no al 52% (fase 11E). Medido a 1440, la
+            columna de texto acaba mas abajo de lo que esta mascara suponia:
+            "Baja para entrar" cae en el 59% del alto, o sea DENTRO del
+            desvanecido, y daba 2,86 : 1 sobre la piedra. El podio empieza en
+            el 74%, asi que hasta el 66% no se le quita densidad a nada.
+          */
           maskImage:
-            'linear-gradient(to bottom, #000 0%, #000 52%, rgba(0,0,0,0.45) 74%, rgba(0,0,0,0.12) 100%)',
+            'linear-gradient(to bottom, #000 0%, #000 66%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.12) 100%)',
           WebkitMaskImage:
-            'linear-gradient(to bottom, #000 0%, #000 52%, rgba(0,0,0,0.45) 74%, rgba(0,0,0,0.12) 100%)',
+            'linear-gradient(to bottom, #000 0%, #000 66%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.12) 100%)',
         }}
       />
 
@@ -622,24 +672,6 @@ export default function Backdrops() {
 
       <div ref={climateRef} className="absolute inset-0 opacity-0" />
 
-      {/*
-        La base del tramo editorial. `scale-110` deja margen para que el
-        desplazamiento del parallax no descubra el borde de la imagen.
-
-        `loading="lazy"` porque está a veinte pantallas de scroll: no tiene por
-        qué competir por el ancho de banda con el modelo del cerebro, que sí se
-        necesita en el primer segundo.
-      */}
-      <img
-        ref={editorialRef}
-        src={editorial.src}
-        srcSet={editorial.srcSet}
-        sizes="100vw"
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 h-full w-full scale-110 object-cover opacity-0"
-      />
     </div>
   )
 }

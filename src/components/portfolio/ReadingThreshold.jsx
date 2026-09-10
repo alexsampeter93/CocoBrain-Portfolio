@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import AreaArt from './AreaArt'
 
 /**
@@ -20,9 +21,17 @@ import AreaArt from './AreaArt'
  * proyectos", tres tarjetas de resumen— destruiría el efecto: convertiría una
  * pausa en un índice.
  */
-export default function ReadingThreshold() {
+/**
+ * Lleva referencia porque este tramo ya no solo SE VE como la transición: la
+ * MIDE. De su recorrido cuelga la retirada de la escena, y eso hace que la
+ * duración del cruce la decida el propio umbral en vez de una fracción del
+ * editorial que cambia cada vez que se escribe un párrafo. Ver
+ * `journey.threshold`.
+ */
+const ReadingThreshold = forwardRef(function ReadingThreshold(_props, ref) {
   return (
     <section
+      ref={ref}
       data-act="3"
       /**
        * 140vh, el doble de lo que medía. No es aire de más: es la duración de
@@ -60,4 +69,6 @@ export default function ReadingThreshold() {
       </div>
     </section>
   )
-}
+})
+
+export default ReadingThreshold

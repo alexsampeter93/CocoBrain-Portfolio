@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Icon } from '../components/ui/Icon'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { Vector3 } from 'three'
@@ -140,7 +141,9 @@ export default function NodePanel({ sections, brain, compact, activeSection, onO
       todo lo demas.
     */
     if (innerRef.current) {
-      const value = open ? ramp(hubFocus(journey.progress), 0.1, 0.75) * overlayRetreat(journey.reading) : 0
+      const value = open
+        ? ramp(hubFocus(journey.progress), 0.1, 0.75) * overlayRetreat(journey.threshold)
+        : 0
       innerRef.current.style.opacity = value
       innerRef.current.style.transform = `translateY(${(1 - value) * 12}px)`
       innerRef.current.style.pointerEvents = value > 0.4 ? 'auto' : 'none'
@@ -350,8 +353,21 @@ export default function NodePanel({ sections, brain, compact, activeSection, onO
               type="button"
               onClick={() => onClose?.()}
               aria-label="Volver a la vista de la red"
-              className="shrink-0 whitespace-nowrap font-mono text-[11px] leading-none text-cream/45 transition-colors hover:text-cream focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-brain-glow"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap font-mono text-[11px] leading-none text-cream/45 transition-colors hover:text-cream focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-brain-glow"
             >
+              {/*
+                El icono es el ÚNICO préstamo que esta pieza toma de la capa
+                editorial, y se puede: `Icon` no sabe nada del portfolio —es un
+                trazo y `currentColor`— así que la regla de §6 sigue en pie. Lo
+                que Three.js no puede conocer son textos, proyectos y
+                contenido, no la forma de una flecha.
+
+                Y aquí el trazo hace más trabajo que en el editorial: esta
+                ficha flota en el espacio, sin filete ni margen que la ordene,
+                y dos botones de once píxeles seguidos se leían como una sola
+                línea de texto. El trazo dice cuál de los dos vuelve.
+              */}
+              <Icon name="back" size="1.15em" className="link-arrow-back" />
               volver a la red
             </button>
           </div>
